@@ -147,11 +147,28 @@
       {/if}
 
       <!-- Data management -->
-      <div class="border-t border-border pt-4 space-y-2">
+      <div class="border-t border-border pt-4 space-y-3">
         <h3 class="text-sm font-medium text-text-secondary">Data</h3>
         <p class="text-xs text-text-muted">
           All data is stored in your browser's localStorage. Nothing is sent to any server except Finnhub API calls.
         </p>
+        <button
+          class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
+          onclick={() => {
+            const keep = ['watchlist', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'lastRefreshed'];
+            const toDelete = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (!keep.includes(k)) toDelete.push(k);
+            }
+            toDelete.forEach(k => localStorage.removeItem(k));
+            saveMessage = `Cleared ${toDelete.length} cached items`;
+            setTimeout(() => saveMessage = '', 3000);
+          }}
+        >
+          Clear API cache
+        </button>
+        <p class="text-xs text-text-muted">Removes cached quotes, charts, news, and fundamentals. Keeps your watchlist and positions.</p>
       </div>
     </div>
   </div>
