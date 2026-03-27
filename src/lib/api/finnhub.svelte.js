@@ -4,6 +4,7 @@ const CACHE_TTL = {
   fundamentals: 604800,
   profile: 604800,
   search: 3600,
+  news: 86400,
 };
 
 const CALL_DELAY_MS = 100;
@@ -120,6 +121,15 @@ export async function fetchPriceTarget(symbol) {
   );
 }
 
+export async function fetchNews(symbol) {
+  const now = new Date();
+  const to = now.toISOString().split('T')[0];
+  const from = new Date(now - 7 * 86400000).toISOString().split('T')[0];
+  return fetchWithCache('news', symbol, () =>
+    fetchFinnhub(`/company-news?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`)
+  );
+}
+
 export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
   if (!fromTs) fromTs = Math.floor((Date.now() - 180 * 86400000) / 1000);
   if (!toTs) toTs = Math.floor(Date.now() / 1000);
@@ -149,14 +159,15 @@ export async function refreshAll(symbols, onProgress) {
     refreshProgress = { current: i + 1, total: symbols.length };
     onProgress?.(refreshProgress);
 
-    const [quote, earnings, metrics, priceTarget] = await Promise.all([
+    const [quote, earnings, metrics, priceTarget, news] = await Promise.all([
       fetchQuote(symbol),
       fetchEarnings(symbol),
       fetchMetrics(symbol),
       fetchPriceTarget(symbol),
+      fetchNews(symbol),
     ]);
 
-    results[symbol] = { quote, earnings, metrics, priceTarget };
+    results[symbol] = { quote, earnings, metrics, priceTarget, news };
 
     if (i < symbols.length - 1) await delay(CALL_DELAY_MS);
   }

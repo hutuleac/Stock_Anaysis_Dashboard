@@ -1,7 +1,7 @@
 <script>
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeSimpleScore, getBadgeStyle, getDaysToEarnings } from '../scoring.js';
+  import { computeScore, getBadgeStyle, getDaysToEarnings } from '../scoring.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
   import PreBuyChecklist from './PreBuyChecklist.svelte';
   import EntryPanel from './EntryPanel.svelte';
@@ -62,8 +62,8 @@
       const bData = getTickerData(b.symbol);
 
       if (sortBy === 'score') {
-        aVal = computeSimpleScore(aData).score ?? -1;
-        bVal = computeSimpleScore(bData).score ?? -1;
+        aVal = computeScore(aData).score ?? -1;
+        bVal = computeScore(bData).score ?? -1;
       } else if (sortBy === 'symbol') {
         aVal = a.symbol;
         bVal = b.symbol;
@@ -190,7 +190,7 @@
         <tbody>
           {#each getSortedTickers() as ticker, i}
             {@const data = getTickerData(ticker.symbol)}
-            {@const score = computeSimpleScore(data)}
+            {@const score = computeScore(data)}
             {@const badge = getBadgeStyle(score.badge)}
             {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
             {@const isSelected = getSelectedSymbol() === ticker.symbol}
@@ -223,8 +223,26 @@
               </td>
               <td class="px-3 py-3 text-right">
                 {#if score.score !== null}
-                  <span class="font-mono font-semibold">{score.score}</span>
-                  <span class="text-xs text-text-muted ml-1">({score.factors}/{score.total})</span>
+                  <div class="flex items-center justify-end gap-2">
+                    <span class="font-mono font-semibold">{score.score}</span>
+                    <span class="text-xs text-text-muted">({score.factors}/{score.total})</span>
+                  </div>
+                  <!-- T/F/S sub-score bars -->
+                  <div class="flex items-center gap-1 mt-1 justify-end">
+                    {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
+                      {#if val !== null}
+                        <div class="flex items-center gap-0.5" title="{label === 'T' ? 'Technical' : label === 'F' ? 'Fundamental' : 'Sentiment'}: {val}">
+                          <span class="text-[9px] text-text-muted">{label}</span>
+                          <div class="w-6 h-1 bg-surface-600 rounded-full overflow-hidden">
+                            <div
+                              class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}"
+                              style="width:{val}%"
+                            ></div>
+                          </div>
+                        </div>
+                      {/if}
+                    {/each}
+                  </div>
                 {:else}
                   <span class="text-text-muted">—</span>
                 {/if}
