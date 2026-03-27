@@ -26,7 +26,7 @@ export function scoreNewsHeadlines(newsData) {
 
 export function computeScore(tickerData) {
   if (!tickerData?.quote?.data) {
-    return { score: null, badge: 'NEUTRAL', factors: 0, total: 9, technical: null, fundamental: null, sentiment: null };
+    return { score: null, badge: 'NEUTRAL', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null };
   }
 
   const quote   = tickerData.quote.data;
@@ -36,7 +36,7 @@ export function computeScore(tickerData) {
 
   let techScore = 0, techFactors = 0, techTotal = 4;
   let fundScore = 0, fundFactors = 0, fundTotal = 3;
-  let sentScore = 0, sentFactors = 0, sentTotal = 2;
+  let sentScore = 0, sentFactors = 0, sentTotal = 3;
 
   // ── TECHNICAL (35%) ─────────────────────────────────────────────────────────
 
@@ -139,6 +139,22 @@ export function computeScore(tickerData) {
   // S2: Sector ETF trend (passed in via tickerData.sectorTrend: true=downtrend)
   if (tickerData.sectorTrend !== undefined && tickerData.sectorTrend !== null) {
     sentScore += tickerData.sectorTrend ? 0.2 : 0.8; // downtrend=bad, uptrend=good
+    sentFactors++;
+  } else sentScore += 0.5;
+
+  // S3: Insider net buying (last 90 days)
+  const insiderTxns = tickerData.insider?.data?.data;
+  if (Array.isArray(insiderTxns) && insiderTxns.length > 0) {
+    let netShares = 0;
+    for (const txn of insiderTxns) {
+      const t = (txn.transactionType || '').toUpperCase();
+      if (t === 'P-PURCHASE' || t === 'BUY') netShares += txn.share ?? 0;
+      else if (t === 'S-SALE' || t === 'SELL') netShares -= txn.share ?? 0;
+    }
+    if (netShares > 50000)       sentScore += 1;
+    else if (netShares > 0)      sentScore += 0.7;
+    else if (netShares > -50000) sentScore += 0.45;
+    else                         sentScore += 0.15;
     sentFactors++;
   } else sentScore += 0.5;
 
