@@ -2,7 +2,7 @@
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext } from './lib/api/finnhub.svelte.js';
   import { getTickers, getSymbols, setMarketData, getTickerData } from './lib/stores/watchlist.svelte.js';
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
-  import { getDaysToEarnings } from './lib/scoring.js';
+  import { getDaysToEarnings, computeScore, storeScoreSnapshot } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
@@ -77,6 +77,12 @@
         } catch {
           setSectorAnswer(ticker.symbol, null);
         }
+      }
+
+      // Store score snapshots for velocity tracking
+      for (const ticker of tickers) {
+        const data = results[ticker.symbol];
+        if (data) storeScoreSnapshot(ticker.symbol, computeScore(data).score);
       }
 
       lastRefreshed = new Date();
