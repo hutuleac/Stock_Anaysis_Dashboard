@@ -63,15 +63,16 @@
           setEarningsAnswer(ticker.symbol, daysToEarnings ?? 999); // no earnings = safe
         }
 
-        // Sector trend auto-answer (Q3)
+        // Sector trend auto-answer (Q3) + store for scoring engine
         try {
           const etfQuote = await fetchSectorETFQuote(ticker.sector);
           if (etfQuote.stale && !etfQuote.data) {
-            setSectorAnswer(ticker.symbol, null); // API failed
+            setSectorAnswer(ticker.symbol, null);
+            results[ticker.symbol].sectorTrend = null;
           } else if (etfQuote.data) {
-            // Simple downtrend check: negative weekly change
             const isDowntrend = etfQuote.data.dp < -1;
             setSectorAnswer(ticker.symbol, isDowntrend);
+            results[ticker.symbol].sectorTrend = isDowntrend;
           }
         } catch {
           setSectorAnswer(ticker.symbol, null);
