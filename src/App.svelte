@@ -1,6 +1,8 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag } from './lib/api/finnhub.svelte.js';
   import { getTickers, getSymbols, setMarketData, getTickerData } from './lib/stores/watchlist.svelte.js';
+  import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
+  import { getPositions } from './lib/stores/portfolio.svelte.js';
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
@@ -26,6 +28,19 @@
   if (typeof window !== 'undefined') {
     window.addEventListener('online', () => offline = false);
     window.addEventListener('offline', () => offline = true);
+
+    window.addEventListener('keydown', (e) => {
+      const tag = document.activeElement?.tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      if (e.key === 'Escape') {
+        import('./lib/stores/watchlist.svelte.js').then(m => m.selectTicker(null));
+      } else if (e.key === 'r' && !isInput && !e.ctrlKey && !e.metaKey) {
+        handleRefresh();
+      } else if (e.key === '/' && !isInput) {
+        e.preventDefault();
+        document.querySelector('input[placeholder*="Search ticker"]')?.focus();
+      }
+    });
   }
 
   function handleOnboardingComplete() {
@@ -192,6 +207,39 @@
   <!-- Main content -->
   <main class="max-w-6xl mx-auto px-4 py-6">
     <WatchlistTable onTickerAdded={handleRefresh} />
+
+    <!-- Portfolio summary strip -->
+    {#if getTrades().length > 0 || getPositions().length > 0}
+      {@const tradeSymbols = [...new Set(getTrades().map(t => t.symbol))]}
+      {@const totalRealized = tradeSymbols.reduce((sum, s) => sum + getRealizedPnL(s), 0)}
+      {@const openPositions = getPositions().length}
+      {@const totalTrades = getTrades().length}
+      <div class="mt-6 border-t border-border/50 pt-4 flex flex-wrap gap-6 text-xs text-text-muted">
+        <span class="flex items-center gap-1.5">
+          <span>Realized P&L:</span>
+          <span class="font-mono font-semibold {totalRealized >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">
+            {totalRealized >= 0 ? '+' : ''}${Math.abs(totalRealized).toFixed(2)}
+          </span>
+        </span>
+        {#if openPositions > 0}
+          <span>{openPositions} open position{openPositions > 1 ? 's' : ''}</span>
+        {/if}
+        <span>{totalTrades} trade{totalTrades > 1 ? 's' : ''} logged</span>
+        <span class="ml-auto hidden sm:block text-[10px]">
+          Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
+          <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
+          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search
+        </span>
+      </div>
+    {:else}
+      <div class="mt-6 border-t border-border/50 pt-3 flex justify-end">
+        <span class="text-[10px] text-text-muted hidden sm:block">
+          Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
+          <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
+          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search
+        </span>
+      </div>
+    {/if}
   </main>
 </div>
 
