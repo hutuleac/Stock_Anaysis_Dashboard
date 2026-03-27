@@ -1,6 +1,6 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag } from './lib/api/finnhub.svelte.js';
-  import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker } from './lib/stores/watchlist.svelte.js';
+  import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
   import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
@@ -77,6 +77,15 @@
       } else if (e.key === '/' && !isInput) {
         e.preventDefault();
         document.querySelector('input[placeholder*="Search ticker"]')?.focus();
+      } else if ((e.key === 'j' || e.key === 'k') && !isInput) {
+        e.preventDefault();
+        const symbols = getSymbols();
+        if (!symbols.length) return;
+        const currentIdx = symbols.indexOf(getSelectedSymbol() ?? '');
+        const nextIdx = e.key === 'j'
+          ? (currentIdx + 1) % symbols.length
+          : (currentIdx <= 0 ? symbols.length - 1 : currentIdx - 1);
+        selectTicker(symbols[nextIdx]);
       }
     });
   }
@@ -288,7 +297,8 @@
         <span class="ml-auto hidden sm:block text-[10px]">
           Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
           <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search
+          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
+          <kbd class="bg-surface-700 px-1 rounded">J</kbd><kbd class="bg-surface-700 px-1 rounded">K</kbd> navigate
         </span>
       </div>
     {:else}
@@ -296,7 +306,8 @@
         <span class="text-[10px] text-text-muted hidden sm:block">
           Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
           <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search
+          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
+          <kbd class="bg-surface-700 px-1 rounded">J</kbd><kbd class="bg-surface-700 px-1 rounded">K</kbd> navigate
         </span>
       </div>
     {/if}
