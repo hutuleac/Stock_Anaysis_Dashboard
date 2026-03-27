@@ -1,7 +1,7 @@
 <script>
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeScore, getBadgeStyle, getDaysToEarnings } from '../scoring.js';
+  import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity } from '../scoring.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
   import PreBuyChecklist from './PreBuyChecklist.svelte';
   import EntryPanel from './EntryPanel.svelte';
@@ -196,6 +196,7 @@
             {@const isSelected = getSelectedSymbol() === ticker.symbol}
             {@const quote = data?.quote?.data}
             {@const isStale = data?.quote?.stale}
+            {@const velocity = getScoreVelocity(ticker.symbol)}
 
             <tr
               class="border-b border-border/50 cursor-pointer transition-colors {isSelected ? 'bg-surface-700' : 'hover:bg-surface-800'}"
@@ -225,6 +226,12 @@
                 {#if score.score !== null}
                   <div class="flex items-center justify-end gap-2">
                     <span class="font-mono font-semibold">{score.score}</span>
+                    {#if velocity}
+                      <span
+                        class="text-xs font-mono {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}"
+                        title="3-day delta: {velocity.delta > 0 ? '+' : ''}{velocity.delta}"
+                      >{velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}</span>
+                    {/if}
                     <span class="text-xs text-text-muted">({score.factors}/{score.total})</span>
                   </div>
                   <!-- T/F/S sub-score bars -->

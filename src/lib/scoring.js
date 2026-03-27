@@ -173,6 +173,71 @@ export function computeScore(tickerData) {
 // Keep legacy export for any components still referencing it
 export const computeSimpleScore = computeScore;
 
+// ─── SCORE VELOCITY ───────────────────────────────────────────────────────────
+// Stores daily score snapshots in localStorage, returns delta vs ~3 days ago.
+
+const VELOCITY_KEY = (symbol) => `sv_${symbol}`;
+const THREE_DAYS_MS = 3 * 86400000;
+const SEVEN_DAYS_MS = 7 * 86400000;
+
+export function storeScoreSnapshot(symbol, score) {
+  if (score === null) return;
+  const key = VELOCITY_KEY(symbol);
+  let history = [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) history = JSON.parse(raw);
+  } catch { /* noop */ }
+
+  const now = Date.now();
+  // Prune entries older than 7 days
+  history = history.filter(e => now - e.ts < SEVEN_DAYS_MS);
+  // Don't add a duplicate within 1 hour of the last entry
+  const last = history[history.length - 1];
+  if (!last || now - last.ts > 3600000) {
+    history.push({ score, ts: now });
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(history));
+  } catch { /* noop */ }
+}
+
+export function getScoreVelocity(symbol) {
+  const key = VELOCITY_KEY(symbol);
+  let history = [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) history = JSON.parse(raw);
+  } catch { return null; }
+
+  if (history.length < 2) return null;
+
+  const now = Date.now();
+  const current = history[history.length - 1];
+
+  // Find the entry closest to 3 days ago (accepting 1–5 day range)
+  const target = now - THREE_DAYS_MS;
+  let best = null;
+  for (const entry of history.slice(0, -1)) {
+    const age = now - entry.ts;
+    if (age < 86400000) continue; // must be at least 1 day old
+    if (!best || Math.abs(entry.ts - target) < Math.abs(best.ts - target)) {
+      best = entry;
+    }
+  }
+
+  // Fallback: oldest entry if nothing within range
+  if (!best) best = history[0];
+  if (!best || best.ts === current.ts) return null;
+
+  const delta = current.score - best.score;
+  return {
+    delta,
+    direction: delta > 2 ? 'up' : delta < -2 ? 'down' : 'flat',
+  };
+}
+
 // ─── BADGE STYLES ─────────────────────────────────────────────────────────────
 
 export function getBadgeStyle(badge) {
