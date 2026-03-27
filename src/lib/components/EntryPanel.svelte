@@ -3,6 +3,7 @@
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { getPosition, getPortfolioValue } from '../stores/portfolio.svelte.js';
   import ThesisSummary from './ThesisSummary.svelte';
+  import { getDaysToEarnings } from '../scoring.js';
 
   let { symbol } = $props();
 
@@ -64,6 +65,7 @@
   }
 
   const scenarios = $derived(getScenarios());
+  const daysToEarnings = $derived(getDaysToEarnings(data?.earnings));
 
   function formatUSD(val) {
     if (val == null) return '—';
@@ -101,6 +103,21 @@
       <div class="bg-surface-700/50 rounded-lg p-3 border border-border/40">
         <ThesisSummary {symbol} />
       </div>
+
+      <!-- Trade Window -->
+      {#if daysToEarnings !== null}
+        <div class="flex items-center gap-3 px-3 py-2 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+          <span class="text-lg">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
+          <div>
+            <p class="text-xs font-semibold {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
+              Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day remaining' : `${daysToEarnings} days remaining`}
+            </p>
+            <p class="text-[10px] text-text-muted">
+              {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into your hold time and position size.' : 'Earnings not imminent — trade window is open.'}
+            </p>
+          </div>
+        </div>
+      {/if}
 
       <!-- Risk Snapshot -->
       <div class="grid grid-cols-2 gap-3">
