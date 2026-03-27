@@ -51,9 +51,17 @@
     return { isOpen, nextEvent };
   }
 
-  // Refresh market status every minute
+  // Refresh market status every minute + auto-refresh if configured
   if (typeof window !== 'undefined') {
     setInterval(() => { marketStatus = getMarketStatus(); }, 60000);
+
+    setInterval(() => {
+      const mins = parseInt(localStorage.getItem('autoRefreshInterval') || '0');
+      if (mins <= 0) return;
+      if (!getMarketStatus().isOpen) return;
+      const lastMs = parseInt(localStorage.getItem('lastRefreshed') || '0');
+      if (Date.now() - lastMs >= mins * 60000) handleRefresh();
+    }, 60000);
   }
 
   // Load last refresh timestamp
