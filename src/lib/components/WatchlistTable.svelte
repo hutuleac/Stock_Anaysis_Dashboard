@@ -173,7 +173,7 @@
       <table class="w-full">
         <thead>
           <tr class="border-b border-border text-xs text-text-muted uppercase tracking-wider">
-            <th class="w-8 px-2 py-3"></th>
+            <th class="w-8 px-2 py-3 hidden sm:table-cell"></th>
             <th class="px-3 py-3 text-left cursor-pointer hover:text-text-secondary" onclick={() => handleSort('symbol')}>
               Ticker {sortBy === 'symbol' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
@@ -186,8 +186,8 @@
             <th class="px-3 py-3 text-right cursor-pointer hover:text-text-secondary" onclick={() => handleSort('score')}>
               Score {sortBy === 'score' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
-            <th class="px-3 py-3 text-center">Setup</th>
-            <th class="px-3 py-3 text-center">Earnings</th>
+            <th class="px-3 py-3 text-center hidden sm:table-cell">Setup</th>
+            <th class="px-3 py-3 text-center hidden md:table-cell">Earnings</th>
             <th class="w-10 px-2 py-3"></th>
           </tr>
         </thead>
@@ -210,7 +210,7 @@
               ondrop={(e) => handleDrop(e, i)}
               onclick={() => selectTicker(ticker.symbol)}
             >
-              <td class="px-2 py-3 text-text-muted cursor-grab">⠿</td>
+              <td class="px-2 py-3 text-text-muted cursor-grab hidden sm:table-cell">⠿</td>
               <td class="px-3 py-3">
                 <div class="flex items-center gap-2">
                   <span class="font-mono font-semibold text-text-primary">{ticker.symbol}</span>
@@ -218,7 +218,7 @@
                     <span class="text-warning text-xs" title="Stale data">⚠</span>
                   {/if}
                 </div>
-                <div class="text-xs text-text-muted truncate max-w-[140px]">{ticker.sector}</div>
+                <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block">{ticker.sector}</div>
               </td>
               <td class="px-3 py-3 text-right font-mono">
                 {formatPrice(quote?.c)}
@@ -236,10 +236,10 @@
                         title="3-day delta: {velocity.delta > 0 ? '+' : ''}{velocity.delta}"
                       >{velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}</span>
                     {/if}
-                    <span class="text-xs text-text-muted">({score.factors}/{score.total})</span>
+                    <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
                   </div>
                   <!-- T/F/S sub-score bars -->
-                  <div class="flex items-center gap-1 mt-1 justify-end">
+                  <div class="hidden sm:flex items-center gap-1 mt-1 justify-end">
                     {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
                       {#if val !== null}
                         <div class="flex items-center gap-0.5" title="{label === 'T' ? 'Technical' : label === 'F' ? 'Fundamental' : 'Sentiment'}: {val}">
@@ -258,12 +258,12 @@
                   <span class="text-text-muted">—</span>
                 {/if}
               </td>
-              <td class="px-3 py-3 text-center">
+              <td class="px-3 py-3 text-center hidden sm:table-cell">
                 <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">
                   {badge.label}
                 </span>
               </td>
-              <td class="px-3 py-3 text-center">
+              <td class="px-3 py-3 text-center hidden md:table-cell">
                 {#if daysToEarnings !== null}
                   <span class="text-xs font-mono {daysToEarnings < 7 ? 'text-danger font-bold' : daysToEarnings < 14 ? 'text-warning' : 'text-text-secondary'}">
                     {daysToEarnings}d

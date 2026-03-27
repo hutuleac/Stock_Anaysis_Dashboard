@@ -108,8 +108,11 @@
   <header class="border-b border-border bg-surface-800/50 backdrop-blur-sm sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <h1 class="text-lg font-bold text-text-primary tracking-tight">Stock Dashboard</h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.1</span>
+        <h1 class="text-lg font-bold text-text-primary tracking-tight">
+          <span class="hidden sm:inline">Stock Dashboard</span>
+          <span class="sm:hidden">StockDash</span>
+        </h1>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.2</span>
       </div>
 
       <div class="flex items-center gap-3">
