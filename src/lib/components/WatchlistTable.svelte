@@ -19,9 +19,31 @@
   let searchOpen = $state(false);
   let sortBy = $state('score');
   let sortDir = $state('desc');
-  let alertSymbol = $state(null);   // symbol whose alert form is open
+  let alertSymbol = $state(null);
   let alertPrice = $state('');
   let alertDir = $state('above');
+  let bulkOpen = $state(false);
+  let bulkText = $state('');
+  let bulkAdding = $state(false);
+  let bulkStatus = $state('');
+
+  async function handleBulkAdd() {
+    const symbols = bulkText.toUpperCase().split(/[\s,;\n]+/).map(s => s.trim()).filter(s => /^[A-Z]{1,5}$/.test(s));
+    if (!symbols.length) { bulkStatus = 'No valid tickers found'; return; }
+    bulkAdding = true;
+    bulkStatus = '';
+    let added = 0;
+    for (const sym of symbols) {
+      await addTicker(sym, sym);
+      added++;
+      bulkStatus = `Adding... ${added}/${symbols.length}`;
+    }
+    bulkStatus = `Added ${added} ticker${added > 1 ? 's' : ''}`;
+    bulkText = '';
+    bulkAdding = false;
+    onTickerAdded();
+    setTimeout(() => { bulkOpen = false; bulkStatus = ''; }, 1500);
+  }
   let searchTimeout;
   let dragIndex = $state(null);
 
@@ -136,7 +158,35 @@
           <div class="absolute right-3 top-3 w-4 h-4 border-2 border-neutral border-t-transparent rounded-full animate-spin"></div>
         {/if}
       </div>
+      <button
+        class="px-3 py-2 text-xs bg-surface-700 hover:bg-surface-600 text-text-muted hover:text-text-secondary rounded-lg border border-border transition-colors whitespace-nowrap"
+        onclick={() => { bulkOpen = !bulkOpen; searchOpen = false; }}
+        title="Bulk add tickers"
+      >+ Bulk</button>
     </div>
+
+    <!-- Bulk add panel -->
+    {#if bulkOpen}
+      <div class="mt-2 bg-surface-700 border border-border rounded-lg p-3 space-y-2">
+        <p class="text-xs text-text-muted">Paste tickers separated by commas, spaces, or newlines:</p>
+        <textarea
+          placeholder="NVDA, AAPL, MSFT, TSLA"
+          class="w-full bg-surface-600 border border-border rounded px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50 h-20 resize-none"
+          bind:value={bulkText}
+        ></textarea>
+        <div class="flex items-center gap-3">
+          <button
+            class="px-4 py-1.5 text-sm bg-bull-strong text-surface-900 font-semibold rounded hover:brightness-110 transition disabled:opacity-40"
+            onclick={handleBulkAdd}
+            disabled={bulkAdding || !bulkText.trim()}
+          >{bulkAdding ? 'Adding...' : 'Add All'}</button>
+          {#if bulkStatus}
+            <span class="text-xs text-text-muted">{bulkStatus}</span>
+          {/if}
+        </div>
+      </div>
+    {/if}
+
 
     {#if searchOpen && searchResults.length > 0}
       <div class="absolute z-50 w-full mt-1 bg-surface-700 border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto">
