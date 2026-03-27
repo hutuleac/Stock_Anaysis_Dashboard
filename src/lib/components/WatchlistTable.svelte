@@ -3,6 +3,7 @@
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity } from '../scoring.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
+  import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
   import PreBuyChecklist from './PreBuyChecklist.svelte';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
@@ -18,6 +19,9 @@
   let searchOpen = $state(false);
   let sortBy = $state('score');
   let sortDir = $state('desc');
+  let alertSymbol = $state(null);   // symbol whose alert form is open
+  let alertPrice = $state('');
+  let alertDir = $state('above');
   let searchTimeout;
   let dragIndex = $state(null);
 
@@ -201,6 +205,7 @@
             {@const quote = data?.quote?.data}
             {@const isStale = data?.quote?.stale}
             {@const velocity = getScoreVelocity(ticker.symbol)}
+            {@const hasAlert = getAlerts().some(a => a.symbol === ticker.symbol)}
 
             <tr
               class="border-b border-border/50 cursor-pointer transition-colors {isSelected ? 'bg-surface-700' : 'hover:bg-surface-800'}"
@@ -273,15 +278,60 @@
                 {/if}
               </td>
               <td class="px-2 py-3">
-                <button
-                  class="text-text-muted hover:text-danger transition-colors p-1"
-                  title="Remove"
-                  onclick={(e) => { e.stopPropagation(); removeTicker(ticker.symbol); }}
-                >
-                  ✕
-                </button>
+                <div class="flex items-center gap-0.5">
+                  <button
+                    class="p-1 transition-colors {hasAlert ? 'text-warning' : 'text-text-muted hover:text-warning'}"
+                    title="{hasAlert ? 'Alert set' : 'Set price alert'}"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      alertSymbol = alertSymbol === ticker.symbol ? null : ticker.symbol;
+                      alertPrice = '';
+                      alertDir = 'above';
+                    }}
+                  >🔔</button>
+                  <button
+                    class="text-text-muted hover:text-danger transition-colors p-1"
+                    title="Remove"
+                    onclick={(e) => { e.stopPropagation(); removeTicker(ticker.symbol); }}
+                  >✕</button>
+                </div>
               </td>
             </tr>
+
+            <!-- Alert form row -->
+            {#if alertSymbol === ticker.symbol}
+              <tr onclick={(e) => e.stopPropagation()}>
+                <td colspan="8" class="px-4 py-2 bg-surface-800/80 border-b border-border/30">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs text-text-muted">Alert when {ticker.symbol} goes</span>
+                    <select
+                      class="text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary"
+                      bind:value={alertDir}
+                    >
+                      <option value="above">above</option>
+                      <option value="below">below</option>
+                    </select>
+                    <input
+                      type="number" step="0.01" placeholder="price"
+                      class="w-24 text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary font-mono"
+                      bind:value={alertPrice}
+                    />
+                    <button
+                      class="text-xs px-3 py-1 bg-warning/20 text-warning rounded hover:bg-warning/30 transition-colors"
+                      onclick={() => {
+                        if (alertPrice) { addAlert(ticker.symbol, alertPrice, alertDir); alertSymbol = null; }
+                      }}
+                    >Set Alert</button>
+                    {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
+                      <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
+                        {alert.direction} ${alert.targetPrice.toFixed(2)}
+                        <button class="hover:text-danger ml-1" onclick={() => removeAlert(alert.id)}>✕</button>
+                      </span>
+                    {/each}
+                  </div>
+                </td>
+              </tr>
+            {/if}
 
             <!-- Inline expansion: Checklist + Entry Panel -->
             {#if isSelected}

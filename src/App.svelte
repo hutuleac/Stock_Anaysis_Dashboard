@@ -3,6 +3,7 @@
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
+  import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
@@ -130,6 +131,9 @@
         }
       }
 
+      // Check price alerts
+      checkAlerts(results);
+
       // Store score snapshots for velocity tracking
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -235,6 +239,16 @@
       <button class="text-xs text-text-muted ml-2 hover:text-text-secondary" onclick={clearStorageFullFlag}>dismiss</button>
     </div>
   {/if}
+
+  <!-- Price alert notifications -->
+  {#each getTriggered() as alert (alert.id)}
+    <div class="bg-bull-strong/10 border-b border-bull-strong/30 px-4 py-2 flex items-center justify-between">
+      <span class="text-sm text-bull-strong font-semibold">
+        🔔 {alert.symbol} hit ${alert.targetPrice.toFixed(2)} — now at ${alert.currentPrice.toFixed(2)}
+      </span>
+      <button class="text-xs text-text-muted hover:text-text-secondary ml-4" onclick={() => dismissTriggered(alert.id)}>dismiss</button>
+    </div>
+  {/each}
 
   <!-- Refresh error -->
   {#if refreshError}
