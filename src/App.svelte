@@ -11,6 +11,7 @@
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   import OnboardingModal from './lib/components/OnboardingModal.svelte';
+  import MorningBrief from './lib/components/MorningBrief.svelte';
 
   let settingsOpen = $state(false);
   let showOnboarding = $state(!getApiKey());
@@ -281,6 +282,7 @@
 
   <!-- Main content -->
   <main class="max-w-6xl mx-auto px-4 py-6">
+    <MorningBrief />
     <WatchlistTable onTickerAdded={handleRefresh} />
 
     <PortfolioStats />
