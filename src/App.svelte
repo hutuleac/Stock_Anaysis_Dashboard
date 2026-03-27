@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag } from './lib/api/finnhub.svelte.js';
   import { getTickers, getSymbols, setMarketData, getTickerData } from './lib/stores/watchlist.svelte.js';
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot } from './lib/scoring.js';
@@ -164,6 +164,14 @@
       <span class="text-sm text-warning">
         Offline — showing cached data {lastRefreshed ? `from ${formatTime(lastRefreshed)}` : ''}
       </span>
+    </div>
+  {/if}
+
+  <!-- Storage full warning -->
+  {#if isStorageFull()}
+    <div class="bg-warning/10 border-b border-warning/30 px-4 py-2 text-center">
+      <span class="text-sm text-warning">Storage full — old cache data may not be saving. Clear cache in Settings.</span>
+      <button class="text-xs text-text-muted ml-2 hover:text-text-secondary" onclick={clearStorageFullFlag}>dismiss</button>
     </div>
   {/if}
 

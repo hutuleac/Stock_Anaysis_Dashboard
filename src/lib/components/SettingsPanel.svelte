@@ -1,11 +1,12 @@
 <script>
   import { getApiKey, setApiKey } from '../api/finnhub.svelte.js';
-  import { getPositions, setPositions } from '../stores/portfolio.svelte.js';
+  import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
 
   let { open = $bindable(false) } = $props();
 
   let apiKeyInput = $state(getApiKey());
   let portfolioText = $state('');
+  let portfolioValueInput = $state(getPortfolioValue() > 0 ? String(getPortfolioValue()) : '');
   let saveMessage = $state('');
 
   // Initialize portfolio text from current positions
@@ -20,6 +21,17 @@
     setApiKey(apiKeyInput.trim());
     saveMessage = 'API key saved';
     setTimeout(() => saveMessage = '', 2000);
+  }
+
+  function savePortfolioValue() {
+    const val = parseFloat(portfolioValueInput.replace(/[,$]/g, ''));
+    if (!isNaN(val) && val > 0) {
+      setPortfolioValue(val);
+      saveMessage = `Portfolio value set to $${val.toLocaleString()}`;
+    } else {
+      saveMessage = 'Enter a valid dollar amount';
+    }
+    setTimeout(() => saveMessage = '', 2500);
   }
 
   function parsePortfolio() {
@@ -79,6 +91,28 @@
         <p class="text-xs text-text-muted">
           Free key from <a href="https://finnhub.io/register" target="_blank" rel="noopener" class="text-uncertain hover:underline">finnhub.io/register</a>
         </p>
+      </div>
+
+      <!-- Portfolio Value (for position sizing) -->
+      <div class="space-y-2">
+        <label class="block">
+          <span class="text-sm font-medium text-text-secondary">Total Portfolio Value</span>
+          <div class="flex gap-2 mt-1">
+            <input
+              type="text"
+              placeholder="e.g. 50000"
+              class="flex-1 bg-surface-700 border border-border rounded px-3 py-2 text-text-primary font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50"
+              bind:value={portfolioValueInput}
+            />
+            <button
+              class="px-4 py-2 bg-bull-strong text-surface-900 font-semibold text-sm rounded hover:brightness-110 transition"
+              onclick={savePortfolioValue}
+            >
+              Set
+            </button>
+          </div>
+        </label>
+        <p class="text-xs text-text-muted">Used to calculate recommended position size (2% risk rule).</p>
       </div>
 
       <!-- Portfolio Snapshot -->
