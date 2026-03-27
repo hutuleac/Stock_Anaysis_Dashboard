@@ -1,7 +1,7 @@
 <script>
   import { isChecklistComplete, getChecklist } from '../stores/checklist.svelte.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';
-  import { getPosition } from '../stores/portfolio.svelte.js';
+  import { getPosition, getPortfolioValue } from '../stores/portfolio.svelte.js';
 
   let { symbol } = $props();
 
@@ -22,11 +22,18 @@
   );
 
   // Position sizing: risk 2% of portfolio per trade
-  // Use a default portfolio size hint if no position data
   const RISK_PCT_PER_TRADE = 2;
-
-  // Scenario table
-  const atr = $derived(data?.metrics?.data?.metric?.['10DayAverageTradingVolume'] ? null : null); // Wave 2: real ATR
+  const portfolioVal = $derived(getPortfolioValue());
+  const maxRiskDollars = $derived(portfolioVal > 0 ? portfolioVal * (RISK_PCT_PER_TRADE / 100) : null);
+  const recommendedShares = $derived(
+    maxRiskDollars && riskPerShare ? Math.floor(maxRiskDollars / riskPerShare) : null
+  );
+  const positionCost = $derived(
+    recommendedShares && currentPrice ? recommendedShares * currentPrice : null
+  );
+  const positionPct = $derived(
+    positionCost && portfolioVal ? (positionCost / portfolioVal) * 100 : null
+  );
 
   function getScenarios() {
     if (!currentPrice || !stopLoss) return null;
@@ -113,13 +120,20 @@
 
       <!-- Position size recommendation -->
       <div class="bg-surface-700 rounded-lg p-3 border-l-2 border-uncertain">
-        <p class="text-xs text-text-muted mb-1">Position Size (2% risk rule)</p>
-        <p class="text-xs text-text-secondary">
-          Enter your portfolio size in Settings to see recommended shares.
-          {#if riskPerShare}
-            At ${riskPerShare.toFixed(2)} risk per share, risking 2% of portfolio.
-          {/if}
-        </p>
+        <p class="text-xs text-text-muted mb-2">Position Size (2% risk rule)</p>
+        {#if recommendedShares !== null}
+          <div class="flex items-baseline gap-3 flex-wrap">
+            <span class="font-mono font-semibold text-text-primary text-sm">{recommendedShares} shares</span>
+            <span class="text-xs text-text-muted">≈ ${positionCost?.toLocaleString('en-US', { maximumFractionDigits: 0 })} ({positionPct?.toFixed(1)}% of portfolio)</span>
+          </div>
+          <p class="text-xs text-text-muted mt-1">Max loss: ${maxRiskDollars?.toFixed(0)} ({RISK_PCT_PER_TRADE}% of ${portfolioVal?.toLocaleString()})</p>
+        {:else}
+          <p class="text-xs text-text-secondary">
+            {#if !portfolioVal}Set portfolio value in Settings to see recommended shares.
+            {:else if !riskPerShare}Set a stop loss above to calculate position size.
+            {/if}
+          </p>
+        {/if}
       </div>
 
       <!-- Scenario Table -->

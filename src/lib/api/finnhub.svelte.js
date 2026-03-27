@@ -45,11 +45,16 @@ function readCache(key, ttl) {
   }
 }
 
+let storageFullFlag = $state(false);
+export function isStorageFull() { return storageFullFlag; }
+export function clearStorageFullFlag() { storageFullFlag = false; }
+
 function writeCache(key, data) {
   try {
     localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
   } catch (e) {
-    console.warn('localStorage write failed:', e);
+    if (e.name === 'QuotaExceededError') storageFullFlag = true;
+    else console.warn('localStorage write failed:', e);
   }
 }
 
