@@ -8,6 +8,14 @@
   let portfolioText = $state('');
   let portfolioValueInput = $state(getPortfolioValue() > 0 ? String(getPortfolioValue()) : '');
   let saveMessage = $state('');
+  let autoRefreshInterval = $state(parseInt(localStorage.getItem('autoRefreshInterval') || '0'));
+
+  function saveAutoRefresh(val) {
+    autoRefreshInterval = val;
+    localStorage.setItem('autoRefreshInterval', String(val));
+    saveMessage = val === 0 ? 'Auto-refresh off' : `Auto-refresh set to ${val} min`;
+    setTimeout(() => saveMessage = '', 2000);
+  }
 
   // Initialize portfolio text from current positions
   $effect(() => {
@@ -139,6 +147,20 @@
         <p class="text-xs text-text-muted">
           Format: TICKER QTY shares @ $PRICE (one per line)
         </p>
+      </div>
+
+      <!-- Auto-refresh -->
+      <div class="space-y-2">
+        <span class="text-sm font-medium text-text-secondary block">Auto-Refresh (market hours only)</span>
+        <div class="flex gap-2 flex-wrap">
+          {#each [[0, 'Off'], [5, '5 min'], [15, '15 min'], [30, '30 min']] as [val, label]}
+            <button
+              class="px-3 py-1.5 text-xs rounded border transition-colors {autoRefreshInterval === val ? 'bg-bull-strong/20 border-bull-strong text-bull-strong font-semibold' : 'bg-surface-700 border-border text-text-muted hover:text-text-secondary'}"
+              onclick={() => saveAutoRefresh(val)}
+            >{label}</button>
+          {/each}
+        </div>
+        <p class="text-xs text-text-muted">Only triggers when market is open (Mon–Fri 9:30–16:00 ET).</p>
       </div>
 
       <!-- Save feedback -->
