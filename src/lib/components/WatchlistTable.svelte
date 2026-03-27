@@ -6,6 +6,7 @@
   import PreBuyChecklist from './PreBuyChecklist.svelte';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
+  import TradeLog from './TradeLog.svelte';
 
   let { onTickerAdded = () => {} } = $props();
 
@@ -288,9 +289,10 @@
                     <div class="mb-5">
                       <PriceChart symbol={ticker.symbol} />
                     </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <PreBuyChecklist symbol={ticker.symbol} />
                       <EntryPanel symbol={ticker.symbol} />
+                      <TradeLog symbol={ticker.symbol} />
                     </div>
                   </div>
                 </td>
