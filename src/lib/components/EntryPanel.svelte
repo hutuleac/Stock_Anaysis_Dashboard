@@ -2,6 +2,7 @@
   import { isChecklistComplete, getChecklist } from '../stores/checklist.svelte.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { getPosition, getPortfolioValue } from '../stores/portfolio.svelte.js';
+  import ThesisSummary from './ThesisSummary.svelte';
 
   let { symbol } = $props();
 
@@ -94,6 +95,11 @@
       <div class="flex items-center gap-2 mb-1">
         <span class="text-bull-strong">🔓</span>
         <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Entry Panel</h3>
+      </div>
+
+      <!-- Thesis Summary -->
+      <div class="bg-surface-700/50 rounded-lg p-3 border border-border/40">
+        <ThesisSummary {symbol} />
       </div>
 
       <!-- Risk Snapshot -->

@@ -254,6 +254,105 @@ export function getScoreVelocity(symbol) {
   };
 }
 
+// ─── THESIS GENERATOR ─────────────────────────────────────────────────────────
+// Produces 2–4 plain-English sentences explaining the score. Returns { bulls, bears, warnings }.
+
+export function generateThesis(tickerData, scoreResult) {
+  if (!tickerData?.quote?.data || !scoreResult) return null;
+
+  const quote   = tickerData.quote.data;
+  const metrics = tickerData.metrics?.data?.metric || {};
+  const pt      = tickerData.priceTarget?.data;
+  const bulls   = [];
+  const bears   = [];
+  const warnings = [];
+
+  // ── TECHNICAL ──
+  const ema50 = metrics['50DayMovingAverage'];
+  if (ema50 && quote.c) {
+    const pct = ((quote.c - ema50) / ema50) * 100;
+    if (pct > 5)       bulls.push(`Price is ${pct.toFixed(1)}% above the 50-day MA — momentum is intact.`);
+    else if (pct > 0)  bulls.push(`Holding just above the 50-day MA — a constructive setup.`);
+    else if (pct > -5) bears.push(`Trading ${Math.abs(pct).toFixed(1)}% below the 50-day MA — trend is weakening.`);
+    else               bears.push(`Price is well below the 50-day MA (${Math.abs(pct).toFixed(1)}%) — technical structure is broken.`);
+  }
+
+  const ma200 = metrics['200DayMovingAverage'];
+  if (ma200 && quote.c) {
+    const pct = ((quote.c - ma200) / ma200) * 100;
+    if (pct > 5)       bulls.push(`Above the 200-day MA — long-term bull regime confirmed.`);
+    else if (pct > 0)  bulls.push(`Just above the 200-day MA — long-term trend borderline bullish.`);
+    else if (pct > -10) bears.push(`Below the 200-day MA — long-term trend is bearish.`);
+    else               bears.push(`Deep below the 200-day MA (${Math.abs(pct).toFixed(1)}%) — avoid until reclaimed.`);
+  }
+
+  const high52 = metrics['52WeekHigh'];
+  const low52  = metrics['52WeekLow'];
+  if (high52 && low52 && quote.c && high52 > low52) {
+    const pos = Math.round(((quote.c - low52) / (high52 - low52)) * 100);
+    if (pos >= 40 && pos <= 70) bulls.push(`At the ${pos}th percentile of its 52-week range — sweet spot for swing entries.`);
+    else if (pos > 85)          bears.push(`Near 52-week highs (${pos}th percentile) — extended, limited upside buffer.`);
+    else if (pos < 20)          bears.push(`Near 52-week lows (${pos}th percentile) — price discovery still ongoing.`);
+  }
+
+  if (quote.dp !== undefined && quote.dp !== null) {
+    if (quote.dp > 3)       bulls.push(`Strong session today (+${quote.dp.toFixed(1)}%) — institutional buying likely.`);
+    else if (quote.dp < -3) bears.push(`Down ${Math.abs(quote.dp).toFixed(1)}% today — selling pressure is elevated.`);
+  }
+
+  // ── FUNDAMENTAL ──
+  const pe = metrics['peNormalizedAnnual'] ?? metrics['peBasicExclExtraTTM'];
+  if (pe != null && pe > 0) {
+    if (pe >= 10 && pe <= 25)     bulls.push(`P/E of ${pe.toFixed(1)}× — reasonable valuation for a swing trade.`);
+    else if (pe > 40)             bears.push(`P/E of ${pe.toFixed(1)}× — premium multiple, needs earnings upside to justify.`);
+    else if (pe > 0 && pe < 10)   bulls.push(`Cheap valuation at ${pe.toFixed(1)}× earnings.`);
+  }
+
+  const epsGrowth = metrics['epsGrowthTTMYoy'] ?? metrics['epsGrowth3Y'];
+  if (epsGrowth != null) {
+    if (epsGrowth > 20)       bulls.push(`Earnings growing ${epsGrowth.toFixed(0)}% YoY — strong fundamental tailwind.`);
+    else if (epsGrowth > 5)   bulls.push(`EPS up ${epsGrowth.toFixed(0)}% YoY — fundamentals trending in the right direction.`);
+    else if (epsGrowth < -10) bears.push(`Earnings declining ${Math.abs(epsGrowth).toFixed(0)}% YoY — fundamental headwind.`);
+  }
+
+  const targetMid = pt?.targetMean ?? pt?.targetHigh;
+  if (targetMid && quote.c) {
+    const premium = Math.round(((targetMid - quote.c) / quote.c) * 100);
+    if (premium > 20)      bulls.push(`Analyst consensus sees ${premium}% upside to $${targetMid.toFixed(2)}.`);
+    else if (premium > 5)  bulls.push(`Analyst target at $${targetMid.toFixed(2)} (+${premium}%) — modest upside confirmed.`);
+    else if (premium < -5) bears.push(`Trading above analyst consensus — current price is already stretched.`);
+  }
+
+  // ── SENTIMENT ──
+  if (tickerData.sectorTrend === true)  bears.push(`Sector ETF is in a downtrend — headwind for individual names.`);
+  if (tickerData.sectorTrend === false) bulls.push(`Sector ETF trending up — tailwind for this setup.`);
+
+  const insiderTxns = tickerData.insider?.data?.data;
+  if (Array.isArray(insiderTxns) && insiderTxns.length > 0) {
+    let netShares = 0;
+    for (const txn of insiderTxns) {
+      const t = (txn.transactionType || '').toUpperCase();
+      if (t === 'P-PURCHASE' || t === 'BUY') netShares += txn.share ?? 0;
+      else if (t === 'S-SALE' || t === 'SELL') netShares -= txn.share ?? 0;
+    }
+    if (netShares > 50000)
+      bulls.push(`Insiders net bought ${(netShares / 1000).toFixed(0)}k shares in the last 90 days — strong conviction signal.`);
+    else if (netShares > 0)
+      bulls.push(`Modest net insider buying (${(netShares / 1000).toFixed(0)}k shares, 90d).`);
+    else if (netShares < -50000)
+      bears.push(`Insiders net sold ${(Math.abs(netShares) / 1000).toFixed(0)}k shares in the last 90 days.`);
+  }
+
+  // ── WARNINGS ──
+  const daysToEarnings = getDaysToEarnings(tickerData.earnings);
+  if (daysToEarnings !== null && daysToEarnings <= 14)
+    warnings.push(`Earnings in ${daysToEarnings} day${daysToEarnings === 1 ? '' : 's'} — binary event risk, size down or wait.`);
+  else if (daysToEarnings !== null && daysToEarnings <= 30)
+    warnings.push(`Trade window: ~${daysToEarnings} days before earnings — factor into your hold time.`);
+
+  return { bulls: bulls.slice(0, 3), bears: bears.slice(0, 2), warnings };
+}
+
 // ─── BADGE STYLES ─────────────────────────────────────────────────────────────
 
 export function getBadgeStyle(badge) {
