@@ -30,6 +30,43 @@
     return { totalPnL, winRate, trades: trades.length, closed: pnlBySymbol.length, best, worst, avgWin, avgLoss };
   });
 
+  // Portfolio beta — weighted average of position betas
+  const portfolioBeta = $derived(() => {
+    const positions = getPositions();
+    if (!positions.length) return null;
+
+    let totalValue = 0;
+    const weighted = [];
+
+    for (const pos of positions) {
+      const data = getTickerData(pos.ticker);
+      const price = data?.quote?.data?.c ?? pos.avgCost;
+      const beta = data?.metrics?.data?.metric?.beta;
+      const value = pos.qty * price;
+      totalValue += value;
+      if (beta != null && isFinite(beta)) {
+        weighted.push({ beta, value });
+      }
+    }
+
+    if (!weighted.length || totalValue === 0) return null;
+    const weightedBeta = weighted.reduce((sum, w) => sum + w.beta * (w.value / totalValue), 0);
+    return Math.round(weightedBeta * 100) / 100;
+  });
+
+  // Unrealized P&L across all open positions
+  const unrealizedPnL = $derived(() => {
+    const positions = getPositions();
+    if (!positions.length) return null;
+    let total = 0;
+    for (const pos of positions) {
+      const data = getTickerData(pos.ticker);
+      const price = data?.quote?.data?.c;
+      if (price != null) total += (price - pos.avgCost) * pos.qty;
+    }
+    return total;
+  });
+
   // Sector concentration from open positions
   const concentration = $derived(() => {
     const positions = getPositions();
@@ -66,8 +103,22 @@
 
 {#if stats()}
   {@const s = stats()}
+  {@const beta = portfolioBeta()}
+  {@const upnl = unrealizedPnL()}
   <div class="mt-8 border-t border-border/50 pt-6">
     <h2 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4">Portfolio Performance</h2>
+
+    <!-- Market sensitivity callout -->
+    {#if beta !== null}
+      <div class="mb-3 flex items-center gap-2 text-xs text-text-muted bg-surface-800 rounded-lg px-3 py-2 w-fit">
+        <span class="font-semibold text-text-secondary">Market sensitivity:</span>
+        <span class="font-mono font-bold {beta > 1.5 ? 'text-warning' : beta > 1 ? 'text-uncertain' : beta < 0 ? 'text-bear-weak' : 'text-bull-strong'}">{beta}×</span>
+        <span>— your portfolio moves ~{beta}× what SPY moves</span>
+        {#if beta > 1.5}<span class="text-warning">(high risk)</span>{/if}
+        {#if beta < 0}<span class="text-bear-weak">(inverse to market)</span>{/if}
+      </div>
+    {/if}
+
     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
       <div class="bg-surface-800 rounded-lg p-3">
         <p class="text-[10px] text-text-muted uppercase tracking-wider mb-1">Realized P&L</p>
@@ -102,6 +153,13 @@
         <p class="text-sm font-mono font-bold text-bear-strong">{fmt(s.worst?.pnl)}</p>
         <p class="text-[10px] text-text-muted font-mono">{s.worst?.symbol}</p>
       </div>
+      {#if upnl !== null}
+        <div class="bg-surface-800 rounded-lg p-3">
+          <p class="text-[10px] text-text-muted uppercase tracking-wider mb-1">Unrealized P&L</p>
+          <p class="text-sm font-mono font-bold {upnl >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">{fmt(upnl)}</p>
+          <p class="text-[10px] text-text-muted">open positions</p>
+        </div>
+      {/if}
     </div>
 
     <!-- Sector Concentration -->
