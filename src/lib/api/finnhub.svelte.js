@@ -5,6 +5,7 @@ const CACHE_TTL = {
   profile: 604800,
   search: 3600,
   news: 86400,
+  candles: 86400,
 };
 
 const CALL_DELAY_MS = 100;
@@ -133,7 +134,7 @@ export async function fetchNews(symbol) {
 export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
   if (!fromTs) fromTs = Math.floor((Date.now() - 180 * 86400000) / 1000);
   if (!toTs) toTs = Math.floor(Date.now() / 1000);
-  return fetchWithCache('quote', `candle_${symbol}`, () =>
+  return fetchWithCache('candles', `${symbol}_${resolution}`, () =>
     fetchFinnhub(`/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${fromTs}&to=${toTs}`)
   );
 }
