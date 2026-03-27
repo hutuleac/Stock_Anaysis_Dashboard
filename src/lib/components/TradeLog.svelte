@@ -45,6 +45,22 @@
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
   }
 
+  function exportCSV() {
+    const rows = [['Date', 'Symbol', 'Side', 'Shares', 'Price', 'Total', 'Notes']];
+    for (const t of trades) {
+      rows.push([
+        new Date(t.date).toISOString().split('T')[0],
+        t.symbol, t.side, t.shares, t.price.toFixed(2),
+        (t.shares * t.price).toFixed(2), t.notes,
+      ]);
+    }
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `trades-${symbol}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  }
+
   function formatPnL(val) {
     if (val == null) return null;
     const sign = val >= 0 ? '+' : '';
@@ -55,7 +71,15 @@
 <div class="space-y-3">
   <div class="flex items-center justify-between">
     <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Trade Log</h3>
-    <button
+    <div class="flex items-center gap-2">
+      {#if trades.length > 0}
+        <button
+          class="text-xs text-text-muted hover:text-text-secondary transition-colors"
+          onclick={exportCSV}
+          title="Export to CSV"
+        >↓ CSV</button>
+      {/if}
+      <button
       class="text-xs px-2.5 py-1 rounded bg-surface-600 hover:bg-surface-500 text-text-secondary hover:text-text-primary transition-colors"
       onclick={() => { showForm = !showForm; if (showForm) prefillCurrentPrice(); }}
     >
