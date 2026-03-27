@@ -1,5 +1,7 @@
 <script>
   import { getTrades, getRealizedPnL } from '../stores/tradelog.svelte.js';
+  import { getPositions } from '../stores/portfolio.svelte.js';
+  import { getTickers, getTickerData } from '../stores/watchlist.svelte.js';
 
   // Compute stats across all trades
   const stats = $derived(() => {
@@ -26,6 +28,33 @@
     const avgLoss = losers.length  ? losers.reduce((s, x) => s + x.pnl, 0)  / losers.length  : 0;
 
     return { totalPnL, winRate, trades: trades.length, closed: pnlBySymbol.length, best, worst, avgWin, avgLoss };
+  });
+
+  // Sector concentration from open positions
+  const concentration = $derived(() => {
+    const positions = getPositions();
+    if (!positions.length) return null;
+
+    const tickers = getTickers();
+    const sectorMap = Object.fromEntries(tickers.map(t => [t.symbol, t.sector || 'Unknown']));
+
+    const sectors = {};
+    let totalValue = 0;
+
+    for (const pos of positions) {
+      const data = getTickerData(pos.ticker);
+      const price = data?.quote?.data?.c ?? pos.avgCost;
+      const value = pos.qty * price;
+      const sector = sectorMap[pos.ticker] || 'Unknown';
+      sectors[sector] = (sectors[sector] || 0) + value;
+      totalValue += value;
+    }
+
+    if (totalValue === 0) return null;
+
+    return Object.entries(sectors)
+      .map(([sector, value]) => ({ sector, value, pct: (value / totalValue) * 100 }))
+      .sort((a, b) => b.pct - a.pct);
   });
 
   function fmt(val) {
@@ -74,5 +103,33 @@
         <p class="text-[10px] text-text-muted font-mono">{s.worst?.symbol}</p>
       </div>
     </div>
+
+    <!-- Sector Concentration -->
+    {#if concentration() && concentration().length > 0}
+      {@const conc = concentration()}
+      {@const overweight = conc.filter(c => c.pct > 40)}
+      {#if overweight.length}
+        <div class="mt-3 flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-lg px-3 py-2">
+          <span class="text-warning mt-0.5 shrink-0">⚠</span>
+          <p class="text-xs text-warning">
+            Concentration risk: {overweight.map(c => `${c.sector} (${c.pct.toFixed(0)}%)`).join(', ')} exceeds 40% of open positions. Consider diversifying before adding more.
+          </p>
+        </div>
+      {/if}
+      <div class="mt-3">
+        <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2">Sector Exposure</p>
+        <div class="flex flex-wrap gap-2">
+          {#each conc as c}
+            <div class="flex items-center gap-1.5 bg-surface-700 rounded px-2 py-1">
+              <span class="text-xs text-text-secondary">{c.sector}</span>
+              <span class="text-xs font-mono font-semibold {c.pct > 40 ? 'text-warning' : 'text-text-primary'}">{c.pct.toFixed(0)}%</span>
+              <div class="w-12 h-1 bg-surface-600 rounded-full overflow-hidden">
+                <div class="h-full rounded-full {c.pct > 40 ? 'bg-warning' : 'bg-bull-strong/60'}" style="width:{Math.min(c.pct, 100)}%"></div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   </div>
 {/if}
