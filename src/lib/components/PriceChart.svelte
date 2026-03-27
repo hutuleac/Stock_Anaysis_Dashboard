@@ -2,15 +2,22 @@
   import { onMount, onDestroy } from 'svelte';
   import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
   import { fetchCandles } from '../api/finnhub.svelte.js';
+  import { getChecklist } from '../stores/checklist.svelte.js';
 
   let { symbol } = $props();
 
   let container = $state(null);
   let chart = null;
   let series = null;
+  let stopLine = null;
   let loading = $state(true);
   let error = $state('');
   let timeframe = $state('3M');
+
+  const stopLossPrice = $derived(() => {
+    const val = parseFloat(getChecklist(symbol).stopLoss);
+    return isNaN(val) || val <= 0 ? null : val;
+  });
 
   const TIMEFRAMES = {
     '1M': 30,
@@ -125,6 +132,23 @@
     timeframe;
     symbol;
     if (chart) loadCandles();
+  });
+
+  $effect(() => {
+    // Update stop loss line on chart
+    if (!series) return;
+    const sl = stopLossPrice();
+    if (stopLine) { series.removePriceLine(stopLine); stopLine = null; }
+    if (sl) {
+      stopLine = series.createPriceLine({
+        price: sl,
+        color: '#ef4444',
+        lineWidth: 1,
+        lineStyle: 2, // dashed
+        axisLabelVisible: true,
+        title: `SL $${sl.toFixed(2)}`,
+      });
+    }
   });
 </script>
 
