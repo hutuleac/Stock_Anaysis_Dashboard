@@ -17,6 +17,42 @@
   let refreshError = $state('');
   let marketContextData = $state(null);
   let marketBarCollapsed = $state(false);
+  let marketStatus = $state(getMarketStatus());
+
+  function getMarketStatus() {
+    const now = new Date();
+    // Convert to US Eastern time
+    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const day = et.getDay(); // 0=Sun, 6=Sat
+    const h = et.getHours(), min = et.getMinutes();
+    const mins = h * 60 + min;
+    const isWeekday = day >= 1 && day <= 5;
+    const isOpen = isWeekday && mins >= 570 && mins < 960; // 9:30–16:00
+
+    let nextEvent = null;
+    if (isOpen) {
+      const closeMin = 960 - mins;
+      nextEvent = `Closes in ${Math.floor(closeMin / 60)}h ${closeMin % 60}m`;
+    } else {
+      // Next open: find next weekday 9:30
+      let minsToOpen = (570 - mins + 1440) % 1440;
+      if (!isWeekday) {
+        const daysToMon = day === 0 ? 1 : 7 - day + 1;
+        minsToOpen = daysToMon * 1440 - mins + 570;
+      } else if (mins >= 960) {
+        const daysToNext = day === 5 ? 3 : 1;
+        minsToOpen = daysToNext * 1440 - mins + 570;
+      }
+      const h2 = Math.floor(minsToOpen / 60), m2 = minsToOpen % 60;
+      nextEvent = h2 > 23 ? `Opens ${Math.floor(h2/24)}d ${h2%24}h` : `Opens in ${h2}h ${m2}m`;
+    }
+    return { isOpen, nextEvent };
+  }
+
+  // Refresh market status every minute
+  if (typeof window !== 'undefined') {
+    setInterval(() => { marketStatus = getMarketStatus(); }, 60000);
+  }
 
   // Load last refresh timestamp
   try {
@@ -131,6 +167,13 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Market status -->
+        <div class="hidden sm:flex items-center gap-1.5 text-xs">
+          <span class="w-1.5 h-1.5 rounded-full {marketStatus.isOpen ? 'bg-bull-strong animate-pulse' : 'bg-surface-500'}"></span>
+          <span class="{marketStatus.isOpen ? 'text-bull-strong' : 'text-text-muted'}">{marketStatus.isOpen ? 'OPEN' : 'CLOSED'}</span>
+          <span class="text-text-muted">{marketStatus.nextEvent}</span>
+        </div>
+
         <!-- Refresh button + progress -->
         {#if isRefreshing()}
           <div class="flex items-center gap-2 text-sm text-text-secondary">
