@@ -1,43 +1,82 @@
-# Svelte + Vite
+# Stock Analysis Dashboard v0.2
 
-This template should help get you started developing with Svelte in Vite.
+A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
 
-## Recommended IDE Setup
+## Features
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+### Watchlist
+- Search and add tickers via Finnhub search API
+- Bulk import — paste a comma/newline-separated list
+- Drag-and-drop reorder, sort by score/price/change
+- Price alerts — set above/below targets, notified on next refresh
 
-## Need an official Svelte framework?
+### Scoring Engine (10 signals)
+| Category | Signals |
+|----------|---------|
+| **Technical 35%** | EMA50 position, MA200 regime, 52-week range, daily momentum |
+| **Fundamental 45%** | P/E ratio, EPS growth, analyst price target premium |
+| **Sentiment 20%** | News headline keywords, sector ETF trend, insider net buying (90d) |
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+Score badges: `STRONG` · `LEAN LONG` · `NEUTRAL` · `LEAN SHORT` · `STRONG SHORT`
 
-## Technical considerations
+Score velocity arrow (↑↓→) shows 3-day delta. T/F/S sub-score bars per row.
 
-**Why use this over SvelteKit?**
+### Expanded Row (per ticker)
+- **Candlestick chart** — 1M / 3M / 6M / 1Y (TradingView lightweight-charts)
+- **News panel** — last 6 headlines with bull/bear/neutral sentiment dots
+- **Fundamentals bar** — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · Analyst Target · Insider 90d · 52w range
+- **Pre-Buy Checklist** — macro calendar, earnings gate, sector trend, stop-loss with quick-picks (3/5/8%)
+- **Entry Panel** — risk snapshot, position sizing (2% rule), scenario table — unlocks after checklist
+- **Trade Log** — BUY/SELL entries, FIFO realized P&L, unrealized P&L, CSV export
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+### Market Context Bar
+- VIX with plain-English interpretation (CALM → EXTREME)
+- SPY trend + sector leaders/laggards (11 ETFs)
+- Soft nudge banner for elevated risk conditions
 
-This template contains as little as possible to get started with Vite + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
+### App-level
+- Market hours indicator — OPEN/CLOSED + countdown (ET)
+- Portfolio summary — total realized P&L · open positions · trades logged
+- Keyboard shortcuts: `R` refresh · `Esc` close · `/` search
+- Offline banner, storage quota protection, cache-clear in Settings
 
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
+## Setup
 
-**Why include `.vscode/extensions.json`?**
+1. Get a free API key from [finnhub.io/register](https://finnhub.io/register)
+2. Clone and install:
+   ```bash
+   git clone https://github.com/hutuleac/Stock_Anaysis_Dashboard
+   cd Stock_Anaysis_Dashboard
+   npm install
+   npm run dev
+   ```
+3. Open `http://localhost:5173` — enter your API key when prompted, then hit Refresh
 
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
+## Tech Stack
 
-**Why enable `checkJs` in the JS template?**
+- **Svelte 5** (runes — `$state`, `$derived`, `$props`)
+- **Vite + Tailwind v4**
+- **TradingView lightweight-charts** — candlestick charts
+- **Finnhub.io** free tier — quotes, earnings, metrics, news, insider transactions
+- **localStorage** — all data stored client-side, nothing sent to any server
 
-It is likely that most cases of changing variable types in runtime are likely to be accidental, rather than deliberate. This provides advanced typechecking out of the box. Should you like to take advantage of the dynamically-typed nature of JavaScript, it is trivial to change the configuration.
+## Cache TTLs
 
-**Why is HMR not preserving my local component state?**
+| Data | TTL |
+|------|-----|
+| Quotes | No cache (always fresh) |
+| News / Earnings | 24h |
+| Candles | 24h |
+| Fundamentals / Profile / Insider | 7d |
 
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/sveltejs/svelte-hmr/tree/master/packages/svelte-hmr#preservation-of-local-state).
+## Changelog
 
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
+### v0.2 (2026-03-28)
+- 10-signal scoring engine with T/F/S sub-score bars + score velocity
+- Candlestick chart, news panel, fundamentals bar
+- Trade log (FIFO P&L + CSV export), price alerts, bulk import
+- Market hours indicator, keyboard shortcuts, mobile responsive
+- Position sizing (2% rule), stop loss quick-picks
 
-```js
-// store.js
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
-```
+### v0.1 (2026-03-27)
+- Watchlist, 3-signal score, pre-buy checklist, entry panel, market context bar
