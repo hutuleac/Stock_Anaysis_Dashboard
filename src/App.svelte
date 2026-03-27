@@ -7,6 +7,7 @@
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
+  import PortfolioStats from './lib/components/PortfolioStats.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   import OnboardingModal from './lib/components/OnboardingModal.svelte';
@@ -264,6 +265,8 @@
   <!-- Main content -->
   <main class="max-w-6xl mx-auto px-4 py-6">
     <WatchlistTable onTickerAdded={handleRefresh} />
+
+    <PortfolioStats />
 
     <!-- Portfolio summary strip -->
     {#if getTrades().length > 0 || getPositions().length > 0}
