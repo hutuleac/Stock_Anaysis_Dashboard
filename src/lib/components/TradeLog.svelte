@@ -85,6 +85,7 @@
     >
       {showForm ? '✕ Cancel' : '+ Log Trade'}
     </button>
+    </div>
   </div>
 
   <!-- Quick entry form -->
