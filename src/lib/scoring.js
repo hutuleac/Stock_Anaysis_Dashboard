@@ -219,6 +219,19 @@ export function storeScoreSnapshot(symbol, score) {
   } catch { /* noop */ }
 }
 
+export function getScoreHistory(symbol, maxPoints = 7) {
+  const key = VELOCITY_KEY(symbol);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const history = JSON.parse(raw);
+    const now = Date.now();
+    return history
+      .filter(e => now - e.ts < SEVEN_DAYS_MS)
+      .slice(-maxPoints);
+  } catch { return []; }
+}
+
 export function getScoreVelocity(symbol) {
   const key = VELOCITY_KEY(symbol);
   let history = [];

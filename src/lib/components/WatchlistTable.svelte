@@ -1,7 +1,7 @@
 <script>
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity } from '../scoring.js';
+  import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
   import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
   import PreBuyChecklist from './PreBuyChecklist.svelte';
@@ -107,6 +107,10 @@
       } else if (sortBy === 'earnings') {
         aVal = getDaysToEarnings(aData?.earnings) ?? 999;
         bVal = getDaysToEarnings(bData?.earnings) ?? 999;
+      } else if (sortBy === 'sector') {
+        aVal = a.sector || '';
+        bVal = b.sector || '';
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }
 
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
@@ -234,6 +238,9 @@
             <th class="px-3 py-3 text-left cursor-pointer hover:text-text-secondary" onclick={() => handleSort('symbol')}>
               Ticker {sortBy === 'symbol' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
+            <th class="px-3 py-3 text-left cursor-pointer hover:text-text-secondary hidden lg:table-cell" onclick={() => handleSort('sector')}>
+              Sector {sortBy === 'sector' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+            </th>
             <th class="px-3 py-3 text-right cursor-pointer hover:text-text-secondary" onclick={() => handleSort('price')}>
               Price {sortBy === 'price' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
@@ -261,6 +268,7 @@
             {@const isStale = data?.quote?.stale}
             {@const velocity = getScoreVelocity(ticker.symbol)}
             {@const hasAlert = getAlerts().some(a => a.symbol === ticker.symbol)}
+            {@const scoreHistory = getScoreHistory(ticker.symbol)}
 
             <tr
               class="border-b border-border/50 cursor-pointer transition-colors {isSelected ? 'bg-surface-700' : 'hover:bg-surface-800'}"
@@ -278,7 +286,10 @@
                     <span class="text-warning text-xs" title="Stale data">⚠</span>
                   {/if}
                 </div>
-                <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block">{ticker.sector}</div>
+                <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
+              </td>
+              <td class="px-3 py-3 hidden lg:table-cell">
+                <span class="text-xs text-text-muted truncate max-w-[160px] block">{ticker.sector || '—'}</span>
               </td>
               <td class="px-3 py-3 text-right font-mono">
                 {formatPrice(quote?.c)}
@@ -289,6 +300,17 @@
               <td class="px-3 py-3 text-right">
                 {#if score.score !== null}
                   <div class="flex items-center justify-end gap-2">
+                    <!-- Score sparkline -->
+                    {#if scoreHistory.length >= 2}
+                      {@const minS = Math.min(...scoreHistory.map(h => h.score))}
+                      {@const maxS = Math.max(...scoreHistory.map(h => h.score))}
+                      {@const range = Math.max(maxS - minS, 10)}
+                      {@const W = 32} {@const H = 14}
+                      {@const pts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * W},${H - ((h.score - minS) / range) * H}`).join(' ')}
+                      <svg width={W} height={H} class="hidden sm:block opacity-60" title="Score trend">
+                        <polyline points={pts} fill="none" stroke={velocity?.direction === 'down' ? '#ef4444' : '#22c55e'} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    {/if}
                     <span class="font-mono font-semibold">{score.score}</span>
                     {#if velocity}
                       <span
@@ -356,7 +378,7 @@
             <!-- Alert form row -->
             {#if alertSymbol === ticker.symbol}
               <tr onclick={(e) => e.stopPropagation()}>
-                <td colspan="8" class="px-4 py-2 bg-surface-800/80 border-b border-border/30">
+                <td colspan="9" class="px-4 py-2 bg-surface-800/80 border-b border-border/30">
                   <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs text-text-muted">Alert when {ticker.symbol} goes</span>
                     <select
@@ -391,7 +413,7 @@
             <!-- Inline expansion: Checklist + Entry Panel -->
             {#if isSelected}
               <tr>
-                <td colspan="8" class="p-0">
+                <td colspan="9" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
                       <PriceChart symbol={ticker.symbol} />
