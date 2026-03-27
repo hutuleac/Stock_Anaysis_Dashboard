@@ -104,6 +104,9 @@
       } else if (sortBy === 'change') {
         aVal = aData?.quote?.data?.dp ?? 0;
         bVal = bData?.quote?.data?.dp ?? 0;
+      } else if (sortBy === 'earnings') {
+        aVal = getDaysToEarnings(aData?.earnings) ?? 999;
+        bVal = getDaysToEarnings(bData?.earnings) ?? 999;
       }
 
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
@@ -241,7 +244,9 @@
               Score {sortBy === 'score' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
             <th class="px-3 py-3 text-center hidden sm:table-cell">Setup</th>
-            <th class="px-3 py-3 text-center hidden md:table-cell">Earnings</th>
+            <th class="px-3 py-3 text-center hidden md:table-cell cursor-pointer hover:text-text-secondary" onclick={() => handleSort('earnings')}>
+              Earnings {sortBy === 'earnings' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+            </th>
             <th class="w-10 px-2 py-3"></th>
           </tr>
         </thead>
