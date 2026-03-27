@@ -75,6 +75,32 @@
     onTickerAdded();
   }
 
+  function exportCSV() {
+    const rows = [['Symbol', 'Sector', 'Price', 'Change%', 'Score', 'Badge', 'Technical', 'Fundamental', 'Sentiment', 'EarningsDays']];
+    for (const t of getTickers()) {
+      const d = getTickerData(t.symbol);
+      const s = computeScore(d);
+      const q = d?.quote?.data;
+      rows.push([
+        t.symbol,
+        t.sector || '',
+        q?.c ?? '',
+        q?.dp ?? '',
+        s.score ?? '',
+        s.badge,
+        s.technical ?? '',
+        s.fundamental ?? '',
+        s.sentiment ?? '',
+        getDaysToEarnings(d?.earnings) ?? '',
+      ]);
+    }
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `watchlist-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
+
   function handleSort(field) {
     if (sortBy === field) {
       sortDir = sortDir === 'desc' ? 'asc' : 'desc';
@@ -170,6 +196,13 @@
         onclick={() => { bulkOpen = !bulkOpen; searchOpen = false; }}
         title="Bulk add tickers"
       >+ Bulk</button>
+      {#if getTickers().length > 0}
+        <button
+          class="px-3 py-2 text-xs bg-surface-700 hover:bg-surface-600 text-text-muted hover:text-text-secondary rounded-lg border border-border transition-colors whitespace-nowrap"
+          onclick={exportCSV}
+          title="Export watchlist to CSV"
+        >↓ CSV</button>
+      {/if}
     </div>
 
     <!-- Bulk add panel -->
@@ -261,7 +294,9 @@
           {#each getSortedTickers() as ticker, i}
             {@const data = getTickerData(ticker.symbol)}
             {@const score = computeScore(data)}
-            {@const badge = getBadgeStyle(score.badge)}
+            {@const checklist = getChecklist(ticker.symbol)}
+            {@const isBlocked = checklist.hardWarning && !checklist.hardWarningDismissed}
+            {@const badge = getBadgeStyle(isBlocked ? 'BLOCKED' : score.badge)}
             {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
             {@const isSelected = getSelectedSymbol() === ticker.symbol}
             {@const quote = data?.quote?.data}
