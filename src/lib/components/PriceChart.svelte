@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
+  import { createChart, CandlestickSeries, LineSeries, ColorType } from 'lightweight-charts';
   import { fetchCandles } from '../api/finnhub.svelte.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
 
@@ -9,9 +9,12 @@
   let container = $state(null);
   let chart = null;
   let series = null;
+  let ma50Series = null;
+  let ma200Series = null;
   let stopLine = null;
   let loading = $state(true);
   let error = $state('');
+  let showMA = $state(true);
   let timeframe = $state('3M');
 
   const stopLossPrice = $derived(() => {
@@ -36,6 +39,15 @@
     upWick:     '#22c55e',
     downWick:   '#ef4444',
   };
+
+  function computeMA(candles, period) {
+    return candles.reduce((acc, c, i) => {
+      if (i < period - 1) return acc;
+      const slice = candles.slice(i - period + 1, i + 1);
+      acc.push({ time: c.time, value: slice.reduce((s, x) => s + x.close, 0) / period });
+      return acc;
+    }, []);
+  }
 
   async function loadCandles() {
     if (!chart) return;
@@ -65,6 +77,17 @@
       })).sort((a, b) => a.time - b.time);
 
       series.setData(candles);
+
+      if (showMA) {
+        const ma50 = computeMA(candles, 50);
+        const ma200 = computeMA(candles, 200);
+        if (ma50.length) ma50Series?.setData(ma50);
+        if (ma200.length) ma200Series?.setData(ma200);
+      } else {
+        ma50Series?.setData([]);
+        ma200Series?.setData([]);
+      }
+
       chart.timeScale().fitContent();
     } catch (err) {
       error = 'Failed to load chart data';
@@ -99,6 +122,22 @@
       handleScale: true,
     });
 
+    ma50Series = chart.addSeries(LineSeries, {
+      color: '#f59e0b',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
+    ma200Series = chart.addSeries(LineSeries, {
+      color: '#3b82f6',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
     series = chart.addSeries(CandlestickSeries, {
       upColor:          CHART_COLORS.up,
       downColor:        CHART_COLORS.down,
@@ -115,8 +154,6 @@
     });
     ro.observe(container);
 
-    loadCandles();
-
     return () => {
       ro.disconnect();
     };
@@ -128,9 +165,10 @@
   });
 
   $effect(() => {
-    // Re-fetch when timeframe or symbol changes
+    // Re-fetch when timeframe, symbol, or MA toggle changes
     timeframe;
     symbol;
+    showMA;
     if (chart) loadCandles();
   });
 
@@ -156,17 +194,39 @@
   <!-- Header -->
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-border">
     <span class="text-sm font-semibold text-text-primary font-mono">{symbol}</span>
-    <div class="flex gap-1">
-      {#each Object.keys(TIMEFRAMES) as tf}
+    <div class="flex items-center gap-2">
+      <!-- MA toggle -->
+      <div class="flex items-center gap-1 border-r border-border pr-2">
         <button
-          class="px-2 py-0.5 text-xs rounded transition-colors {timeframe === tf
-            ? 'bg-bull-strong/20 text-bull-strong font-semibold'
-            : 'text-text-muted hover:text-text-secondary'}"
-          onclick={() => timeframe = tf}
+          class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}"
+          onclick={() => showMA = !showMA}
+          title="Toggle moving averages"
         >
-          {tf}
+          <span class="inline-block w-2 h-0.5 bg-amber-400 rounded"></span>
+          <span class="text-text-muted">MA50</span>
         </button>
-      {/each}
+        <button
+          class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}"
+          onclick={() => showMA = !showMA}
+          title="Toggle moving averages"
+        >
+          <span class="inline-block w-2 h-0.5 bg-blue-400 rounded"></span>
+          <span class="text-text-muted">MA200</span>
+        </button>
+      </div>
+      <!-- Timeframe buttons -->
+      <div class="flex gap-1">
+        {#each Object.keys(TIMEFRAMES) as tf}
+          <button
+            class="px-2 py-0.5 text-xs rounded transition-colors {timeframe === tf
+              ? 'bg-bull-strong/20 text-bull-strong font-semibold'
+              : 'text-text-muted hover:text-text-secondary'}"
+            onclick={() => timeframe = tf}
+          >
+            {tf}
+          </button>
+        {/each}
+      </div>
     </div>
   </div>
 
