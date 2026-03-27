@@ -15,6 +15,16 @@
   const complete = $derived(isChecklistComplete(symbol));
   const showAccToggle = $derived(showAccumulationToggle(symbol));
   const hasData = $derived(!!getTickerData(symbol));
+  const currentPrice = $derived(getTickerData(symbol)?.quote?.data?.c ?? null);
+
+  function stopSuggestions() {
+    if (!currentPrice) return [];
+    return [
+      { label: '3%', price: currentPrice * 0.97 },
+      { label: '5%', price: currentPrice * 0.95 },
+      { label: '8%', price: currentPrice * 0.92 },
+    ];
+  }
 </script>
 
 <div class="space-y-3">
@@ -195,6 +205,19 @@
           />
         </div>
         <p class="text-xs text-text-muted mt-1.5">This is the key — you cannot see your reward until you've committed to your risk.</p>
+        {#if stopSuggestions().length > 0}
+          <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span class="text-[10px] text-text-muted">Quick:</span>
+            {#each stopSuggestions() as s}
+              <button
+                class="text-[10px] px-2 py-0.5 rounded bg-surface-600 hover:bg-surface-500 text-text-muted hover:text-bear-strong transition-colors font-mono"
+                onclick={() => setStopLoss(symbol, s.price.toFixed(2))}
+              >
+                -{s.label} (${s.price.toFixed(2)})
+              </button>
+            {/each}
+          </div>
+        {/if}
       </label>
     </div>
   {/if}
