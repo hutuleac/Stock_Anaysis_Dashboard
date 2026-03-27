@@ -1,6 +1,6 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag } from './lib/api/finnhub.svelte.js';
-  import { getTickers, getSymbols, setMarketData, getTickerData } from './lib/stores/watchlist.svelte.js';
+  import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
@@ -33,7 +33,7 @@
       const tag = document.activeElement?.tagName;
       const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
       if (e.key === 'Escape') {
-        import('./lib/stores/watchlist.svelte.js').then(m => m.selectTicker(null));
+        selectTicker(null);
       } else if (e.key === 'r' && !isInput && !e.ctrlKey && !e.metaKey) {
         handleRefresh();
       } else if (e.key === '/' && !isInput) {
