@@ -36,15 +36,17 @@ export function computeScore(tickerData) {
 
   const ind = tickerData.indicators || null;
   let techScore = 0, techFactors = 0, techTotal = 4;
-  if (ind?.rsi  != null) techTotal++;
-  if (ind?.macd != null) techTotal++;
+  if (ind?.rsi    != null) techTotal++;
+  if (ind?.macd   != null) techTotal++;
+  if (ind?.adx    != null) techTotal++;
+  if (ind?.stochK != null) techTotal++;
   let fundScore = 0, fundFactors = 0, fundTotal = 3;
   let sentScore = 0, sentFactors = 0, sentTotal = 3;
 
   // ── TECHNICAL (35%) ─────────────────────────────────────────────────────────
 
   // T1: Price vs EMA50
-  const ema50 = metrics['50DayMovingAverage'];
+  const ema50 = metrics['50DayMovingAverage'] ?? ind?.ema50;
   if (ema50 && quote.c) {
     const pct = ((quote.c - ema50) / ema50) * 100;
     if (pct > 5)       techScore += 1;
@@ -55,7 +57,7 @@ export function computeScore(tickerData) {
   } else techScore += 0.5;
 
   // T2: Price vs MA200 (long-term regime)
-  const ma200 = metrics['200DayMovingAverage'];
+  const ma200 = metrics['200DayMovingAverage'] ?? ind?.ma200;
   if (ma200 && quote.c) {
     const pct = ((quote.c - ma200) / ma200) * 100;
     if (pct > 5)      techScore += 1;
@@ -109,6 +111,39 @@ export function computeScore(tickerData) {
     else if (histogram > 0)              techScore += 0.55;
     else if (histogram < 0 && macd < signal) techScore += 0.2;
     else                                 techScore += 0.4;
+    techFactors++;
+  }
+
+  // T7: ADX trend strength (>25 = trending, <20 = ranging)
+  if (ind?.adx != null) {
+    const adx = ind.adx;
+    const histPos = ind?.macd?.histogram != null ? ind.macd.histogram > 0 : null;
+    if (adx > 30) {
+      // Strong trend — score direction based on MACD histogram
+      techScore += histPos === true ? 1.0 : histPos === false ? 0.0 : 0.5;
+    } else if (adx > 25) {
+      techScore += histPos === true ? 0.8 : histPos === false ? 0.2 : 0.5;
+    } else if (adx > 20) {
+      techScore += 0.5; // emerging trend, no directional edge
+    } else {
+      techScore += 0.45; // ranging — slight negative, momentum trades stall
+    }
+    techFactors++;
+  }
+
+  // T8: Stochastic %K momentum (oversold/overbought zones + crossover)
+  if (ind?.stochK != null) {
+    const k = ind.stochK;
+    const cross = ind.stochCross;
+    if (cross === 'bullish_cross' && k < 30)      techScore += 1.0; // oversold bull cross — high confidence
+    else if (cross === 'bullish_cross')            techScore += 0.75;
+    else if (cross === 'bearish_cross' && k > 70)  techScore += 0.0; // overbought bear cross
+    else if (cross === 'bearish_cross')            techScore += 0.25;
+    else if (k < 20)  techScore += 0.85; // oversold
+    else if (k < 35)  techScore += 0.65; // mild oversold
+    else if (k < 60)  techScore += 0.5;  // neutral
+    else if (k < 75)  techScore += 0.4;  // mild overbought
+    else              techScore += 0.2;  // overbought
     techFactors++;
   }
 
@@ -308,7 +343,8 @@ export function generateThesis(tickerData, scoreResult) {
   const warnings = [];
 
   // ── TECHNICAL ──
-  const ema50 = metrics['50DayMovingAverage'];
+  const ind = tickerData.indicators || null;
+  const ema50 = metrics['50DayMovingAverage'] ?? ind?.ema50;
   if (ema50 && quote.c) {
     const pct = ((quote.c - ema50) / ema50) * 100;
     if (pct > 5)       bulls.push(`Price is ${pct.toFixed(1)}% above the 50-day MA — momentum is intact.`);
@@ -317,7 +353,7 @@ export function generateThesis(tickerData, scoreResult) {
     else               bears.push(`Price is well below the 50-day MA (${Math.abs(pct).toFixed(1)}%) — technical structure is broken.`);
   }
 
-  const ma200 = metrics['200DayMovingAverage'];
+  const ma200 = metrics['200DayMovingAverage'] ?? ind?.ma200;
   if (ma200 && quote.c) {
     const pct = ((quote.c - ma200) / ma200) * 100;
     if (pct > 5)       bulls.push(`Above the 200-day MA — long-term bull regime confirmed.`);
