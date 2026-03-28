@@ -23,11 +23,15 @@
   });
 
   const TIMEFRAMES = {
-    '1M': 30,
-    '3M': 90,
-    '6M': 180,
-    '1Y': 365,
+    '1D': { days: 2,   resolution: '60', intraday: true  },
+    '5D': { days: 7,   resolution: '60', intraday: true  },
+    '1M': { days: 30,  resolution: 'D',  intraday: false },
+    '3M': { days: 90,  resolution: 'D',  intraday: false },
+    '6M': { days: 180, resolution: 'D',  intraday: false },
+    '1Y': { days: 365, resolution: 'D',  intraday: false },
   };
+
+  const isIntraday = $derived(TIMEFRAMES[timeframe]?.intraday ?? false);
 
   const CHART_COLORS = {
     background: '#0f1117',
@@ -53,12 +57,21 @@
     if (!chart) return;
     loading = true;
     error = '';
-    const days = TIMEFRAMES[timeframe];
+    const tf     = TIMEFRAMES[timeframe];
     const toTs   = Math.floor(Date.now() / 1000);
-    const fromTs = Math.floor((Date.now() - days * 86400000) / 1000);
+    const fromTs = Math.floor((Date.now() - tf.days * 86400000) / 1000);
+
+    // Show/hide time axis for intraday
+    chart.applyOptions({
+      timeScale: {
+        borderColor: CHART_COLORS.border,
+        timeVisible: tf.intraday,
+        secondsVisible: false,
+      },
+    });
 
     try {
-      const result = await fetchCandles(symbol, 'D', fromTs, toTs);
+      const result = await fetchCandles(symbol, tf.resolution, fromTs, toTs);
       const raw = result.data;
 
       if (!raw || raw.s === 'no_data' || !raw.t?.length) {
@@ -67,7 +80,6 @@
         return;
       }
 
-      // Convert Finnhub candle arrays to lightweight-charts format
       const candles = raw.t.map((ts, i) => ({
         time: ts,
         open:  raw.o[i],
@@ -78,10 +90,11 @@
 
       series.setData(candles);
 
-      if (showMA) {
-        const ma50 = computeMA(candles, 50);
+      // MAs only meaningful on daily+ timeframes
+      if (showMA && !tf.intraday) {
+        const ma50  = computeMA(candles, 50);
         const ma200 = computeMA(candles, 200);
-        if (ma50.length) ma50Series?.setData(ma50);
+        if (ma50.length)  ma50Series?.setData(ma50);
         if (ma200.length) ma200Series?.setData(ma200);
       } else {
         ma50Series?.setData([]);
@@ -195,25 +208,27 @@
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-border">
     <span class="text-sm font-semibold text-text-primary font-mono">{symbol}</span>
     <div class="flex items-center gap-2">
-      <!-- MA toggle -->
-      <div class="flex items-center gap-1 border-r border-border pr-2">
-        <button
-          class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}"
-          onclick={() => showMA = !showMA}
-          title="Toggle moving averages"
-        >
-          <span class="inline-block w-2 h-0.5 bg-amber-400 rounded"></span>
-          <span class="text-text-muted">MA50</span>
-        </button>
-        <button
-          class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}"
-          onclick={() => showMA = !showMA}
-          title="Toggle moving averages"
-        >
-          <span class="inline-block w-2 h-0.5 bg-blue-400 rounded"></span>
-          <span class="text-text-muted">MA200</span>
-        </button>
-      </div>
+      <!-- MA toggle (daily only) -->
+      {#if !isIntraday}
+        <div class="flex items-center gap-1 border-r border-border pr-2">
+          <button
+            class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}"
+            onclick={() => showMA = !showMA}
+            title="Toggle moving averages"
+          >
+            <span class="inline-block w-2 h-0.5 bg-amber-400 rounded"></span>
+            <span class="text-text-muted">MA50</span>
+          </button>
+          <button
+            class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}"
+            onclick={() => showMA = !showMA}
+            title="Toggle moving averages"
+          >
+            <span class="inline-block w-2 h-0.5 bg-blue-400 rounded"></span>
+            <span class="text-text-muted">MA200</span>
+          </button>
+        </div>
+      {/if}
       <!-- Timeframe buttons -->
       <div class="flex gap-1">
         {#each Object.keys(TIMEFRAMES) as tf}
