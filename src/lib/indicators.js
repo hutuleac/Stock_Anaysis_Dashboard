@@ -101,13 +101,48 @@ export function computeATR(highs, lows, closes, period = 14) {
   return recent.reduce((s, v) => s + v, 0) / recent.length;
 }
 
-// ── Main: compute all indicators from raw Finnhub candle response ─────────────
+// ── Z-score of RSI vs its own rolling 90-candle history ─────────────────────
+// Returns how many std-devs the current RSI is above/below its recent average.
+// e.g. +1.8 = RSI unusually high vs recent history; -1.5 = unusually low.
+export function computeRSIZScore(closes, period = 14) {
+  if (!closes || closes.length < period + 30) return null;
+
+  const windowSize = Math.min(closes.length - period, 90);
+  const startIdx = closes.length - windowSize;
+
+  const rsiHistory = [];
+  for (let i = startIdx; i < closes.length; i++) {
+    const rsi = computeRSI(closes.slice(0, i + 1), period);
+    if (rsi !== null) rsiHistory.push(rsi);
+  }
+
+  if (rsiHistory.length < 5) return null;
+
+  const current = rsiHistory[rsiHistory.length - 1];
+  const mean = rsiHistory.reduce((s, v) => s + v, 0) / rsiHistory.length;
+  const variance = rsiHistory.reduce((s, v) => s + (v - mean) ** 2, 0) / rsiHistory.length;
+  const stddev = Math.sqrt(variance);
+
+  if (stddev < 0.1) return 0;
+  return Math.round(((current - mean) / stddev) * 10) / 10;
+}
+
+// ── Main: compute all indicators from raw Finnhub/TwelveData candle response ──
 export function computeIndicatorsFromCandles(raw) {
   if (!raw?.c || raw.s !== 'ok' || raw.c.length < 30) return null;
 
   const closes = raw.c;
   const [rsiCurr, rsiPrev] = computeRSIPair(closes);
   const macdResult = computeMACD(closes);
+
+  // EMA/SMA values — used in scoring + FundamentalsBar (no extra API credits)
+  const ema20arr = emaArray(closes, 20);
+  const ema50arr = emaArray(closes, 50);
+  const ema20 = ema20arr.length > 0 ? Math.round(ema20arr[ema20arr.length - 1] * 100) / 100 : null;
+  const ema50 = ema50arr.length > 0 ? Math.round(ema50arr[ema50arr.length - 1] * 100) / 100 : null;
+  const ma200 = closes.length >= 200
+    ? Math.round((closes.slice(-200).reduce((s, v) => s + v, 0) / 200) * 100) / 100
+    : null;
 
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
@@ -117,9 +152,13 @@ export function computeIndicatorsFromCandles(raw) {
         : rsiCurr < rsiPrev - 0.1 ? 'falling'
         : 'flat'
       : null,
+    rsiZScore: computeRSIZScore(closes),
     macd: macdResult ? macdResult.current : null,
     macdCrossover: macdResult ? macdResult.crossover : null,
     bb: null,
+    ema20,
+    ema50,
+    ma200,
     source: 'local',
   };
 }

@@ -46,10 +46,25 @@
     };
   }
 
-  function getNudge(vixLevel, spyTrend) {
+  function getFearGreedInfo(fg) {
+    if (!fg) return null;
+    const score = fg.score;
+    if (score == null) return null;
+    let color, label;
+    if (score <= 25)      { color = 'text-bear-strong'; label = 'Extreme Fear'; }
+    else if (score <= 40) { color = 'text-bear-weak';   label = 'Fear'; }
+    else if (score <= 60) { color = 'text-text-secondary'; label = 'Neutral'; }
+    else if (score <= 75) { color = 'text-bull-strong'; label = 'Greed'; }
+    else                  { color = 'text-bull-strong'; label = 'Extreme Greed'; }
+    return { score, label: fg.rating ?? label, color };
+  }
+
+  function getNudge(vixLevel, spyTrend, fgInfo) {
     if (vixLevel === 'extreme') return { text: 'Extreme fear in the market — cash is a valid position today', type: 'danger' };
+    if (fgInfo?.score != null && fgInfo.score <= 25) return { text: `Fear & Greed at ${fgInfo.score} (Extreme Fear) — market in panic mode, tread carefully`, type: 'danger' };
     if (vixLevel === 'high') return { text: 'Market anxiety is high — consider reducing position sizes', type: 'warning' };
     if (vixLevel === 'elevated' && spyTrend === 'Bearish') return { text: 'Elevated VIX + bearish trend — not ideal for new longs', type: 'warning' };
+    if (fgInfo?.score != null && fgInfo.score >= 80) return { text: `Fear & Greed at ${fgInfo.score} (Extreme Greed) — market extended, contrarian caution`, type: 'warning' };
     return null;
   }
 
@@ -59,7 +74,8 @@
   let spyData = $derived(marketData?.spy?.data ?? null);
   let spyTrend = $derived(getSpyTrend(spyData));
   let sectorInfo = $derived(getSectorLeaders(marketData?.sectors));
-  let nudge = $derived(getNudge(vixInfo.level, spyTrend.label));
+  let fgInfo = $derived(getFearGreedInfo(marketData?.fearGreed?.data));
+  let nudge = $derived(getNudge(vixInfo.level, spyTrend.label, fgInfo));
 </script>
 
 <!-- Nudge Banner -->
@@ -121,6 +137,27 @@
 
         <!-- Divider -->
         <div class="w-px h-8 bg-border"></div>
+
+        <!-- Fear & Greed -->
+        {#if fgInfo}
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] uppercase tracking-wider text-text-muted">Fear & Greed</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold font-mono {fgInfo.color}">{fgInfo.score}</span>
+              <span class="text-[10px] font-semibold {fgInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">{fgInfo.label}</span>
+            </div>
+            <!-- Gauge bar 0–100 -->
+            <div class="w-20 h-1 bg-surface-700 rounded-full overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all {fgInfo.score <= 40 ? 'bg-bear-strong' : fgInfo.score <= 60 ? 'bg-text-muted' : 'bg-bull-strong'}"
+                style="width: {fgInfo.score}%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="w-px h-8 bg-border"></div>
+        {/if}
 
         <!-- Sector Leaders -->
         <div class="flex flex-col gap-0.5">

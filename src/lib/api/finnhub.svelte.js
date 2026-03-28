@@ -8,6 +8,7 @@ const CACHE_TTL = {
   candles: 86400,
   candles_intraday: 900, // 15 min — intraday data refreshes frequently
   insider: 604800,
+  feargreed: 3600,       // CNN Fear & Greed — 1 hour
 };
 
 const CALL_DELAY_MS = 100;
@@ -250,6 +251,32 @@ export async function fetchSectorETFQuote(sector) {
   return fetchQuote(etf);
 }
 
+// ── CNN Fear & Greed Index ────────────────────────────────────────────────────
+// Returns { score: 0–100, rating: string } or null on failure.
+export async function fetchFearAndGreed() {
+  const key = 'fh_feargreed_market';
+  const ttl = CACHE_TTL.feargreed;
+  const cached = readCache(key, ttl);
+  if (cached) return { data: cached, stale: false };
+
+  try {
+    const res  = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const fg   = json.fear_and_greed;
+    if (!fg?.score) throw new Error('Unexpected F&G shape');
+    const data = { score: Math.round(fg.score), rating: fg.rating ?? 'Unknown' };
+    writeCache(key, data);
+    return { data, stale: false };
+  } catch (err) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return { data: JSON.parse(raw).data, stale: true, error: err.message };
+    } catch { /* noop */ }
+    return { data: null, stale: true, error: err.message };
+  }
+}
+
 // All unique sector ETFs for market context
 const ALL_SECTOR_ETFS = ['XLK', 'XLF', 'XLV', 'XLY', 'XLP', 'XLE', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC'];
 
@@ -263,6 +290,10 @@ export async function fetchMarketContext() {
   const vixResult = await fetchQuote('VIX').catch(() => ({ data: null, stale: true }));
   await delay(CALL_DELAY_MS);
 
+  // Fear & Greed (non-blocking — CORS may fail on some networks)
+  const fearGreed = await fetchFearAndGreed().catch(() => ({ data: null, stale: true }));
+  await delay(CALL_DELAY_MS);
+
   // Fetch all sector ETFs
   const sectorResults = {};
   for (const etf of ALL_SECTOR_ETFS) {
@@ -270,5 +301,5 @@ export async function fetchMarketContext() {
     await delay(CALL_DELAY_MS);
   }
 
-  return { vix: vixResult, spy: spyQuote, sectors: sectorResults };
+  return { vix: vixResult, spy: spyQuote, fearGreed, sectors: sectorResults };
 }
