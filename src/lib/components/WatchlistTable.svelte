@@ -2,6 +2,7 @@
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
+  import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
   import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
   import PreBuyChecklist from './PreBuyChecklist.svelte';
@@ -320,6 +321,9 @@
                   {#if isStale}
                     <span class="text-warning text-xs" title="Stale data">⚠</span>
                   {/if}
+                  {#if hasNotes(ticker.symbol)}
+                    <span class="text-[10px] text-uncertain" title="Has notes">📝</span>
+                  {/if}
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
               </td>
@@ -512,6 +516,22 @@
                       <PreBuyChecklist symbol={ticker.symbol} />
                       <EntryPanel symbol={ticker.symbol} />
                       <TradeLog symbol={ticker.symbol} />
+                    </div>
+
+                    <!-- Per-ticker notes -->
+                    <div class="mt-4 border-t border-border/30 pt-4">
+                      <label class="block">
+                        <span class="text-[10px] text-text-muted uppercase tracking-wider mb-1.5 block">
+                          Notes — {ticker.symbol}
+                        </span>
+                        <textarea
+                          class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-uncertain/50 resize-none font-mono leading-relaxed"
+                          rows="3"
+                          placeholder="Thesis, key levels, catalysts, reminders…"
+                          value={getNotes(ticker.symbol)}
+                          oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
+                        ></textarea>
+                      </label>
                     </div>
                   </div>
                 </td>
