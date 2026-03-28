@@ -223,13 +223,13 @@
 
     <!-- Conviction — signal agreement score -->
     {#if score.conviction != null}
+      {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-uncertain' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}
       <div class="flex flex-col min-w-[80px]" title={convictionTooltip(score.conviction, score.convictionLabel)}>
         <span class="text-[10px] text-text-muted uppercase tracking-wider">Conviction</span>
         <div class="flex items-baseline gap-1 mt-0.5">
-          {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-uncertain' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}
           <span class="text-sm font-mono font-semibold {convColor}">{score.conviction}%</span>
         </div>
-        <span class="text-[9px] {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}">{score.convictionLabel}</span>
+        <span class="text-[9px] {convColor}">{score.convictionLabel}</span>
       </div>
     {/if}
 
