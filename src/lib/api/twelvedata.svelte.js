@@ -5,10 +5,12 @@
 const BASE = 'https://api.twelvedata.com';
 
 const CACHE_TTL = {
-  rsi:   3600,   // 1 hour
-  macd:  3600,
-  bbands: 3600,
-  tdquote: 0,    // never cache real-time quote
+  rsi:     3600,
+  macd:    3600,
+  bbands:  3600,
+  tdquote: 0,
+  ts_1day: 86400,  // daily candles — 24h
+  ts_1h:   900,    // intraday candles — 15 min
 };
 
 let tdApiKey = $state('');
@@ -142,6 +144,21 @@ export async function fetchTDQuote(symbol) {
   } catch {
     return null;
   }
+}
+
+// ── OHLCV candle series ───────────────────────────────────────────────────────
+// interval: '1day' | '1week' | '1h' | '4h' etc.
+// outputsize: number of bars (max 5000 on free tier)
+// Returns values array sorted ascending (oldest first), ready for lightweight-charts
+export async function fetchTimeSeries(symbol, interval, outputsize) {
+  const cacheType = interval === '1h' ? 'ts_1h' : 'ts_1day';
+  return fetchWithCache(cacheType, `${symbol}_${interval}`, async () => {
+    const json = await fetchTD(
+      `/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputsize}&order=ASC`
+    );
+    if (!json.values?.length) throw new Error('No candle data');
+    return json.values;
+  });
 }
 
 // ── Fetch all indicators for one symbol ──────────────────────────────────────

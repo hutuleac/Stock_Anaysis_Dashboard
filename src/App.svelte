@@ -1,6 +1,6 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, hydrateFromCache } from './lib/api/finnhub.svelte.js';
-  import { hasTDApiKey, fetchIndicators } from './lib/api/twelvedata.svelte.js';
+  import { hasTDApiKey, fetchIndicators, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
@@ -155,15 +155,38 @@
 
         // Daily candles → local RSI/MACD indicators
         try {
-          const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
-          const localInd = computeIndicatorsFromCandles(candleRes?.data);
-          if (localInd) results[ticker.symbol].indicators = localInd;
+          if (hasTDApiKey()) {
+            // TwelveData — Finnhub free tier blocks /candle
+            const candleRes = await fetchTimeSeries(ticker.symbol, '1day', 120);
+            if (candleRes?.data?.length) {
+              // Convert to Finnhub-style raw object for computeIndicatorsFromCandles
+              const vals = candleRes.data;
+              const synthetic = {
+                s: 'ok',
+                t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
+                o: vals.map(v => parseFloat(v.open)),
+                h: vals.map(v => parseFloat(v.high)),
+                l: vals.map(v => parseFloat(v.low)),
+                c: vals.map(v => parseFloat(v.close)),
+                v: vals.map(v => parseInt(v.volume, 10)),
+              };
+              const localInd = computeIndicatorsFromCandles(synthetic);
+              if (localInd) results[ticker.symbol].indicators = localInd;
 
-          // Weekly candles → multi-timeframe trend confirmation
-          const weeklyFromTs = toTs - 52 * 7 * 86400; // ~1 year of weekly bars
-          const weeklyRes = await fetchCandles(ticker.symbol, 'W', weeklyFromTs, toTs);
-          const weeklyTrend = computeWeeklyTrend(weeklyRes?.data);
-          if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
+              // Weekly trend from same data (resample: take every 5th bar)
+              const weeklyTrend = computeWeeklyTrend(synthetic);
+              if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
+            }
+          } else {
+            const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
+            const localInd = computeIndicatorsFromCandles(candleRes?.data);
+            if (localInd) results[ticker.symbol].indicators = localInd;
+
+            const weeklyFromTs = toTs - 52 * 7 * 86400;
+            const weeklyRes = await fetchCandles(ticker.symbol, 'W', weeklyFromTs, toTs);
+            const weeklyTrend = computeWeeklyTrend(weeklyRes?.data);
+            if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
+          }
         } catch { /* non-blocking */ }
       }
 

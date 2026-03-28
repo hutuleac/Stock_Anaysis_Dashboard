@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { createChart, CandlestickSeries, LineSeries, ColorType } from 'lightweight-charts';
   import { fetchCandles } from '../api/finnhub.svelte.js';
+  import { hasTDApiKey, fetchTimeSeries } from '../api/twelvedata.svelte.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
 
   let { symbol } = $props();
@@ -24,12 +25,12 @@
   });
 
   const TIMEFRAMES = {
-    '1D': { days: 2,   resolution: '60', intraday: true  },
-    '5D': { days: 7,   resolution: '60', intraday: true  },
-    '1M': { days: 30,  resolution: 'D',  intraday: false },
-    '3M': { days: 90,  resolution: 'D',  intraday: false },
-    '6M': { days: 180, resolution: 'D',  intraday: false },
-    '1Y': { days: 365, resolution: 'D',  intraday: false },
+    '1D': { days: 2,   resolution: '60', intraday: true,  tdInterval: '1h',    tdOutput: 48   },
+    '5D': { days: 7,   resolution: '60', intraday: true,  tdInterval: '1h',    tdOutput: 200  },
+    '1M': { days: 30,  resolution: 'D',  intraday: false, tdInterval: '1day',  tdOutput: 30   },
+    '3M': { days: 90,  resolution: 'D',  intraday: false, tdInterval: '1day',  tdOutput: 90   },
+    '6M': { days: 180, resolution: 'D',  intraday: false, tdInterval: '1day',  tdOutput: 180  },
+    '1Y': { days: 365, resolution: 'D',  intraday: false, tdInterval: '1day',  tdOutput: 365  },
   };
 
   const isIntraday = $derived(TIMEFRAMES[timeframe]?.intraday ?? false);
@@ -72,24 +73,46 @@
     });
 
     try {
-      const result = await fetchCandles(symbol, tf.resolution, fromTs, toTs);
-      const raw = result.data;
-      console.log('[Chart] candle result — status:', raw?.s, 'count:', raw?.t?.length, 'stale:', result.stale, 'error:', result.error);
+      let candles;
 
-      if (!raw || raw.s === 'no_data' || !raw.t?.length) {
-        console.warn('[Chart] no data available');
-        error = 'No chart data available';
-        loading = false;
-        return;
+      if (hasTDApiKey()) {
+        // TwelveData — primary source (Finnhub free tier blocks /candle)
+        const result = await fetchTimeSeries(symbol, tf.tdInterval, tf.tdOutput);
+        const values = result.data;
+        console.log('[Chart] TD candle result — count:', values?.length, 'stale:', result.stale, 'error:', result.error);
+        if (!values?.length) {
+          error = 'No chart data available';
+          loading = false;
+          return;
+        }
+        candles = values.map(v => ({
+          // daily: "2023-01-15" string; intraday: "2023-01-15 14:30:00" UTC → unix seconds
+          time: tf.intraday
+            ? Math.floor(new Date(v.datetime.replace(' ', 'T') + 'Z').getTime() / 1000)
+            : v.datetime,
+          open:  parseFloat(v.open),
+          high:  parseFloat(v.high),
+          low:   parseFloat(v.low),
+          close: parseFloat(v.close),
+        }));
+      } else {
+        // Finnhub fallback
+        const result = await fetchCandles(symbol, tf.resolution, fromTs, toTs);
+        const raw = result.data;
+        console.log('[Chart] FH candle result — status:', raw?.s, 'count:', raw?.t?.length, 'stale:', result.stale, 'error:', result.error);
+        if (!raw || raw.s === 'no_data' || !raw.t?.length) {
+          error = 'No chart data available';
+          loading = false;
+          return;
+        }
+        candles = raw.t.map((ts, i) => ({
+          time: ts,
+          open:  raw.o[i],
+          high:  raw.h[i],
+          low:   raw.l[i],
+          close: raw.c[i],
+        })).sort((a, b) => a.time - b.time);
       }
-
-      const candles = raw.t.map((ts, i) => ({
-        time: ts,
-        open:  raw.o[i],
-        high:  raw.h[i],
-        low:   raw.l[i],
-        close: raw.c[i],
-      })).sort((a, b) => a.time - b.time);
 
       console.log('[Chart] setData with', candles.length, 'candles, first:', candles[0], 'last:', candles[candles.length-1]);
       series.setData(candles);
