@@ -1,5 +1,15 @@
 // 9-signal scoring engine — Technical 35% / Fundamental 45% / Sentiment 20%
 // Missing data → signal neutral (0.5), not penalised. Factor count tracks completeness.
+// Regime-aware: VIX > 25 shifts weight toward fundamentals.
+// Market-context penalties: SPY downtrend (-20% pull toward neutral) + F&G adjustments.
+
+// ─── MARKET CONTEXT (module-level, set once per refresh) ──────────────────────
+// Consumed by computeScore() so all callers get regime-aware scores automatically.
+
+let _marketContext = null;
+
+export function setMarketContext(ctx) { _marketContext = ctx; }
+export function getMarketContext()    { return _marketContext; }
 
 // ─── NEWS SENTIMENT ────────────────────────────────────────────────────────────
 
@@ -23,10 +33,12 @@ export function scoreNewsHeadlines(newsData) {
 }
 
 // ─── MAIN SCORING ENGINE ───────────────────────────────────────────────────────
+// marketContext: { vixPrice, spyDowntrend, fearGreedValue } — all optional.
+// Defaults to module-level _marketContext (set via setMarketContext on each refresh).
 
-export function computeScore(tickerData) {
+export function computeScore(tickerData, marketContext = _marketContext) {
   if (!tickerData?.quote?.data) {
-    return { score: null, badge: 'NEUTRAL', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null };
+    return { score: null, badge: 'NEUTRAL', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null, conviction: null, convictionLabel: null, regimeNote: null, spyPenaltyApplied: false, rsiZScore: null, scoreZScore: null };
   }
 
   const quote   = tickerData.quote.data;
@@ -43,168 +55,138 @@ export function computeScore(tickerData) {
   let fundScore = 0, fundFactors = 0, fundTotal = 3;
   let sentScore = 0, sentFactors = 0, sentTotal = 3;
 
+  // Collect individual signal values for conviction scoring (only when data present)
+  const signals = [];
+
   // ── TECHNICAL (35%) ─────────────────────────────────────────────────────────
 
   // T1: Price vs EMA50
   const ema50 = metrics['50DayMovingAverage'] ?? ind?.ema50;
   if (ema50 && quote.c) {
     const pct = ((quote.c - ema50) / ema50) * 100;
-    if (pct > 5)       techScore += 1;
-    else if (pct > 0)  techScore += 0.65;
-    else if (pct > -5) techScore += 0.35;
-    else               techScore += 0;
-    techFactors++;
+    const v = pct > 5 ? 1 : pct > 0 ? 0.65 : pct > -5 ? 0.35 : 0;
+    techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
   // T2: Price vs MA200 (long-term regime)
   const ma200 = metrics['200DayMovingAverage'] ?? ind?.ma200;
   if (ma200 && quote.c) {
     const pct = ((quote.c - ma200) / ma200) * 100;
-    if (pct > 5)      techScore += 1;
-    else if (pct > 0) techScore += 0.7;
-    else if (pct > -10) techScore += 0.3;
-    else              techScore += 0;
-    techFactors++;
+    const v = pct > 5 ? 1 : pct > 0 ? 0.7 : pct > -10 ? 0.3 : 0;
+    techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
   // T3: 52-week position (price vs high/low range)
   const high52 = metrics['52WeekHigh'];
   const low52  = metrics['52WeekLow'];
   if (high52 && low52 && quote.c && high52 > low52) {
-    const pos = (quote.c - low52) / (high52 - low52); // 0=at low, 1=at high
-    // Sweet spot for swing: 0.4–0.7 (not extended, not broken)
-    if (pos >= 0.4 && pos <= 0.7)       techScore += 0.9;
-    else if (pos > 0.7 && pos <= 0.85)  techScore += 0.7;
-    else if (pos > 0.85)                techScore += 0.5; // extended
-    else if (pos >= 0.2)                techScore += 0.4;
-    else                                techScore += 0.1; // near 52w low
-    techFactors++;
+    const pos = (quote.c - low52) / (high52 - low52);
+    const v = pos >= 0.4 && pos <= 0.7 ? 0.9
+            : pos > 0.7 && pos <= 0.85 ? 0.7
+            : pos > 0.85               ? 0.5
+            : pos >= 0.2               ? 0.4
+            :                            0.1;
+    techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
   // T4: Daily momentum
   if (quote.dp !== undefined && quote.dp !== null) {
-    if (quote.dp > 2)       techScore += 1;
-    else if (quote.dp > 0)  techScore += 0.65;
-    else if (quote.dp > -2) techScore += 0.35;
-    else                    techScore += 0;
-    techFactors++;
+    const v = quote.dp > 2 ? 1 : quote.dp > 0 ? 0.65 : quote.dp > -2 ? 0.35 : 0;
+    techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
   // T5: RSI(14) — oversold = buying opportunity for swing traders
   if (ind?.rsi != null) {
     const rsi = ind.rsi;
-    if (rsi < 30)                  techScore += 1.0;  // oversold
-    else if (rsi < 40)             techScore += 0.8;  // mild oversold
-    else if (rsi < 55)             techScore += 0.55; // neutral
-    else if (rsi < 70)             techScore += 0.75; // momentum (not yet extended)
-    else                           techScore += 0.25; // overbought — caution
-    techFactors++;
+    const v = rsi < 30 ? 1.0 : rsi < 40 ? 0.8 : rsi < 55 ? 0.55 : rsi < 70 ? 0.75 : 0.25;
+    techScore += v; techFactors++; signals.push(v);
   }
 
   // T6: MACD — histogram direction + line vs signal
   if (ind?.macd != null) {
     const { histogram, macd, signal } = ind.macd;
     const cross = ind.macdCrossover;
-    if (cross === 'bullish_cross')       techScore += 1.0; // fresh crossover — strongest signal
-    else if (cross === 'bearish_cross')  techScore += 0.0;
-    else if (histogram > 0 && macd > signal) techScore += 0.75;
-    else if (histogram > 0)              techScore += 0.55;
-    else if (histogram < 0 && macd < signal) techScore += 0.2;
-    else                                 techScore += 0.4;
-    techFactors++;
+    let v;
+    if (cross === 'bullish_cross')                   v = 1.0;
+    else if (cross === 'bearish_cross')              v = 0.0;
+    else if (histogram > 0 && macd > signal)         v = 0.75;
+    else if (histogram > 0)                          v = 0.55;
+    else if (histogram < 0 && macd < signal)         v = 0.2;
+    else                                             v = 0.4;
+    techScore += v; techFactors++; signals.push(v);
   }
 
   // T7: ADX trend strength (>25 = trending, <20 = ranging)
   if (ind?.adx != null) {
     const adx = ind.adx;
     const histPos = ind?.macd?.histogram != null ? ind.macd.histogram > 0 : null;
-    if (adx > 30) {
-      // Strong trend — score direction based on MACD histogram
-      techScore += histPos === true ? 1.0 : histPos === false ? 0.0 : 0.5;
-    } else if (adx > 25) {
-      techScore += histPos === true ? 0.8 : histPos === false ? 0.2 : 0.5;
-    } else if (adx > 20) {
-      techScore += 0.5; // emerging trend, no directional edge
-    } else {
-      techScore += 0.45; // ranging — slight negative, momentum trades stall
-    }
-    techFactors++;
+    let v;
+    if (adx > 30)       v = histPos === true ? 1.0 : histPos === false ? 0.0 : 0.5;
+    else if (adx > 25)  v = histPos === true ? 0.8 : histPos === false ? 0.2 : 0.5;
+    else if (adx > 20)  v = 0.5;
+    else                v = 0.45;
+    techScore += v; techFactors++; signals.push(v);
   }
 
   // T8: Stochastic %K momentum (oversold/overbought zones + crossover)
   if (ind?.stochK != null) {
     const k = ind.stochK;
     const cross = ind.stochCross;
-    if (cross === 'bullish_cross' && k < 30)      techScore += 1.0; // oversold bull cross — high confidence
-    else if (cross === 'bullish_cross')            techScore += 0.75;
-    else if (cross === 'bearish_cross' && k > 70)  techScore += 0.0; // overbought bear cross
-    else if (cross === 'bearish_cross')            techScore += 0.25;
-    else if (k < 20)  techScore += 0.85; // oversold
-    else if (k < 35)  techScore += 0.65; // mild oversold
-    else if (k < 60)  techScore += 0.5;  // neutral
-    else if (k < 75)  techScore += 0.4;  // mild overbought
-    else              techScore += 0.2;  // overbought
-    techFactors++;
+    let v;
+    if (cross === 'bullish_cross' && k < 30)    v = 1.0;
+    else if (cross === 'bullish_cross')          v = 0.75;
+    else if (cross === 'bearish_cross' && k > 70) v = 0.0;
+    else if (cross === 'bearish_cross')          v = 0.25;
+    else if (k < 20)  v = 0.85;
+    else if (k < 35)  v = 0.65;
+    else if (k < 60)  v = 0.5;
+    else if (k < 75)  v = 0.4;
+    else              v = 0.2;
+    techScore += v; techFactors++; signals.push(v);
   }
 
-  // Normalise technical to 0–1
   const techNorm = techScore / techTotal;
 
   // ── FUNDAMENTAL (45%) ────────────────────────────────────────────────────────
 
-  // F1: P/E ratio (prefer 10–30 for swing traders; penalise negative or >60)
   const pe = metrics['peNormalizedAnnual'] ?? metrics['peBasicExclExtraTTM'];
   if (pe != null && pe > 0) {
-    if (pe >= 10 && pe <= 25)      fundScore += 1;
-    else if (pe > 25 && pe <= 40)  fundScore += 0.65;
-    else if (pe > 40 && pe <= 60)  fundScore += 0.4;
-    else if (pe > 60)              fundScore += 0.15;
-    else if (pe > 0 && pe < 10)    fundScore += 0.8; // cheap
-    fundFactors++;
+    let v;
+    if (pe >= 10 && pe <= 25)      v = 1;
+    else if (pe > 25 && pe <= 40)  v = 0.65;
+    else if (pe > 40 && pe <= 60)  v = 0.4;
+    else if (pe > 60)              v = 0.15;
+    else                           v = 0.8; // pe < 10 — cheap
+    fundScore += v; fundFactors++; signals.push(v);
   } else fundScore += 0.5;
 
-  // F2: EPS trend (last reported growth)
   const epsGrowth = metrics['epsGrowthTTMYoy'] ?? metrics['epsGrowth3Y'];
   if (epsGrowth != null) {
-    if (epsGrowth > 20)       fundScore += 1;
-    else if (epsGrowth > 5)   fundScore += 0.75;
-    else if (epsGrowth > 0)   fundScore += 0.55;
-    else if (epsGrowth > -10) fundScore += 0.3;
-    else                      fundScore += 0;
-    fundFactors++;
+    const v = epsGrowth > 20 ? 1 : epsGrowth > 5 ? 0.75 : epsGrowth > 0 ? 0.55 : epsGrowth > -10 ? 0.3 : 0;
+    fundScore += v; fundFactors++; signals.push(v);
   } else fundScore += 0.5;
 
-  // F3: Analyst price target premium
   const targetMid = pt?.targetMean ?? pt?.targetHigh;
   if (targetMid && quote.c) {
     const premium = (targetMid - quote.c) / quote.c;
-    if (premium > 0.20)       fundScore += 1;
-    else if (premium > 0.10)  fundScore += 0.75;
-    else if (premium > 0)     fundScore += 0.55;
-    else if (premium > -0.05) fundScore += 0.35;
-    else                      fundScore += 0.1;
-    fundFactors++;
+    const v = premium > 0.20 ? 1 : premium > 0.10 ? 0.75 : premium > 0 ? 0.55 : premium > -0.05 ? 0.35 : 0.1;
+    fundScore += v; fundFactors++; signals.push(v);
   } else fundScore += 0.5;
 
-  // Normalise fundamental to 0–1
   const fundNorm = fundScore / fundTotal;
 
   // ── SENTIMENT (20%) ──────────────────────────────────────────────────────────
 
-  // S1: News headline sentiment (last 5 headlines)
   const newsSent = scoreNewsHeadlines(news);
   if (newsSent !== null) {
-    sentScore += newsSent;
-    sentFactors++;
+    sentScore += newsSent; sentFactors++; signals.push(newsSent);
   } else sentScore += 0.5;
 
-  // S2: Sector ETF trend (passed in via tickerData.sectorTrend: true=downtrend)
   if (tickerData.sectorTrend !== undefined && tickerData.sectorTrend !== null) {
-    sentScore += tickerData.sectorTrend ? 0.2 : 0.8; // downtrend=bad, uptrend=good
-    sentFactors++;
+    const v = tickerData.sectorTrend ? 0.2 : 0.8;
+    sentScore += v; sentFactors++; signals.push(v);
   } else sentScore += 0.5;
 
-  // S3: Insider net buying (last 90 days)
   const insiderTxns = tickerData.insider?.data?.data;
   if (Array.isArray(insiderTxns) && insiderTxns.length > 0) {
     let netShares = 0;
@@ -213,29 +195,80 @@ export function computeScore(tickerData) {
       if (t === 'P-PURCHASE' || t === 'BUY') netShares += txn.share ?? 0;
       else if (t === 'S-SALE' || t === 'SELL') netShares -= txn.share ?? 0;
     }
-    if (netShares > 50000)       sentScore += 1;
-    else if (netShares > 0)      sentScore += 0.7;
-    else if (netShares > -50000) sentScore += 0.45;
-    else                         sentScore += 0.15;
-    sentFactors++;
+    const v = netShares > 50000 ? 1 : netShares > 0 ? 0.7 : netShares > -50000 ? 0.45 : 0.15;
+    sentScore += v; sentFactors++; signals.push(v);
   } else sentScore += 0.5;
 
-  // Normalise sentiment to 0–1
   const sentNorm = sentScore / sentTotal;
+
+  // ── REGIME-AWARE WEIGHTS ─────────────────────────────────────────────────────
+  // When VIX is elevated, fundamentals are more reliable than technical noise.
+
+  const vixPrice = marketContext?.vixPrice ?? null;
+  let techWeight = 0.35, fundWeight = 0.45, sentWeight = 0.20;
+  let regimeNote = null;
+
+  if (vixPrice !== null && vixPrice > 35) {
+    techWeight = 0.20; fundWeight = 0.60; sentWeight = 0.20;
+    regimeNote = `VIX ${vixPrice.toFixed(0)} extreme — fundamentals heavily weighted (60%)`;
+  } else if (vixPrice !== null && vixPrice > 25) {
+    techWeight = 0.25; fundWeight = 0.55; sentWeight = 0.20;
+    regimeNote = `VIX ${vixPrice.toFixed(0)} elevated — fundamentals weighted higher (55%)`;
+  }
 
   // ── COMPOSITE ────────────────────────────────────────────────────────────────
 
-  const composite = (techNorm * 0.35) + (fundNorm * 0.45) + (sentNorm * 0.20);
-  const score = Math.max(0, Math.min(100, Math.round(composite * 100)));
+  let score = Math.max(0, Math.min(100, Math.round(
+    ((techNorm * techWeight) + (fundNorm * fundWeight) + (sentNorm * sentWeight)) * 100
+  )));
+
+  // ── SPY DOWNTREND PENALTY ────────────────────────────────────────────────────
+  // In a market downtrend, pull LONG scores 20% toward neutral (50).
+
+  let spyPenaltyApplied = false;
+  if ((marketContext?.spyDowntrend ?? false) && score > 50) {
+    score = Math.round(score - (score - 50) * 0.20);
+    spyPenaltyApplied = true;
+  }
+
+  // ── FEAR & GREED MODIFIER ────────────────────────────────────────────────────
+  // Extreme Fear: LONG setups face additional market headwind.
+  // Extreme Greed: contrarian caution — market likely extended.
+
+  const fg = marketContext?.fearGreedValue ?? null;
+  if (fg !== null && score > 50) {
+    if (fg < 25)      score = Math.max(50, score - 3); // Extreme Fear
+    else if (fg > 75) score = Math.max(50, score - 2); // Extreme Greed (contrarian)
+    else if (fg < 35) score = Math.max(50, score - 1); // Fear
+  }
+
+  // ── CONVICTION SCORE ────────────────────────────────────────────────────────
+  // Measures signal agreement, independent of directional strength.
+  // "How bullish" (score) vs "how many signals agree" (conviction).
+
+  let conviction = null;
+  let convictionLabel = null;
+  if (signals.length > 0) {
+    const isBullish = score > 50;
+    const aligned = signals.filter(v => isBullish ? v > 0.6 : v < 0.4).length;
+    conviction = Math.round((aligned / signals.length) * 100);
+    convictionLabel = conviction >= 75 ? 'HIGH'
+                    : conviction >= 55 ? 'MODERATE'
+                    : conviction >= 35 ? 'LOW'
+                    :                    'MIXED';
+  }
+
+  // ── BADGE ────────────────────────────────────────────────────────────────────
+
   const factors = techFactors + fundFactors + sentFactors;
-  const total = techTotal + fundTotal + sentTotal;
+  const total   = techTotal + fundTotal + sentTotal;
 
   let badge;
-  if (score >= 72) badge = 'STRONG_LONG';
+  if (score >= 72)      badge = 'STRONG_LONG';
   else if (score >= 58) badge = 'LEAN_LONG';
   else if (score >= 42) badge = 'NEUTRAL';
   else if (score >= 28) badge = 'LEAN_SHORT';
-  else badge = 'STRONG_SHORT';
+  else                  badge = 'STRONG_SHORT';
 
   return {
     score,
@@ -245,6 +278,13 @@ export function computeScore(tickerData) {
     technical:   Math.round(techNorm * 100),
     fundamental: Math.round(fundNorm * 100),
     sentiment:   Math.round(sentNorm * 100),
+    weights:     { tech: techWeight, fund: fundWeight, sent: sentWeight },
+    conviction,
+    convictionLabel,
+    regimeNote,
+    spyPenaltyApplied,
+    rsiZScore:   ind?.rsiZScore ?? null,
+    scoreZScore: null, // computed separately via computeScoreZScore(symbol)
   };
 }
 
@@ -327,6 +367,24 @@ export function getScoreVelocity(symbol) {
     delta,
     direction: delta > 2 ? 'up' : delta < -2 ? 'down' : 'flat',
   };
+}
+
+// ─── SCORE Z-SCORE ────────────────────────────────────────────────────────────
+// Returns how many std-devs the current score sits above/below its 90-day mean.
+// Requires storeScoreSnapshot to have been called on prior refreshes.
+
+export function computeScoreZScore(symbol) {
+  const history = getScoreHistory(symbol, 90);
+  if (history.length < 5) return null;
+
+  const values  = history.map(e => e.score);
+  const current = values[values.length - 1];
+  const mean     = values.reduce((s, v) => s + v, 0) / values.length;
+  const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
+  const stddev   = Math.sqrt(variance);
+
+  if (stddev < 0.1) return 0;
+  return Math.round(((current - mean) / stddev) * 10) / 10;
 }
 
 // ─── THESIS GENERATOR ─────────────────────────────────────────────────────────
@@ -425,6 +483,11 @@ export function generateThesis(tickerData, scoreResult) {
     warnings.push(`Earnings in ${daysToEarnings} day${daysToEarnings === 1 ? '' : 's'} — binary event risk, size down or wait.`);
   else if (daysToEarnings !== null && daysToEarnings <= 30)
     warnings.push(`Trade window: ~${daysToEarnings} days before earnings — factor into your hold time.`);
+
+  if (scoreResult.regimeNote)
+    warnings.push(scoreResult.regimeNote + ' — weight technicals lightly.');
+  if (scoreResult.spyPenaltyApplied)
+    warnings.push('SPY in downtrend — score penalised; new longs face market headwind.');
 
   return { bulls: bulls.slice(0, 3), bears: bears.slice(0, 2), warnings };
 }

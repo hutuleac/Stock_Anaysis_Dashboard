@@ -7,7 +7,7 @@
   import { getPositions } from './lib/stores/portfolio.svelte.js';
   import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
   import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
-  import { getDaysToEarnings, computeScore, storeScoreSnapshot } from './lib/scoring.js';
+  import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import PortfolioStats from './lib/components/PortfolioStats.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
@@ -114,9 +114,16 @@
     if (symbols.length === 0) return;
 
     try {
-      // Fetch market context first (VIX, SPY, sectors)
+      // Fetch market context first (VIX, SPY, sectors, Fear & Greed)
       try {
         marketContextData = await fetchMarketContext();
+        // Push regime context into scoring engine — all computeScore() calls
+        // this session will automatically use regime-aware weights + penalties.
+        setMarketContext({
+          vixPrice:       marketContextData.vix?.data?.c ?? null,
+          spyDowntrend:   (marketContextData.spy?.data?.dp ?? 0) < -0.5,
+          fearGreedValue: marketContextData.fearGreed?.data?.score ?? null,
+        });
       } catch { /* non-blocking — market context is informational */ }
 
       const results = await refreshAll(symbols);
@@ -292,7 +299,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.5</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.6</span>
       </div>
 
       <div class="flex items-center gap-3">
