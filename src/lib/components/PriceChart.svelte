@@ -55,14 +55,14 @@
   }
 
   async function loadCandles() {
-    if (!chart) return;
+    console.log('[Chart] loadCandles called — chart:', !!chart, 'series:', !!series, 'symbol:', symbol);
+    if (!chart) { console.warn('[Chart] chart is null, aborting'); return; }
     loading = true;
     error = '';
     const tf     = TIMEFRAMES[timeframe];
     const toTs   = Math.floor(Date.now() / 1000);
     const fromTs = Math.floor((Date.now() - tf.days * 86400000) / 1000);
 
-    // Show/hide time axis for intraday
     chart.applyOptions({
       timeScale: {
         borderColor: CHART_COLORS.border,
@@ -74,8 +74,10 @@
     try {
       const result = await fetchCandles(symbol, tf.resolution, fromTs, toTs);
       const raw = result.data;
+      console.log('[Chart] candle result — status:', raw?.s, 'count:', raw?.t?.length, 'stale:', result.stale, 'error:', result.error);
 
       if (!raw || raw.s === 'no_data' || !raw.t?.length) {
+        console.warn('[Chart] no data available');
         error = 'No chart data available';
         loading = false;
         return;
@@ -89,9 +91,10 @@
         close: raw.c[i],
       })).sort((a, b) => a.time - b.time);
 
+      console.log('[Chart] setData with', candles.length, 'candles, first:', candles[0], 'last:', candles[candles.length-1]);
       series.setData(candles);
+      console.log('[Chart] setData OK');
 
-      // MAs only meaningful on daily+ timeframes
       if (showMA && !tf.intraday) {
         const ma50  = computeMA(candles, 50);
         const ma200 = computeMA(candles, 200);
@@ -103,7 +106,9 @@
       }
 
       chart.timeScale().fitContent();
+      console.log('[Chart] fitContent OK — container size:', container?.clientWidth, 'x', container?.clientHeight);
     } catch (err) {
+      console.error('[Chart] error in loadCandles:', err);
       error = 'Failed to load chart data';
     }
     loading = false;
@@ -164,6 +169,7 @@
       wickDownColor:    CHART_COLORS.downWick,
     });
 
+    console.log('[Chart] init complete — container:', container?.clientWidth, 'x', container?.clientHeight);
     // Signal that chart is ready — triggers the $effect below to call loadCandles()
     chartReady = true;
     }, 0); // end setTimeout
