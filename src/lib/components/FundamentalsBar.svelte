@@ -107,14 +107,14 @@
       })(),
     },
     {
-      label: 'MA200',
-      value: fmt(m['200DayMovingAverage'] ?? data?.indicators?.ma200, '$'),
+      label: 'EMA200',
+      value: fmt(m['200DayMovingAverage'] ?? data?.indicators?.ema200, '$'),
       note: (() => {
-        const v = m['200DayMovingAverage'] ?? data?.indicators?.ma200;
+        const v = m['200DayMovingAverage'] ?? data?.indicators?.ema200;
         return (v && price) ? (((price - v) / v) * 100).toFixed(1) + '%' : null;
       })(),
       noteColor: (() => {
-        const v = m['200DayMovingAverage'] ?? data?.indicators?.ma200;
+        const v = m['200DayMovingAverage'] ?? data?.indicators?.ema200;
         return (v && price) ? (price > v ? 'text-bull-strong' : 'text-bear-strong') : '';
       })(),
     },
