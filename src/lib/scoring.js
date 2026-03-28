@@ -34,7 +34,10 @@ export function computeScore(tickerData) {
   const pt      = tickerData.priceTarget?.data;
   const news    = tickerData.news;
 
+  const ind = tickerData.indicators || null;
   let techScore = 0, techFactors = 0, techTotal = 4;
+  if (ind?.rsi  != null) techTotal++;
+  if (ind?.macd != null) techTotal++;
   let fundScore = 0, fundFactors = 0, fundTotal = 3;
   let sentScore = 0, sentFactors = 0, sentTotal = 3;
 
@@ -84,6 +87,30 @@ export function computeScore(tickerData) {
     else                    techScore += 0;
     techFactors++;
   } else techScore += 0.5;
+
+  // T5: RSI(14) — oversold = buying opportunity for swing traders
+  if (ind?.rsi != null) {
+    const rsi = ind.rsi;
+    if (rsi < 30)                  techScore += 1.0;  // oversold
+    else if (rsi < 40)             techScore += 0.8;  // mild oversold
+    else if (rsi < 55)             techScore += 0.55; // neutral
+    else if (rsi < 70)             techScore += 0.75; // momentum (not yet extended)
+    else                           techScore += 0.25; // overbought — caution
+    techFactors++;
+  }
+
+  // T6: MACD — histogram direction + line vs signal
+  if (ind?.macd != null) {
+    const { histogram, macd, signal } = ind.macd;
+    const cross = ind.macdCrossover;
+    if (cross === 'bullish_cross')       techScore += 1.0; // fresh crossover — strongest signal
+    else if (cross === 'bearish_cross')  techScore += 0.0;
+    else if (histogram > 0 && macd > signal) techScore += 0.75;
+    else if (histogram > 0)              techScore += 0.55;
+    else if (histogram < 0 && macd < signal) techScore += 0.2;
+    else                                 techScore += 0.4;
+    techFactors++;
+  }
 
   // Normalise technical to 0–1
   const techNorm = techScore / techTotal;

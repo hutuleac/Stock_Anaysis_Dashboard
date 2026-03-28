@@ -1,5 +1,6 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag } from './lib/api/finnhub.svelte.js';
+  import { hasTDApiKey, fetchIndicators } from './lib/api/twelvedata.svelte.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
@@ -147,6 +148,18 @@
           }
         } catch {
           setSectorAnswer(ticker.symbol, null);
+        }
+      }
+
+      // Fetch TwelveData technical indicators (if key configured)
+      if (hasTDApiKey()) {
+        for (const ticker of tickers) {
+          try {
+            const indicators = await fetchIndicators(ticker.symbol);
+            if (indicators && results[ticker.symbol]) {
+              results[ticker.symbol].indicators = indicators;
+            }
+          } catch { /* non-blocking */ }
         }
       }
 

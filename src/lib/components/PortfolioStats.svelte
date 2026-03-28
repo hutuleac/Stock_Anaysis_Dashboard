@@ -27,7 +27,17 @@
     const avgWin  = winners.length ? winners.reduce((s, x) => s + x.pnl, 0) / winners.length : 0;
     const avgLoss = losers.length  ? losers.reduce((s, x) => s + x.pnl, 0)  / losers.length  : 0;
 
-    return { totalPnL, winRate, trades: trades.length, closed: pnlBySymbol.length, best, worst, avgWin, avgLoss };
+    const W = winners.length / pnlBySymbol.length;
+    const R = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : null;
+    // Expectancy per trade in dollars
+    const expectancy = W * avgWin + (1 - W) * avgLoss;
+    // Kelly fraction (% of capital to risk per trade for max geometric growth)
+    const kelly = R !== null ? (W - (1 - W) / R) * 100 : null;
+    // Probability of N consecutive losses (ruin scenario at 2% risk = 10 losses = ~18% drawdown)
+    const pLoss5  = Math.pow(1 - W, 5)  * 100;
+    const pLoss10 = Math.pow(1 - W, 10) * 100;
+
+    return { totalPnL, winRate, trades: trades.length, closed: pnlBySymbol.length, best, worst, avgWin, avgLoss, expectancy, kelly, pLoss5, pLoss10 };
   });
 
   // Portfolio beta — weighted average of position betas
@@ -161,6 +171,50 @@
         </div>
       {/if}
     </div>
+
+    <!-- Edge Analysis (needs ≥5 closed trades to be meaningful) -->
+    {#if s.closed >= 5}
+      {@const hasEdge = s.expectancy > 0}
+      {@const kellyOk = s.kelly !== null && s.kelly > 0}
+      <div class="mt-4 bg-surface-800 rounded-lg px-4 py-3 border border-border/40">
+        <p class="text-[10px] text-text-muted uppercase tracking-wider mb-3">Edge Analysis <span class="normal-case font-normal">({s.closed} closed trades)</span></p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <!-- Expectancy -->
+          <div>
+            <p class="text-[10px] text-text-muted mb-0.5">Expectancy / trade</p>
+            <p class="text-sm font-mono font-bold {hasEdge ? 'text-bull-strong' : 'text-bear-strong'}">{fmt(s.expectancy)}</p>
+            <p class="text-[10px] text-text-muted">{hasEdge ? 'Positive edge' : 'No edge yet'}</p>
+          </div>
+          <!-- Kelly -->
+          <div>
+            <p class="text-[10px] text-text-muted mb-0.5">Kelly fraction</p>
+            <p class="text-sm font-mono font-bold {kellyOk ? 'text-bull-strong' : 'text-bear-strong'}">
+              {s.kelly !== null ? s.kelly.toFixed(1) + '%' : '—'}
+            </p>
+            <p class="text-[10px] text-text-muted">
+              {s.kelly === null ? '' : s.kelly <= 0 ? 'Reduce size' : s.kelly > 25 ? 'Use ½ Kelly max' : 'Optimal bet size'}
+            </p>
+          </div>
+          <!-- 5-loss streak -->
+          <div>
+            <p class="text-[10px] text-text-muted mb-0.5">5 losses in a row</p>
+            <p class="text-sm font-mono font-bold {s.pLoss5 > 10 ? 'text-warning' : 'text-text-primary'}">{s.pLoss5.toFixed(1)}%</p>
+            <p class="text-[10px] text-text-muted">≈ −10% at 2% risk</p>
+          </div>
+          <!-- 10-loss streak -->
+          <div>
+            <p class="text-[10px] text-text-muted mb-0.5">10 losses in a row</p>
+            <p class="text-sm font-mono font-bold {s.pLoss10 > 5 ? 'text-danger' : 'text-text-primary'}">{s.pLoss10.toFixed(2)}%</p>
+            <p class="text-[10px] text-text-muted">≈ −18% at 2% risk</p>
+          </div>
+        </div>
+        {#if !hasEdge || !kellyOk}
+          <p class="mt-2 text-[10px] text-text-muted border-t border-border/30 pt-2">
+            {!hasEdge ? 'Expectancy is negative — your system is losing money per trade on average. Review your exit discipline before adding new positions.' : 'Kelly is ≤ 0 — your R:R ratio does not compensate for your win rate. Either tighten losses or let winners run.'}
+          </p>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Sector Concentration -->
     {#if concentration() && concentration().length > 0}

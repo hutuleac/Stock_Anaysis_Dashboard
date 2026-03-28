@@ -457,6 +457,57 @@
                     <div class="mb-4">
                       <FundamentalsBar symbol={ticker.symbol} />
                     </div>
+                    <!-- Score History Chart -->
+                    {#if scoreHistory.length >= 2}
+                      {@const SH = 48} {@const SW = 600}
+                      {@const minH = Math.min(...scoreHistory.map(h => h.score))}
+                      {@const maxH = Math.max(...scoreHistory.map(h => h.score))}
+                      {@const rangeH = Math.max(maxH - minH, 15)}
+                      {@const hPts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * SW},${SH - ((h.score - minH) / rangeH) * (SH - 8) - 4}`).join(' ')}
+                      {@const lastScore = scoreHistory[scoreHistory.length - 1]?.score}
+                      {@const firstScore = scoreHistory[0]?.score}
+                      {@const scoreDelta = lastScore - firstScore}
+                      <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
+                        <div class="flex items-center justify-between mb-2">
+                          <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Score History</p>
+                          <div class="flex items-center gap-3 text-xs">
+                            <span class="text-text-muted font-mono">{firstScore} → {lastScore}</span>
+                            <span class="font-mono font-semibold {scoreDelta > 0 ? 'text-bull-strong' : scoreDelta < 0 ? 'text-bear-strong' : 'text-text-muted'}">
+                              {scoreDelta > 0 ? '↑ +' : scoreDelta < 0 ? '↓ ' : '→ '}{scoreDelta}
+                            </span>
+                            <span class="text-text-muted">{scoreHistory.length} snapshots</span>
+                          </div>
+                        </div>
+                        <svg viewBox="0 0 {SW} {SH}" class="w-full" style="height: {SH}px" preserveAspectRatio="none">
+                          <!-- 50-point reference line -->
+                          {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
+                          {#if refY > 0 && refY < SH}
+                            <line x1="0" y1={refY} x2={SW} y2={refY} stroke="#ffffff18" stroke-width="1" stroke-dasharray="4,4"/>
+                          {/if}
+                          <!-- Fill area -->
+                          <polygon
+                            points="{hPts} {SW},{SH} 0,{SH}"
+                            fill={scoreDelta >= 0 ? '#22c55e18' : '#ef444418'}
+                          />
+                          <!-- Line -->
+                          <polyline
+                            points={hPts}
+                            fill="none"
+                            stroke={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                          <!-- Latest dot -->
+                          {@const lastPt = hPts.split(' ').pop()}
+                          {#if lastPt}
+                            {@const [lx, ly] = lastPt.split(',').map(Number)}
+                            <circle cx={lx} cy={ly} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
+                          {/if}
+                        </svg>
+                      </div>
+                    {/if}
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <PreBuyChecklist symbol={ticker.symbol} />
                       <EntryPanel symbol={ticker.symbol} />

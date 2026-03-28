@@ -4,6 +4,7 @@
   import { getPosition, getPortfolioValue } from '../stores/portfolio.svelte.js';
   import ThesisSummary from './ThesisSummary.svelte';
   import { getDaysToEarnings } from '../scoring.js';
+  import { fetchCandles } from '../api/finnhub.svelte.js';
 
   let { symbol } = $props();
 
@@ -11,6 +12,36 @@
   const checklist = $derived(getChecklist(symbol));
   const data = $derived(getTickerData(symbol));
   const position = $derived(getPosition(symbol));
+
+  // ATR(14) — loaded from cached candle data
+  let atr = $state(null);
+
+  function computeATR(raw, period = 14) {
+    if (!raw?.h || raw.h.length < period + 1) return null;
+    const n = raw.h.length;
+    const trs = [];
+    for (let i = 1; i < n; i++) {
+      const tr = Math.max(
+        raw.h[i] - raw.l[i],
+        Math.abs(raw.h[i] - raw.c[i - 1]),
+        Math.abs(raw.l[i] - raw.c[i - 1])
+      );
+      trs.push(tr);
+    }
+    const recent = trs.slice(-period);
+    return recent.reduce((s, v) => s + v, 0) / recent.length;
+  }
+
+  async function loadATR(sym) {
+    const toTs = Math.floor(Date.now() / 1000);
+    const fromTs = toTs - 60 * 86400; // 60 days of daily candles
+    const raw = await fetchCandles(sym, 'D', fromTs, toTs);
+    atr = computeATR(raw);
+  }
+
+  $effect(() => {
+    if (complete && symbol) loadATR(symbol);
+  });
 
   const currentPrice = $derived(data?.quote?.data?.c ?? null);
   const stopLoss = $derived(parseFloat(checklist.stopLoss) || null);
@@ -119,6 +150,22 @@
         </div>
       {/if}
 
+      <!-- High-volatility day warning -->
+      {@const dp = data?.quote?.data?.dp ?? null}
+      {#if dp !== null && Math.abs(dp) >= 5}
+        <div class="flex items-center gap-3 px-3 py-2 rounded-lg border {dp >= 5 ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}">
+          <span class="text-lg">🌊</span>
+          <div>
+            <p class="text-xs font-semibold {dp >= 5 ? 'text-warning' : 'text-danger'}">
+              High-volatility day ({dp > 0 ? '+' : ''}{dp.toFixed(1)}%)
+            </p>
+            <p class="text-[10px] text-text-muted">
+              {dp >= 5 ? 'Chasing a gap-up — consider waiting for the dust to settle.' : 'Entering into a sharp selloff — could bounce or accelerate lower.'}
+            </p>
+          </div>
+        </div>
+      {/if}
+
       <!-- Risk Snapshot -->
       <div class="grid grid-cols-2 gap-3">
         <div class="bg-surface-700 rounded-lg p-3">
@@ -140,6 +187,31 @@
           </p>
         </div>
       </div>
+
+      <!-- ATR Volatility Band -->
+      {#if atr !== null && currentPrice}
+        {@const atrPct = (atr / currentPrice) * 100}
+        {@const stopTooTight = riskPerShare !== null && riskPerShare < atr * 0.5}
+        {@const stopWithinATR = riskPerShare !== null && riskPerShare < atr}
+        <div class="rounded-lg p-3 border {stopTooTight ? 'bg-danger/10 border-danger/40' : stopWithinATR ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+          <div class="flex items-center justify-between mb-1">
+            <p class="text-xs font-semibold {stopTooTight ? 'text-danger' : stopWithinATR ? 'text-warning' : 'text-text-muted'}">
+              {stopTooTight ? '⚠ Stop within noise range' : stopWithinATR ? '⚠ Stop within 1 ATR' : '📊 Intraday Volatility (ATR 14)'}
+            </p>
+            <span class="font-mono text-xs text-text-secondary">{formatUSD(atr)} / {atrPct.toFixed(1)}%</span>
+          </div>
+          <p class="text-[11px] text-text-muted">
+            On a normal day, {symbol} moves ≈ {formatUSD(atr)} ({atrPct.toFixed(1)}%).
+            {#if stopTooTight}
+              Your stop is less than half an ATR — likely to be triggered by noise.
+            {:else if stopWithinATR}
+              Your stop is within one ATR — consider widening it or sizing down.
+            {:else}
+              Stop is beyond the daily noise range.
+            {/if}
+          </p>
+        </div>
+      {/if}
 
       <!-- Position size recommendation -->
       <div class="bg-surface-700 rounded-lg p-3 border-l-2 border-uncertain">
