@@ -161,18 +161,29 @@
         } catch { /* non-blocking */ }
       }
 
-      // TwelveData indicators — override/extend local ones if key configured
+      // TwelveData — live quote + indicators override local ones if key configured
       if (hasTDApiKey()) {
         for (const ticker of tickers) {
           try {
             const tdInd = await fetchIndicators(ticker.symbol);
             if (tdInd && results[ticker.symbol]) {
-              // Merge: TD values win, local fills gaps (e.g. if TD call fails)
+              // Merge indicators: TD wins, local fills gaps
               results[ticker.symbol].indicators = {
                 ...results[ticker.symbol].indicators,
                 ...tdInd,
                 source: 'twelvedata',
               };
+
+              // Merge live quote: overwrite Finnhub price/change with TD values
+              const q = tdInd.quote;
+              if (q?.price && results[ticker.symbol].quote?.data) {
+                results[ticker.symbol].quote.data.c  = q.price;
+                results[ticker.symbol].quote.data.d  = q.change;
+                results[ticker.symbol].quote.data.dp = q.changePct;
+                results[ticker.symbol].quote.data.pc = q.prevClose;
+              }
+              // Store full TD quote for volume ratio display
+              if (q) results[ticker.symbol].tdQuote = q;
             }
           } catch { /* non-blocking */ }
         }
