@@ -37,7 +37,38 @@
     const pLoss5  = Math.pow(1 - W, 5)  * 100;
     const pLoss10 = Math.pow(1 - W, 10) * 100;
 
-    return { totalPnL, winRate, trades: trades.length, closed: pnlBySymbol.length, best, worst, avgWin, avgLoss, expectancy, kelly, pLoss5, pLoss10 };
+    const profitFactor = losers.length && avgLoss !== 0
+      ? Math.abs(winners.reduce((s, x) => s + x.pnl, 0) / losers.reduce((s, x) => s + x.pnl, 0))
+      : null;
+
+    // Max drawdown — run cumulative P&L across symbols sorted by last sell date
+    const symbolLastSell = {};
+    for (const t of trades) {
+      if (t.side === 'SELL') {
+        const d = new Date(t.date).getTime();
+        if (!symbolLastSell[t.symbol] || d > symbolLastSell[t.symbol]) symbolLastSell[t.symbol] = d;
+      }
+    }
+    const sortedByDate = [...pnlBySymbol].sort((a, b) => (symbolLastSell[a.symbol] ?? 0) - (symbolLastSell[b.symbol] ?? 0));
+    let cum = 0, peak = 0, maxDrawdown = 0;
+    for (const { pnl } of sortedByDate) {
+      cum += pnl;
+      if (cum > peak) peak = cum;
+      const dd = peak - cum;
+      if (dd > maxDrawdown) maxDrawdown = dd;
+    }
+
+    // Current streak — consecutive W/L from most recent closed symbol
+    const sortedRecent = [...pnlBySymbol].sort((a, b) => (symbolLastSell[b.symbol] ?? 0) - (symbolLastSell[a.symbol] ?? 0));
+    let streakCount = 0, streakType = null;
+    for (const { pnl } of sortedRecent) {
+      const type = pnl > 0 ? 'W' : 'L';
+      if (streakType === null) { streakType = type; streakCount = 1; }
+      else if (type === streakType) streakCount++;
+      else break;
+    }
+
+    return { totalPnL, winRate, trades: trades.length, closed: pnlBySymbol.length, best, worst, avgWin, avgLoss, expectancy, kelly, pLoss5, pLoss10, profitFactor, maxDrawdown, streakCount, streakType };
   });
 
   // Portfolio beta — weighted average of position betas
@@ -189,6 +220,20 @@
           <p class="text-[10px] text-text-muted">open positions</p>
         </div>
       {/if}
+      {#if s.maxDrawdown > 0}
+        <div class="bg-surface-800 rounded-lg p-3">
+          <p class="text-[10px] text-text-muted uppercase tracking-wider mb-1">Max Drawdown</p>
+          <p class="text-sm font-mono font-bold text-bear-strong">-${s.maxDrawdown.toFixed(2)}</p>
+          <p class="text-[10px] text-text-muted">peak → trough</p>
+        </div>
+      {/if}
+      {#if s.streakType !== null}
+        <div class="bg-surface-800 rounded-lg p-3">
+          <p class="text-[10px] text-text-muted uppercase tracking-wider mb-1">Streak</p>
+          <p class="text-sm font-mono font-bold {s.streakType === 'W' ? 'text-bull-strong' : 'text-bear-strong'}">{s.streakCount}{s.streakType}</p>
+          <p class="text-[10px] text-text-muted">in a row</p>
+        </div>
+      {/if}
     </div>
 
     <!-- Edge Analysis (needs ≥5 closed trades to be meaningful) -->
@@ -212,6 +257,16 @@
             </p>
             <p class="text-[10px] text-text-muted">
               {s.kelly === null ? '' : s.kelly <= 0 ? 'Reduce size' : s.kelly > 25 ? 'Use ½ Kelly max' : 'Optimal bet size'}
+            </p>
+          </div>
+          <!-- Profit Factor -->
+          <div>
+            <p class="text-[10px] text-text-muted mb-0.5">Profit factor</p>
+            <p class="text-sm font-mono font-bold {s.profitFactor != null && s.profitFactor >= 1.5 ? 'text-bull-strong' : s.profitFactor != null && s.profitFactor >= 1 ? 'text-uncertain' : 'text-bear-strong'}">
+              {s.profitFactor != null ? s.profitFactor.toFixed(2) : '—'}
+            </p>
+            <p class="text-[10px] text-text-muted">
+              {s.profitFactor == null ? '' : s.profitFactor >= 2 ? 'Excellent' : s.profitFactor >= 1.5 ? 'Good' : s.profitFactor >= 1 ? 'Break-even' : 'Losing'}
             </p>
           </div>
           <!-- 5-loss streak -->

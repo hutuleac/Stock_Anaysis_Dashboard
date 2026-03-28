@@ -86,6 +86,43 @@ export function computeMACD(closes, fast = 12, slow = 26, signal = 9) {
   };
 }
 
+// ── ADX(14) — local Wilder-smoothed computation for replay ───────────────────
+function computeADXLocal(highs, lows, closes, period = 14) {
+  if (highs.length < period * 2 + 1) return null;
+  const plusDM = [], minusDM = [], tr = [];
+  for (let i = 1; i < highs.length; i++) {
+    const up   = highs[i] - highs[i - 1];
+    const down = lows[i - 1] - lows[i];
+    plusDM.push(up > down && up > 0 ? up : 0);
+    minusDM.push(down > up && down > 0 ? down : 0);
+    tr.push(Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    ));
+  }
+  if (tr.length < period) return null;
+  function wilderSmooth(arr, p) {
+    let s = arr.slice(0, p).reduce((a, v) => a + v, 0);
+    const out = [s];
+    for (let i = p; i < arr.length; i++) { s = s - s / p + arr[i]; out.push(s); }
+    return out;
+  }
+  const sTR = wilderSmooth(tr, period);
+  const sPDM = wilderSmooth(plusDM, period);
+  const sNDM = wilderSmooth(minusDM, period);
+  const dx = sTR.map((t, i) => {
+    if (t === 0) return 0;
+    const dp = 100 * sPDM[i] / t;
+    const dm = 100 * sNDM[i] / t;
+    const s = dp + dm;
+    return s === 0 ? 0 : 100 * Math.abs(dp - dm) / s;
+  });
+  if (dx.length < period) return null;
+  const adxArr = wilderSmooth(dx, period);
+  return Math.round(adxArr[adxArr.length - 1] * 10) / 10;
+}
+
 // ── ATR(14) from OHLC arrays ─────────────────────────────────────────────────
 export function computeATR(highs, lows, closes, period = 14) {
   if (!closes || closes.length < period + 1) return null;
@@ -228,6 +265,7 @@ export function computeSnapshotAt(raw, index) {
 
   const ema20arr = emaArray(closes, 20);
   const ema20 = ema20arr.length > 0 ? ema20arr[ema20arr.length - 1] : null;
+  const adx = highs.length >= 29 ? computeADXLocal(highs, lows, closes) : null;
 
   // Simple tech reading from available signals
   let bull = 0, bear = 0;
@@ -255,6 +293,7 @@ export function computeSnapshotAt(raw, index) {
     macdCrossover: macdResult?.crossover ?? null,
     ema20,
     atr,
+    adx,
     reading,
   };
 }
