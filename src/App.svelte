@@ -138,7 +138,7 @@
       // Per-ticker enrichment: checklist auto-answers + indicators
       const tickers = getTickers();
       const toTs = Math.floor(Date.now() / 1000);
-      const fromTs = toTs - 90 * 86400; // 90 days — enough for MACD(26+9) + RSI(14)
+      const fromTs = toTs - 250 * 86400; // 250 days — enough for EMA200
 
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -171,7 +171,7 @@
         try {
           if (hasTDApiKey()) {
             // TwelveData — Finnhub free tier blocks /candle
-            const candleRes = await fetchTimeSeries(ticker.symbol, '1day', 120);
+            const candleRes = await fetchTimeSeries(ticker.symbol, '1day', 250);
             if (candleRes?.data?.length) {
               // Convert to Finnhub-style raw object for computeIndicatorsFromCandles
               const vals = candleRes.data;
