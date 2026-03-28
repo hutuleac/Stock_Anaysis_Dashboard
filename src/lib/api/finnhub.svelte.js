@@ -8,7 +8,8 @@ const CACHE_TTL = {
   candles: 86400,
   candles_intraday: 900, // 15 min — intraday data refreshes frequently
   insider: 604800,
-  feargreed: 3600,       // CNN Fear & Greed — 1 hour
+  feargreed:    3600,       // CNN Fear & Greed — 1 hour
+  earnings_hist: 86400,    // historical earnings surprises — 24h
 };
 
 const CALL_DELAY_MS = 100;
@@ -249,6 +250,15 @@ export function getSectorETF(sector) {
 export async function fetchSectorETFQuote(sector) {
   const etf = getSectorETF(sector);
   return fetchQuote(etf);
+}
+
+// ── Historical Earnings Surprises ────────────────────────────────────────────
+// Returns array of { period, actual, estimate, surprisePercent, ... } for chart markers.
+export async function fetchHistoricalEarnings(symbol, limit = 8) {
+  return fetchWithCache('earnings_hist', symbol, async () => {
+    const data = await fetchFinnhub(`/stock/earnings?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
+    return Array.isArray(data) ? data : [];
+  });
 }
 
 // ── CNN Fear & Greed Index ────────────────────────────────────────────────────

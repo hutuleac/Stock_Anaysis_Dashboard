@@ -257,6 +257,107 @@
     <div class="fixed inset-0 z-40" onclick={() => { searchOpen = false; searchResults = []; }}></div>
   {/if}
 
+  <!-- ── Mobile card layout (< sm) ─────────────────────────────────────────── -->
+  {#if getTickers().length > 0}
+    <div class="block sm:hidden space-y-2 mb-4">
+      {#each getSortedTickers() as ticker}
+        {@const data = getTickerData(ticker.symbol)}
+        {@const score = computeScore(data)}
+        {@const checklist = getChecklist(ticker.symbol)}
+        {@const isBlocked = checklist.hardWarning && !checklist.hardWarningDismissed}
+        {@const badge = getBadgeStyle(isBlocked ? 'BLOCKED' : score.badge)}
+        {@const quote = data?.quote?.data}
+        {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
+        {@const isSelected = getSelectedSymbol() === ticker.symbol}
+        {@const velocity = getScoreVelocity(ticker.symbol)}
+
+        <div
+          class="bg-surface-800 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors {isSelected ? 'border-bull-strong/40 bg-surface-700' : 'border-border hover:bg-surface-750'}"
+          onclick={() => selectTicker(ticker.symbol)}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => e.key === 'Enter' && selectTicker(ticker.symbol)}
+        >
+          <!-- Row 1: ticker + badge + earnings badge -->
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-text-primary">{ticker.symbol}</span>
+              {#if daysToEarnings !== null && daysToEarnings <= 14}
+                <span class="text-[10px] font-semibold text-warning bg-warning/10 px-1 rounded">E {daysToEarnings}d</span>
+              {/if}
+              {#if data?.quote?.stale}
+                <span class="text-warning text-xs" title="Stale data">⚠</span>
+              {/if}
+            </div>
+            <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
+          </div>
+
+          <!-- Row 2: price + change + score -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-sm text-text-primary">{formatPrice(quote?.c)}</span>
+              <span class="text-xs font-mono {(quote?.dp ?? 0) >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">{formatPct(quote?.dp)}</span>
+            </div>
+            {#if score.score !== null}
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono font-semibold text-sm">{score.score}</span>
+                {#if velocity}
+                  <span class="text-xs {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
+                    {velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}
+                  </span>
+                {/if}
+                {#if score.convictionLabel}
+                  <span class="text-[10px] text-text-muted">{score.convictionLabel}</span>
+                {/if}
+              </div>
+            {/if}
+          </div>
+
+          <!-- Row 3: T/F/S mini bars -->
+          {#if score.score !== null}
+            <div class="flex items-center gap-2 mt-1.5">
+              {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
+                {#if val !== null}
+                  <div class="flex items-center gap-0.5">
+                    <span class="text-[9px] text-text-muted">{label}</span>
+                    <div class="w-10 h-1 bg-surface-600 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}" style="width:{val}%"></div>
+                    </div>
+                    <span class="text-[9px] font-mono text-text-muted">{val}</span>
+                  </div>
+                {/if}
+              {/each}
+              {#if score.regimeNote || score.spyPenaltyApplied}
+                <span class="text-[9px] text-warning ml-1">⚡</span>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Mobile expansion (same detail panel) -->
+        {#if isSelected}
+          <div class="bg-surface-800 border border-border/50 rounded-lg px-4 py-4 -mt-1">
+            <PriceChart symbol={ticker.symbol} priceTarget={data?.priceTarget?.data ?? null} />
+            <div class="mt-4"><FundamentalsBar symbol={ticker.symbol} /></div>
+            <div class="mt-4 grid grid-cols-1 gap-4">
+              <PreBuyChecklist symbol={ticker.symbol} />
+              <EntryPanel symbol={ticker.symbol} />
+            </div>
+            <div class="mt-3 border-t border-border/30 pt-3">
+              <textarea
+                class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none resize-none font-mono"
+                rows="2"
+                placeholder="Notes…"
+                value={getNotes(ticker.symbol)}
+                oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
+              ></textarea>
+            </div>
+          </div>
+        {/if}
+      {/each}
+    </div>
+  {/if}
+
   <!-- Table -->
   {#if getTickers().length === 0}
     <div class="text-center py-16 text-text-muted">
@@ -265,7 +366,7 @@
       <p class="text-sm">Search above to add your first ticker</p>
     </div>
   {:else}
-    <div class="overflow-x-auto">
+    <div class="hidden sm:block overflow-x-auto">
       <table class="w-full">
         <thead>
           <tr class="border-b border-border text-xs text-text-muted uppercase tracking-wider">
@@ -351,12 +452,20 @@
                         <polyline points={pts} fill="none" stroke={velocity?.direction === 'down' ? '#ef4444' : '#22c55e'} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     {/if}
-                    <span class="font-mono font-semibold">{score.score}</span>
+                    <span
+                      class="font-mono font-semibold"
+                      title="{score.regimeNote ? score.regimeNote + '. ' : ''}{score.spyPenaltyApplied ? 'SPY downtrend penalty applied.' : ''}"
+                    >{score.score}{score.regimeNote || score.spyPenaltyApplied ? '*' : ''}</span>
                     {#if velocity}
                       <span
                         class="text-xs font-mono {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}"
                         title="3-day delta: {velocity.delta > 0 ? '+' : ''}{velocity.delta}"
                       >{velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}</span>
+                    {/if}
+                    {#if score.convictionLabel}
+                      <span class="text-[10px] hidden md:inline {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}"
+                        title="{score.conviction}% signal agreement"
+                      >{score.convictionLabel}</span>
                     {/if}
                     <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
                   </div>
@@ -456,7 +565,7 @@
                 <td colspan="9" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
-                      <PriceChart symbol={ticker.symbol} />
+                      <PriceChart symbol={ticker.symbol} priceTarget={data?.priceTarget?.data ?? null} />
                       <NewsPanel symbol={ticker.symbol} />
                     </div>
                     <div class="mb-4">
