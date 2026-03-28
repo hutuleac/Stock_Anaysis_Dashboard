@@ -25,9 +25,10 @@
   });
 
   const TIMEFRAMES = {
-    '1D': { days: 2,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 48  },
-    '5D': { days: 7,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 200 },
-    // Daily always fetches 365 bars → same cache entry → MA200 available on all daily views
+    // Intraday: always fetch 200 bars (5D worth) → same cache, setVisibleRange zooms to 1D/5D
+    '1D': { days: 1,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 200 },
+    '5D': { days: 5,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 200 },
+    // Daily: always fetch 365 bars → same cache entry → MA200 available on all daily views
     '1M': { days: 30,  resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
     '3M': { days: 90,  resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
     '6M': { days: 180, resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
@@ -130,12 +131,18 @@
       }
 
       chart.timeScale().fitContent();
-      // Zoom to selected timeframe range (data always has 365 bars for daily)
-      if (!tf.intraday) {
-        const fromStr = new Date(Date.now() - tf.days * 86400000).toISOString().split('T')[0];
-        const toStr   = new Date().toISOString().split('T')[0];
-        try { chart.timeScale().setVisibleRange({ from: fromStr, to: toStr }); } catch { /* noop */ }
-      }
+      // Zoom to selected timeframe range (all daily share 365-bar cache; intraday share 200-bar)
+      try {
+        if (tf.intraday) {
+          const toTs   = Math.floor(Date.now() / 1000);
+          const fromTs = Math.floor((Date.now() - tf.days * 86400000) / 1000);
+          chart.timeScale().setVisibleRange({ from: fromTs, to: toTs });
+        } else {
+          const fromStr = new Date(Date.now() - tf.days * 86400000).toISOString().split('T')[0];
+          const toStr   = new Date().toISOString().split('T')[0];
+          chart.timeScale().setVisibleRange({ from: fromStr, to: toStr });
+        }
+      } catch { /* noop */ }
       console.log('[Chart] fitContent OK — container size:', container?.clientWidth, 'x', container?.clientHeight);
     } catch (err) {
       console.error('[Chart] error in loadCandles:', err);
@@ -279,8 +286,8 @@
   </div>
 
   <!-- Chart container -->
-  <div class="relative" style="height: 240px;">
-    <div bind:this={container} style="width:100%;height:240px;"></div>
+  <div class="relative" style="height: 380px;">
+    <div bind:this={container} style="width:100%;height:380px;"></div>
 
     {#if loading}
       <div class="absolute inset-0 flex items-center justify-center bg-surface-900/80">
