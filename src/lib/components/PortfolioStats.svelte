@@ -77,6 +77,25 @@
     return total;
   });
 
+  // Correlation warning — same-sector positions held simultaneously
+  const correlationWarnings = $derived(() => {
+    const positions = getPositions();
+    if (!positions.length) return [];
+    const tickers = getTickers();
+    const sectorMap = Object.fromEntries(tickers.map(t => [t.symbol, t.sector || 'Unknown']));
+    const bySector = {};
+    for (const pos of positions) {
+      if ((pos.qty ?? 0) <= 0) continue;
+      const sector = sectorMap[pos.ticker] || 'Unknown';
+      if (sector === 'Unknown') continue;
+      if (!bySector[sector]) bySector[sector] = [];
+      bySector[sector].push(pos.ticker);
+    }
+    return Object.entries(bySector)
+      .filter(([, syms]) => syms.length >= 2)
+      .map(([sector, symbols]) => ({ sector, symbols }));
+  });
+
   // Sector concentration from open positions
   const concentration = $derived(() => {
     const positions = getPositions();
@@ -228,6 +247,14 @@
           </p>
         </div>
       {/if}
+      {#each correlationWarnings() as warn}
+        <div class="mt-2 flex items-start gap-2 bg-uncertain/10 border border-uncertain/30 rounded-lg px-3 py-2">
+          <span class="text-uncertain mt-0.5 shrink-0">⚡</span>
+          <p class="text-xs text-uncertain">
+            Correlation risk: {warn.symbols.join(' + ')} are both {warn.sector} names — they tend to move together in a sector selloff. Consider sizing down or hedging one leg.
+          </p>
+        </div>
+      {/each}
       <div class="mt-3">
         <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2">Sector Exposure</p>
         <div class="flex flex-wrap gap-2">

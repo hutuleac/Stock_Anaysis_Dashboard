@@ -1,4 +1,4 @@
-# Stock Analysis Dashboard v0.5
+# Stock Analysis Dashboard v0.8
 
 A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
 
@@ -39,6 +39,12 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - Score badges: `STRONG` · `LEAN LONG` · `NEUTRAL` · `LEAN SHORT` · `STRONG SHORT` · `BLOCKED`
 - Confidence band: `(factors/total)` shows how many signals had live data
 - T/F/S sub-score mini bars inline per row
+- **Conviction %** — signal agreement score separate from directional strength ("how bullish" vs "how many signals agree") — HIGH / MODERATE / LOW / MIXED label
+- **Regime-aware weights** — VIX > 25: fundamentals 55%, VIX > 35: fundamentals 60%; technicals weighted down in volatile regimes
+- **SPY downtrend penalty** — when SPY is in downtrend, all LONG scores pulled 20% toward neutral
+- **Fear & Greed modifier** — CNN F&G index adjusts scores at extremes (extreme fear: −3, extreme greed: −2)
+- **RSI z-score** — how many std-devs current RSI sits above/below its 90-day mean (shown inline in Fundamentals Bar)
+- **Score z-score** — same concept for the composite score itself; shown in table and Fundamentals Bar once ≥5 snapshots exist
 
 ### Expanded Row (per ticker, click to open)
 
@@ -49,7 +55,8 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 
 **Data panels**
 - News panel — last 6 headlines with bull/bear/neutral sentiment dots + timeAgo
-- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · Analyst Target · Insider 90d net shares · 52w range bar · RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · Weekly trend · Volume ratio
+- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · Analyst Target · Insider 90d net shares · 52w range bar · RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · Score Z · Weekly trend · Volume ratio · Conviction %
+- **"So what" tooltips** — hover any indicator for plain-English interpretation (e.g. RSI 38 → "approaching oversold; potential base forming")
 - Score history chart — full-width SVG with area fill, delta header, 50-point reference line
 
 **Decision flow (left → right)**
@@ -73,11 +80,13 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - Realized P&L · Win Rate · Avg Win · Avg Loss · R:R Ratio · Best/Worst trade · Unrealized P&L
 - Weighted portfolio beta — "Market sensitivity: your portfolio moves ~1.4× SPY"
 - Sector exposure breakdown — bars per sector with ⚠ warning if any sector > 40%
+- **Correlation warning** — ⚡ flag when 2+ open positions are in the same sector (e.g. TSLA + AMZN both Consumer Cyclical)
 - **Edge Analysis** (unlocks after 5+ closed trades): Expectancy/trade · Kelly % · probability of 5/10 consecutive losses
 
 ### Market Context Bar
 - VIX with plain-English interpretation (CALM → EXTREME)
 - SPY trend + 11 sector ETF performance
+- **CNN Fear & Greed index** — gauge bar (0–100) with Extreme Fear / Greed labels + nudge integration
 - Soft nudge banner for elevated risk conditions
 - Collapsible
 
@@ -130,6 +139,26 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 ---
 
 ## Changelog
+
+### v0.8 (2026-03-28)
+- **Score z-score display** — surfaced in WatchlistTable (desktop, lg+) and Fundamentals Bar; shows how many std-devs current score is above/below its 90-day mean
+- **Correlation warning** — Portfolio Stats now flags when 2+ open positions share the same sector with ⚡ warning and plain-English guidance
+- **README + changelog** synced to v0.8
+
+### v0.7 (2026-03-28)
+- **Mobile card layout** — single-column morning scan mode for < sm breakpoint with expandable rows
+- **"So what" tooltips** — hover RSI, MACD, ADX, Stochastic, Conviction, or Score for plain-English interpretation
+- **Volume profile** — horizontal histogram SVG overlay on chart right side (toggle ▣ button)
+- **Earnings annotations** — past earnings markers on chart coloured by surprise % (fetch from Finnhub `/stock/earnings`)
+- **Analyst price target zone** — PT↓ / PT / PT↑ dashed lines on chart from Finnhub price target data
+- **Drawing tools** — horizontal line (─), trend line (╱), rectangle (▭) drawn directly on chart and persisted to localStorage per symbol
+
+### v0.6 (2026-03-28)
+- **Fear & Greed index** — CNN F&G gauge in Market Context Bar; integrates into score modifier (extreme fear −3, extreme greed −2)
+- **SPY downtrend penalty** — when SPY dp < −0.5%, all LONG scores pulled 20% toward neutral; ⚡ shown in table
+- **Regime-aware weights** — VIX > 25: fund 55%; VIX > 35: fund 60%; regimeNote shown in thesis + score tooltip
+- **Conviction scoring** — signal agreement % separate from directional score; HIGH/MODERATE/LOW/MIXED labels in table + Fundamentals Bar
+- **RSI z-score** — 90-day rolling z-score in Fundamentals Bar with "unusually high/low vs history" tooltip
 
 ### v0.5 (2026-03-28)
 - **Default watchlist** — first-time users see TSLA · SKM · SOFI · GOOGL · AMZN · HOOD immediately; no empty state

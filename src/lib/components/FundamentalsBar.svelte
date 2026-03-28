@@ -1,6 +1,6 @@
 <script>
   import { getTickerData } from '../stores/watchlist.svelte.js';
-  import { computeScore } from '../scoring.js';
+  import { computeScore, computeScoreZScore } from '../scoring.js';
   import { rsiTooltip, macdTooltip, adxTooltip, stochTooltip, rsiZScoreTooltip, convictionTooltip } from '../tooltips.js';
 
   let { symbol } = $props();
@@ -59,6 +59,7 @@
   const tdQuote  = $derived(data?.tdQuote ?? null);
   const weekly   = $derived(data?.weekly ?? null);
   const score    = $derived(computeScore(data));
+  const scoreZ   = $derived(computeScoreZScore(symbol));
 
   function fmtVol(v) {
     if (!v) return '—';
@@ -230,6 +231,16 @@
           <span class="text-sm font-mono font-semibold {convColor}">{score.conviction}%</span>
         </div>
         <span class="text-[9px] {convColor}">{score.convictionLabel}</span>
+      </div>
+    {/if}
+
+    <!-- Score z-score vs 90-day history -->
+    {#if scoreZ != null}
+      {@const szColor = scoreZ > 1.5 ? 'text-bull-strong' : scoreZ < -1.5 ? 'text-bear-strong' : 'text-text-muted'}
+      <div class="flex flex-col min-w-[60px]" title="Score z-score: how many std-devs the current score sits above/below its 90-day mean. Needs ≥5 score snapshots.">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">Score Z</span>
+        <span class="text-sm font-mono font-semibold mt-0.5 {szColor}">{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
+        <span class="text-[9px] {szColor}">{scoreZ > 2 ? 'Extended' : scoreZ < -2 ? 'Depressed' : scoreZ > 1 ? 'Above avg' : scoreZ < -1 ? 'Below avg' : 'In range'}</span>
       </div>
     {/if}
 
