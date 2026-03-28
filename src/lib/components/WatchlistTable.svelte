@@ -1,7 +1,7 @@
 <script>
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
+  import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
   import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
   import ReplayPanel from './ReplayPanel.svelte';
   import { getChecklist } from '../stores/checklist.svelte.js';
@@ -270,6 +270,7 @@
         {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
         {@const isSelected = getSelectedSymbol() === ticker.symbol}
         {@const velocity = getScoreVelocity(ticker.symbol)}
+        {@const scoreZ = computeScoreZScore(ticker.symbol)}
 
         <div
           class="bg-surface-800 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors {isSelected ? 'border-bull-strong/40 bg-surface-700' : 'border-border hover:bg-surface-750'}"
@@ -308,6 +309,9 @@
                 {/if}
                 {#if score.convictionLabel}
                   <span class="text-[10px] text-text-muted">{score.convictionLabel}</span>
+                {/if}
+                {#if scoreZ != null}
+                  <span class="text-[9px] font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
                 {/if}
               </div>
             {/if}
@@ -407,6 +411,7 @@
             {@const velocity = getScoreVelocity(ticker.symbol)}
             {@const hasAlert = getAlerts().some(a => a.symbol === ticker.symbol)}
             {@const scoreHistory = getScoreHistory(ticker.symbol)}
+            {@const scoreZ = computeScoreZScore(ticker.symbol)}
 
             <tr
               class="border-b border-border/50 cursor-pointer transition-colors {isSelected ? 'bg-surface-700' : 'hover:bg-surface-800'}"
@@ -466,6 +471,9 @@
                       <span class="text-[10px] hidden md:inline {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}"
                         title="{score.conviction}% signal agreement"
                       >{score.convictionLabel}</span>
+                    {/if}
+                    {#if scoreZ != null}
+                      <span class="text-[9px] font-mono text-text-muted hidden lg:inline" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
                     {/if}
                     <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
                   </div>
