@@ -110,6 +110,7 @@
 
   onMount(() => {
     chart = createChart(container, {
+      autoSize: true,
       layout: {
         background: { color: CHART_COLORS.background },
         textColor: CHART_COLORS.text,
@@ -160,20 +161,9 @@
       wickDownColor:    CHART_COLORS.downWick,
     });
 
-    const ro = new ResizeObserver(() => {
-      if (container && chart) {
-        chart.applyOptions({ width: container.clientWidth });
-      }
-    });
-    ro.observe(container);
-
     // Initial load — $effect runs before onMount in Svelte 5, so chart is null
     // when the effect first fires. Call loadCandles() directly here instead.
     loadCandles();
-
-    return () => {
-      ro.disconnect();
-    };
   });
 
   onDestroy(() => {
