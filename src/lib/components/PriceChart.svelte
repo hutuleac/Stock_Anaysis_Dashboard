@@ -110,6 +110,8 @@
   }
 
   onMount(() => {
+    // Defer one tick so the browser completes CSS layout before reading container size
+    setTimeout(() => {
     chart = createChart(container, {
       autoSize: true,
       layout: {
@@ -164,6 +166,7 @@
 
     // Signal that chart is ready — triggers the $effect below to call loadCandles()
     chartReady = true;
+    }, 0); // end setTimeout
   });
 
   onDestroy(() => {
