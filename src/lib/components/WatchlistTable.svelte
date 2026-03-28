@@ -467,6 +467,9 @@
                       {@const lastScore = scoreHistory[scoreHistory.length - 1]?.score}
                       {@const firstScore = scoreHistory[0]?.score}
                       {@const scoreDelta = lastScore - firstScore}
+                      {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
+                      {@const lastPt = hPts.split(' ').pop()}
+                      {@const lastPtCoords = lastPt ? lastPt.split(',').map(Number) : null}
                       <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
                         <div class="flex items-center justify-between mb-2">
                           <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Score History</p>
@@ -480,7 +483,6 @@
                         </div>
                         <svg viewBox="0 0 {SW} {SH}" class="w-full" style="height: {SH}px" preserveAspectRatio="none">
                           <!-- 50-point reference line -->
-                          {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
                           {#if refY > 0 && refY < SH}
                             <line x1="0" y1={refY} x2={SW} y2={refY} stroke="#ffffff18" stroke-width="1" stroke-dasharray="4,4"/>
                           {/if}
@@ -499,10 +501,8 @@
                             stroke-linejoin="round"
                           />
                           <!-- Latest dot -->
-                          {@const lastPt = hPts.split(' ').pop()}
-                          {#if lastPt}
-                            {@const [lx, ly] = lastPt.split(',').map(Number)}
-                            <circle cx={lx} cy={ly} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
+                          {#if lastPtCoords}
+                            <circle cx={lastPtCoords[0]} cy={lastPtCoords[1]} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
                           {/if}
                         </svg>
                       </div>
