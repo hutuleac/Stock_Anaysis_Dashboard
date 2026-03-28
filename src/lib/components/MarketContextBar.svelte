@@ -1,4 +1,7 @@
 <script>
+  import { tooltip as tipAction } from '../actions/tooltip.js';
+  import { TIPS } from '../tooltipDefs.js';
+
   let { marketData = null, collapsed = $bindable(false) } = $props();
 
   const SECTOR_NAMES = {
@@ -101,7 +104,7 @@
     {#if !collapsed}
       <div class="flex items-center gap-6 pb-3 flex-wrap">
         <!-- VIX -->
-        <div class="flex flex-col gap-0.5">
+        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.vix, current: vixPrice != null ? { value: vixPrice.toFixed(1), label: vixInfo.label, color: vixInfo.level === 'calm' ? '#22c55e' : vixInfo.level === 'normal' ? '#9ca3af' : vixInfo.level === 'elevated' ? '#f59e0b' : vixInfo.level === 'high' ? '#f97316' : '#ef4444' } : undefined })}>
           <span class="text-[9px] uppercase tracking-wider text-text-muted">VIX</span>
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold font-mono {vixInfo.color}">
@@ -121,7 +124,7 @@
         <div class="w-px h-8 bg-border"></div>
 
         <!-- SPY Trend -->
-        <div class="flex flex-col gap-0.5">
+        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.spyTrend, current: spyData?.dp != null ? { value: (spyData.dp > 0 ? '+' : '') + spyData.dp.toFixed(2) + '%', label: spyTrend.label, color: spyTrend.label === 'Bullish' ? '#22c55e' : spyTrend.label === 'Bearish' ? '#ef4444' : '#9ca3af' } : undefined })}>
           <span class="text-[9px] uppercase tracking-wider text-text-muted">SPY Trend</span>
           <div class="flex items-center gap-1.5">
             <span class="text-sm font-bold {spyTrend.color}">{spyTrend.direction}</span>
@@ -140,7 +143,7 @@
 
         <!-- Fear & Greed -->
         {#if fgInfo}
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.fearGreed, current: { value: String(fgInfo.score), label: fgInfo.label, color: fgInfo.score <= 25 ? '#ef4444' : fgInfo.score <= 40 ? '#f97316' : fgInfo.score <= 60 ? '#9ca3af' : fgInfo.score <= 75 ? '#f59e0b' : '#ef4444' } })}>
             <span class="text-[9px] uppercase tracking-wider text-text-muted">Fear & Greed</span>
             <div class="flex items-center gap-2">
               <span class="text-sm font-bold font-mono {fgInfo.color}">{fgInfo.score}</span>
