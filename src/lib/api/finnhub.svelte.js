@@ -168,6 +168,31 @@ export async function fetchInsiderTransactions(symbol) {
   );
 }
 
+// Hydrate all cached data for symbols without TTL checks (startup, no API calls)
+export function hydrateFromCache(symbols) {
+  const results = {};
+  for (const symbol of symbols) {
+    const readStale = (key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw).data;
+      } catch { return null; }
+    };
+    results[symbol] = {
+      quote:          { data: readStale(cacheKey('quote', symbol)),                stale: true },
+      earnings:       { data: readStale(cacheKey('earnings', symbol)),             stale: true },
+      metrics:        { data: readStale(cacheKey('fundamentals', symbol)),         stale: true },
+      priceTarget:    { data: readStale(cacheKey('fundamentals', `pt_${symbol}`)), stale: true },
+      news:           { data: readStale(cacheKey('news', symbol)),                 stale: true },
+      insider:        { data: readStale(cacheKey('insider', symbol)),              stale: true },
+      _candlesDaily:  readStale(cacheKey('candles', `${symbol}_D`)),
+      _candlesWeekly: readStale(cacheKey('candles', `${symbol}_W`)),
+    };
+  }
+  return results;
+}
+
 export async function refreshAll(symbols, onProgress) {
   refreshing = true;
   refreshProgress = { current: 0, total: symbols.length };

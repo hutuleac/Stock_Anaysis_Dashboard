@@ -206,15 +206,14 @@
 
           <!-- Mini price sparkline showing context window -->
           {#if sp}
+            {@const lastPt = sp.pts.split(' ').pop()}
+            {@const dotCoords = lastPt ? lastPt.split(',').map(Number) : null}
             <div class="bg-surface-700/30 rounded px-3 py-2 border border-border/30">
               <p class="text-[9px] text-text-muted mb-1 uppercase tracking-wider">Price context (last 30 candles up to selected date)</p>
               <svg viewBox="0 0 {sp.W} {sp.H}" class="w-full" style="height:{sp.H}px" preserveAspectRatio="none">
                 <polyline points={sp.pts} fill="none" stroke="#22c55e80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <!-- Dot at selected date (last point) -->
-                {@const lastPt = sp.pts.split(' ').pop()}
-                {#if lastPt}
-                  {@const coords = lastPt.split(',').map(Number)}
-                  <circle cx={coords[0]} cy={coords[1]} r="3" fill="#22c55e"/>
+                {#if dotCoords}
+                  <circle cx={dotCoords[0]} cy={dotCoords[1]} r="3" fill="#22c55e"/>
                 {/if}
               </svg>
             </div>

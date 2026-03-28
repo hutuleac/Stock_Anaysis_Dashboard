@@ -4,11 +4,25 @@ let tickers = $state([]);
 let selectedSymbol = $state(null);
 let marketData = $state({});
 
-// Initialize from localStorage
+const DEFAULT_TICKERS = [
+  { symbol: 'TSLA',  name: 'Tesla Inc',          sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
+  { symbol: 'SKM',   name: 'SK Telecom',          sector: 'Communication Services', sectorETF: 'XLC' },
+  { symbol: 'SOFI',  name: 'SoFi Technologies',   sector: 'Financial Services',     sectorETF: 'XLF' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc',         sector: 'Communication Services', sectorETF: 'XLC' },
+  { symbol: 'AMZN',  name: 'Amazon.com Inc',       sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
+  { symbol: 'HOOD',  name: 'Robinhood Markets',    sector: 'Financial Services',     sectorETF: 'XLF' },
+];
+
+// Initialize from localStorage or seed with defaults on first run
 try {
   const saved = localStorage.getItem('watchlist');
   if (saved) tickers = JSON.parse(saved);
 } catch { /* noop */ }
+
+if (tickers.length === 0) {
+  tickers = [...DEFAULT_TICKERS];
+  try { localStorage.setItem('watchlist', JSON.stringify(tickers)); } catch { /* noop */ }
+}
 
 function persistTickers() {
   try {

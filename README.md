@@ -1,4 +1,4 @@
-# Stock Analysis Dashboard v0.4
+# Stock Analysis Dashboard v0.5
 
 A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
 
@@ -79,6 +79,8 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - Collapsible
 
 ### App-level
+- **Default watchlist** — opens pre-loaded with TSLA · SKM · SOFI · GOOGL · AMZN · HOOD on first run
+- **Startup hydration** — last fetched data is shown immediately on load from cache; no auto-fetch on open
 - Market hours indicator — OPEN/CLOSED + countdown (ET), updates every minute
 - Auto-refresh — Off / 5 / 15 / 30 min, only fires when market is open
 - Keyboard shortcuts: `R` refresh · `Esc` close · `/` search · `J`/`K` navigate tickers
@@ -125,6 +127,12 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 ---
 
 ## Changelog
+
+### v0.5 (2026-03-28)
+- **Default watchlist** — first-time users see TSLA · SKM · SOFI · GOOGL · AMZN · HOOD immediately; no empty state
+- **Startup hydration** — on every open the app loads last-cached quotes, scores, indicators, and news instantly without hitting any API; data only updates when Refresh is clicked
+- **Intraday candles** — 1D (1h bars) and 5D (1h bars) timeframes on the price chart with 15-min cache
+- **Browser push notifications** — price alerts fire a system notification even when the tab is in the background
 
 ### v0.4 (2026-03-28)
 - **Local RSI(14) + MACD** computed from Finnhub candles — T5/T6 scoring active for all users with no extra API key
