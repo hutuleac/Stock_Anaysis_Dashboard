@@ -210,6 +210,11 @@
           class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
           onclick={() => {
             const keep = ['watchlist', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'lastRefreshed'];
+            // Preserve per-ticker notes
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k?.startsWith('note_')) keep.push(k);
+            }
             const toDelete = [];
             for (let i = 0; i < localStorage.length; i++) {
               const k = localStorage.key(i);
