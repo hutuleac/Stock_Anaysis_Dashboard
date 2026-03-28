@@ -180,6 +180,10 @@
               </div>
               <div class="grid grid-cols-3 gap-2 text-[11px]">
                 <div>
+                  <p class="text-text-muted">Open</p>
+                  <p class="font-mono text-text-secondary">{fmtPrice(snapshot.open)}</p>
+                </div>
+                <div>
                   <p class="text-text-muted">Close</p>
                   <p class="font-mono font-semibold text-text-primary">{fmtPrice(snapshot.price)}</p>
                 </div>
@@ -190,16 +194,16 @@
                   </p>
                 </div>
                 <div>
-                  <p class="text-text-muted">Volume</p>
-                  <p class="font-mono text-text-secondary">{fmtVol(snapshot.volume)}</p>
-                </div>
-                <div>
                   <p class="text-text-muted">High</p>
                   <p class="font-mono text-text-secondary">{fmtPrice(snapshot.high)}</p>
                 </div>
                 <div>
                   <p class="text-text-muted">Low</p>
                   <p class="font-mono text-text-secondary">{fmtPrice(snapshot.low)}</p>
+                </div>
+                <div>
+                  <p class="text-text-muted">Volume</p>
+                  <p class="font-mono text-text-secondary">{fmtVol(snapshot.volume)}</p>
                 </div>
                 <div>
                   <p class="text-text-muted">ATR(14)</p>

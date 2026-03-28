@@ -481,7 +481,7 @@
                   <div class="hidden sm:flex items-center gap-1 mt-1 justify-end">
                     {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
                       {#if val !== null}
-                        <div class="flex items-center gap-0.5" title="{label === 'T' ? 'Technical' : label === 'F' ? 'Fundamental' : 'Sentiment'}: {val}">
+                        <div class="flex items-center gap-0.5" title="{label === 'T' ? `Technical (${Math.round((score.weights?.tech ?? 0.35)*100)}%)` : label === 'F' ? `Fundamental (${Math.round((score.weights?.fund ?? 0.45)*100)}%)` : `Sentiment (${Math.round((score.weights?.sent ?? 0.20)*100)}%)`}: {val}">
                           <span class="text-[9px] text-text-muted">{label}</span>
                           <div class="w-6 h-1 bg-surface-600 rounded-full overflow-hidden">
                             <div
