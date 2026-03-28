@@ -151,6 +151,11 @@
           {fmtInsider(insiderNet())} shares
         </span>
       </div>
+    {:else}
+      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={TIPS.insider}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Insider 90d</span>
+        <span class="text-sm font-mono font-semibold text-text-muted mt-0.5">—</span>
+      </div>
     {/if}
 
     <!-- RSI(14) — from TwelveData if available -->
@@ -176,6 +181,12 @@
           {/if}
         </div>
       </div>
+    {:else}
+      <div class="flex flex-col min-w-[70px] cursor-default" use:tipAction={TIPS.rsi}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
+        <span class="text-sm font-mono font-semibold text-text-muted">—</span>
+        <span class="text-[12px] text-text-muted">—</span>
+      </div>
     {/if}
 
     <!-- MACD — from TwelveData if available -->
@@ -194,6 +205,12 @@
           {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : macd.histogram > 0 ? 'Bullish' : 'Bearish'}
         </span>
       </div>
+    {:else}
+      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={TIPS.macd}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">MACD</span>
+        <span class="text-sm font-mono font-semibold text-text-muted">—</span>
+        <span class="text-[12px] text-text-muted">—</span>
+      </div>
     {/if}
 
     <!-- ADX — trend strength -->
@@ -208,6 +225,12 @@
           <span class="text-sm font-mono font-semibold {adxColor}">{adx.toFixed(1)}</span>
         </div>
         <span class="text-[12px] {adxColor}">{adxLabel}</span>
+      </div>
+    {:else}
+      <div class="flex flex-col min-w-[70px] cursor-default" use:tipAction={TIPS.adx}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
+        <span class="text-sm font-mono font-semibold text-text-muted">—</span>
+        <span class="text-[12px] text-text-muted">—</span>
       </div>
     {/if}
 
@@ -230,6 +253,12 @@
         <span class="text-[12px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : stochColor}">
           {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : k < 20 ? 'Oversold' : k > 80 ? 'Overbought' : k < 35 ? 'Mild OS' : 'Neutral'}
         </span>
+      </div>
+    {:else}
+      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={TIPS.stoch}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Stoch %K</span>
+        <span class="text-sm font-mono font-semibold text-text-muted">—</span>
+        <span class="text-[12px] text-text-muted">—</span>
       </div>
     {/if}
 
@@ -309,6 +338,12 @@
           {/if}
         </div>
       </div>
+    {:else}
+      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={TIPS.weeklyTrend}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
+        <span class="text-sm font-mono font-semibold text-text-muted">—</span>
+        <span class="text-[12px] text-text-muted">—</span>
+      </div>
     {/if}
 
     <!-- Volume ratio — from TwelveData live quote -->
@@ -326,6 +361,12 @@
           {ratio !== null ? ratio.toFixed(2) + '× avg' : ''}
           {ratio >= 2 ? ' 🔥' : ratio <= 0.4 ? ' low' : ''}
         </span>
+      </div>
+    {:else}
+      <div class="flex flex-col min-w-[90px] cursor-default" use:tipAction={TIPS.volume}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Volume</span>
+        <span class="text-sm font-mono font-semibold text-text-muted">—</span>
+        <span class="text-[12px] text-text-muted">—</span>
       </div>
     {/if}
 
@@ -346,6 +387,15 @@
         </div>
         <span class="text-[12px] {bbColor}">{bbPct < 15 ? 'Near lower band' : bbPct > 85 ? 'Near upper band' : 'Mid-band'}</span>
       </div>
+    {:else}
+      <div class="flex flex-col min-w-[100px] cursor-default" use:tipAction={TIPS.bb}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">BB Position</span>
+        <div class="flex items-center gap-1.5 mt-1.5">
+          <div class="flex-1 h-1 bg-surface-600 rounded-full min-w-[60px]"></div>
+          <span class="text-[13px] font-mono text-text-muted">—</span>
+        </div>
+        <span class="text-[12px] text-text-muted">—</span>
+      </div>
     {/if}
 
     <!-- 52-week range bar -->
@@ -358,6 +408,15 @@
             <div class="absolute h-2.5 w-0.5 bg-text-primary rounded-full -top-[3px]" style="left: {pos52w()}%"></div>
           </div>
           <span class="text-[13px] text-text-muted font-mono">${m['52WeekHigh']?.toFixed(0)}</span>
+        </div>
+      </div>
+    {:else}
+      <div class="flex flex-col min-w-[120px]">
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
+        <div class="flex items-center gap-1.5 mt-1.5">
+          <span class="text-[13px] text-text-muted font-mono">—</span>
+          <div class="flex-1 h-1 bg-surface-600 rounded-full min-w-[60px]"></div>
+          <span class="text-[13px] text-text-muted font-mono">—</span>
         </div>
       </div>
     {/if}
