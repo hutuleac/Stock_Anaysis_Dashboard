@@ -6,6 +6,7 @@ const CACHE_TTL = {
   search: 3600,
   news: 86400,
   candles: 86400,
+  candles_intraday: 900, // 15 min — intraday data refreshes frequently
   insider: 604800,
 };
 
@@ -140,7 +141,9 @@ export async function fetchNews(symbol) {
 export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
   if (!fromTs) fromTs = Math.floor((Date.now() - 180 * 86400000) / 1000);
   if (!toTs) toTs = Math.floor(Date.now() / 1000);
-  return fetchWithCache('candles', `${symbol}_${resolution}`, () =>
+  const isIntraday = resolution !== 'D' && resolution !== 'W' && resolution !== 'M';
+  const cacheType = isIntraday ? 'candles_intraday' : 'candles';
+  return fetchWithCache(cacheType, `${symbol}_${resolution}`, () =>
     fetchFinnhub(`/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${fromTs}&to=${toTs}`)
   );
 }

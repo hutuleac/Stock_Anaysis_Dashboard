@@ -7,6 +7,17 @@
 
   let apiKeyInput = $state(getApiKey());
   let tdApiKeyInput = $state(getTDApiKey());
+  let notifPermission = $state(
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+  );
+
+  async function requestNotifications() {
+    if (typeof Notification === 'undefined') return;
+    const result = await Notification.requestPermission();
+    notifPermission = result;
+    saveMessage = result === 'granted' ? 'Notifications enabled' : 'Permission denied';
+    setTimeout(() => saveMessage = '', 2500);
+  }
   let portfolioText = $state('');
   let portfolioValueInput = $state(getPortfolioValue() > 0 ? String(getPortfolioValue()) : '');
   let saveMessage = $state('');
@@ -179,6 +190,29 @@
         <p class="text-xs text-text-muted">
           Format: TICKER QTY shares @ $PRICE (one per line)
         </p>
+      </div>
+
+      <!-- Push Notifications -->
+      <div class="space-y-2">
+        <span class="text-sm font-medium text-text-secondary block">Price Alert Notifications</span>
+        <div class="flex items-center gap-3">
+          {#if notifPermission === 'unsupported'}
+            <span class="text-xs text-text-muted">Not supported in this browser.</span>
+          {:else if notifPermission === 'granted'}
+            <span class="flex items-center gap-1.5 text-xs text-bull-strong">
+              <span class="w-1.5 h-1.5 rounded-full bg-bull-strong inline-block"></span>
+              Notifications enabled
+            </span>
+          {:else if notifPermission === 'denied'}
+            <span class="text-xs text-bear-strong">Blocked by browser — allow in site settings.</span>
+          {:else}
+            <button
+              class="px-4 py-1.5 bg-uncertain/20 text-uncertain border border-uncertain/30 font-semibold text-sm rounded hover:brightness-110 transition"
+              onclick={requestNotifications}
+            >Enable Notifications</button>
+          {/if}
+        </div>
+        <p class="text-xs text-text-muted">Fires a browser notification when a price alert triggers, even if the tab is in the background.</p>
       </div>
 
       <!-- Auto-refresh -->

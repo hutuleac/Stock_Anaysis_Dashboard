@@ -32,6 +32,17 @@ export function dismissTriggered(id) {
   if (idx !== -1) triggered.splice(idx, 1);
 }
 
+function fireNotification(alert) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  try {
+    new Notification(`🔔 ${alert.symbol} alert`, {
+      body: `${alert.symbol} is ${alert.direction} $${alert.targetPrice.toFixed(2)} — now at $${alert.currentPrice.toFixed(2)}`,
+      icon: '/favicon.ico',
+      tag: `alert-${alert.symbol}-${alert.id}`,
+    });
+  } catch { /* unsupported environment */ }
+}
+
 export function checkAlerts(marketData) {
   const newlyTriggered = [];
   const remaining = [];
@@ -54,5 +65,6 @@ export function checkAlerts(marketData) {
     alerts.length = 0;
     alerts.push(...remaining);
     persist();
+    newlyTriggered.forEach(fireNotification);
   }
 }
