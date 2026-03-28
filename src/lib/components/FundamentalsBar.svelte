@@ -92,23 +92,27 @@
     },
     {
       label: 'EMA50',
-      value: fmt(m['50DayMovingAverage'], '$'),
-      note: price && m['50DayMovingAverage']
-        ? (((price - m['50DayMovingAverage']) / m['50DayMovingAverage']) * 100).toFixed(1) + '%'
-        : null,
-      noteColor: price && m['50DayMovingAverage']
-        ? price > m['50DayMovingAverage'] ? 'text-bull-strong' : 'text-bear-strong'
-        : '',
+      value: fmt(m['50DayMovingAverage'] ?? data?.indicators?.ema50, '$'),
+      note: (() => {
+        const v = m['50DayMovingAverage'] ?? data?.indicators?.ema50;
+        return (v && price) ? (((price - v) / v) * 100).toFixed(1) + '%' : null;
+      })(),
+      noteColor: (() => {
+        const v = m['50DayMovingAverage'] ?? data?.indicators?.ema50;
+        return (v && price) ? (price > v ? 'text-bull-strong' : 'text-bear-strong') : '';
+      })(),
     },
     {
       label: 'MA200',
-      value: fmt(m['200DayMovingAverage'], '$'),
-      note: price && m['200DayMovingAverage']
-        ? (((price - m['200DayMovingAverage']) / m['200DayMovingAverage']) * 100).toFixed(1) + '%'
-        : null,
-      noteColor: price && m['200DayMovingAverage']
-        ? price > m['200DayMovingAverage'] ? 'text-bull-strong' : 'text-bear-strong'
-        : '',
+      value: fmt(m['200DayMovingAverage'] ?? data?.indicators?.ma200, '$'),
+      note: (() => {
+        const v = m['200DayMovingAverage'] ?? data?.indicators?.ma200;
+        return (v && price) ? (((price - v) / v) * 100).toFixed(1) + '%' : null;
+      })(),
+      noteColor: (() => {
+        const v = m['200DayMovingAverage'] ?? data?.indicators?.ma200;
+        return (v && price) ? (price > v ? 'text-bull-strong' : 'text-bear-strong') : '';
+      })(),
     },
     {
       label: 'Analyst Target',
@@ -170,6 +174,40 @@
         </div>
         <span class="text-[9px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : 'text-text-muted'}">
           {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : macd.histogram > 0 ? 'Bullish' : 'Bearish'}
+        </span>
+      </div>
+    {/if}
+
+    <!-- ADX — trend strength -->
+    {#if data?.indicators?.adx != null}
+      {@const adx = data.indicators.adx}
+      {@const adxLabel = adx > 30 ? 'Strong' : adx > 25 ? 'Trending' : adx > 20 ? 'Emerging' : 'Ranging'}
+      {@const adxColor = adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-uncertain' : 'text-text-muted'}
+      <div class="flex flex-col min-w-[70px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">ADX 14</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {adxColor}">{adx.toFixed(1)}</span>
+        </div>
+        <span class="text-[9px] {adxColor}">{adxLabel}</span>
+      </div>
+    {/if}
+
+    <!-- Stochastic %K/%D -->
+    {#if data?.indicators?.stochK != null}
+      {@const k = data.indicators.stochK}
+      {@const d = data.indicators.stochD}
+      {@const cross = data.indicators.stochCross}
+      {@const stochColor = k < 20 ? 'text-bull-strong' : k > 80 ? 'text-danger' : k < 35 ? 'text-uncertain' : 'text-text-primary'}
+      <div class="flex flex-col min-w-[80px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">Stoch %K</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {stochColor}">{k.toFixed(1)}</span>
+          {#if d != null}
+            <span class="text-[10px] text-text-muted">/ {d.toFixed(1)}</span>
+          {/if}
+        </div>
+        <span class="text-[9px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : stochColor}">
+          {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : k < 20 ? 'Oversold' : k > 80 ? 'Overbought' : k < 35 ? 'Mild OS' : 'Neutral'}
         </span>
       </div>
     {/if}
