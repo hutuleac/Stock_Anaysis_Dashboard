@@ -317,6 +317,112 @@ export const TIPS = {
     why: 'Insider buying is one of the strongest forward-looking signals in finance. Academic research consistently shows stocks with high insider buying outperform over 6–12 months.',
   },
 
+  setupBadge: {
+    title: 'Setup Badge',
+    subtitle: 'Pre-Buy Checklist Verdict',
+    category: 'Composite',
+    description: 'A one-word verdict combining the composite score and pre-buy checklist. Tells you at a glance whether a ticker is actionable right now.',
+    levels: [
+      { range: 'BULL',    label: 'Bullish',     color: C.green,  desc: 'Score ≥ 70 + checklist clear. Strong setup with broad signal alignment — ready to trade.' },
+      { range: 'WATCH',   label: 'Watch',       color: C.amber,  desc: 'Score 55–70. Favorable but not fully confirmed — monitor for a catalyst or entry trigger.' },
+      { range: 'SPEC',    label: 'Speculative', color: C.orange, desc: 'Score 55+ but checklist has soft warnings. Higher risk — use smaller size if trading.' },
+      { range: 'WEAK',    label: 'Weak',        color: C.orange, desc: 'Score 30–55. More bearish than bullish signals. Avoid new longs.' },
+      { range: 'BEAR',    label: 'Bearish',     color: C.red,    desc: 'Score < 30. Broad signal weakness — high risk for longs, consider shorts.' },
+      { range: 'BLOCKED', label: 'Blocked',     color: C.red,    desc: 'Hard checklist warning active (earnings imminent, key level broken). Do not trade.' },
+    ],
+    why: 'A fast-scan signal for watchlist triage. Use it to shortlist candidates, not as a standalone trade trigger. Always open the detail panel to review the checklist and pillar breakdown before acting.',
+  },
+
+  topSetups: {
+    title: 'Top Setups',
+    subtitle: 'Highest-Scoring Actionable Tickers',
+    category: 'Morning Brief',
+    description: 'The top 3 tickers from your watchlist with composite score ≥ 55, sorted by score. Blocked tickers are excluded regardless of score.',
+    levels: [
+      { range: 'Score ≥ 72', label: 'Prime',  color: C.green, desc: 'High-conviction setup — broad signal alignment. Best candidates for full-size position.' },
+      { range: '55–72',      label: 'Watch',  color: C.amber, desc: 'Favorable but not at full strength. Monitor for an entry trigger or wait for confirmation.' },
+    ],
+    why: 'Your daily shortlist. Focus on the top 1–2 setups rather than spreading attention across all tickers. A score of 72+ with HIGH conviction is rare — treat it as a priority.',
+  },
+
+  earningsSoon: {
+    title: 'Earnings Soon',
+    subtitle: 'Reports Within 7 Days',
+    category: 'Morning Brief',
+    description: 'Tickers with earnings reports within the next 7 days. Earnings cause sharp unpredictable price gaps — standard technical setups do not apply around the event.',
+    levels: [
+      { range: 'Today / 1d', label: 'Imminent', color: C.red,    desc: 'Report within 24 hours. Do NOT open new positions. Existing positions: close or hedge.' },
+      { range: '2–4 days',   label: 'Warning',  color: C.amber,  desc: 'Days away — reduce size or tighten stops. The setup thesis may be invalidated by the print.' },
+      { range: '5–7 days',   label: 'Caution',  color: C.amber,  desc: 'Within the week. Plan your earnings strategy: hold, reduce, or exit before the event.' },
+    ],
+    why: 'Options markets price in the expected move for each ticker at earnings. Holding through earnings unhedged is speculation, not a technical trade. Know your risk before the event.',
+  },
+
+  bigMovers: {
+    title: 'Big Movers Today',
+    subtitle: 'Watchlist Tickers Moving ≥ 3%',
+    category: 'Morning Brief',
+    description: 'Tickers from your watchlist moving ±3% or more intraday. Large moves signal news events, breakouts, or breakdowns that may invalidate the current thesis.',
+    levels: [
+      { range: '≥ +5%',      label: 'Gap up',   color: C.green,  desc: 'Strong upside — confirm on volume. May mark a breakout or catalyst. Re-evaluate entry levels.' },
+      { range: '+3% to +5%', label: 'Up',        color: C.green,  desc: 'Significant gain. Check if near key resistance before chasing the move.' },
+      { range: '-3% to -5%', label: 'Down',      color: C.red,    desc: 'Significant decline — check if stop levels are threatened.' },
+      { range: '≤ -5%',      label: 'Gap down',  color: C.red,    desc: 'Sharp sell-off — investigate the cause. May signal a breakdown or a buying opportunity.' },
+    ],
+    why: 'Moves above 3% often accompany news, earnings surprises, or sector rotation. A gap up on high volume can start a sustained move; a gap down may fully invalidate the setup.',
+  },
+
+  blockedTickers: {
+    title: 'Blocked Tickers',
+    subtitle: 'Pre-Buy Checklist Hard Warnings',
+    category: 'Morning Brief',
+    description: 'Tickers where the pre-buy checklist has triggered a hard warning — conditions representing unacceptable risk for a new trade entry. Ignore the score; the block takes priority.',
+    levels: [
+      { range: 'Earnings < 3d', label: 'Earnings risk',  color: C.red, desc: 'Report is imminent. Binary event — exit, hedge, or stay flat. No fresh positions.' },
+      { range: 'Stop hit',      label: 'Level broken',   color: C.red, desc: 'Price broke a key technical level. Original thesis is invalidated.' },
+      { range: 'Other warning', label: 'Flagged',        color: C.red, desc: 'A hard-stop checklist criterion was answered negatively.' },
+    ],
+    why: 'The checklist enforces discipline. A BLOCKED ticker may still have a high composite score — but the score cannot override a fundamental risk condition. Only dismiss a block if you consciously accept the stated risk.',
+  },
+
+  sectorLeaders: {
+    title: 'Sector Leaders',
+    subtitle: 'Best-Performing Sector ETFs Today',
+    category: 'Market Context',
+    description: 'The two best-performing sector ETFs (XLK, XLF, XLV…) by daily % change. Sector leadership shows where institutional money is rotating today.',
+    levels: [
+      { range: '> +1%',        label: 'Strong',  color: C.green, desc: 'Sector firmly outperforming. Setups in this sector get a systemic tailwind today.' },
+      { range: '+0.3% to +1%', label: 'Mild',    color: C.amber, desc: 'Modest leadership — some interest but no conviction flow yet.' },
+    ],
+    why: 'Trading a stock in the leading sector gives you both individual and sector tailwinds. Sector rotation often precedes broad index moves by 1–2 sessions.',
+  },
+
+  sectorLaggards: {
+    title: 'Sector Laggards',
+    subtitle: 'Worst-Performing Sector ETFs Today',
+    category: 'Market Context',
+    description: 'The two worst-performing sector ETFs today. Stocks within lagging sectors face a dual headwind: broad market selling plus sector-specific distribution.',
+    levels: [
+      { range: '< -1%',         label: 'Weak',     color: C.red,    desc: 'Sector actively sold. Avoid new longs here today — even great setups face strong headwinds.' },
+      { range: '-0.3% to -1%',  label: 'Lagging',  color: C.orange, desc: 'Mild underperformance. Sector not in favor — wait for rotation to improve before entering.' },
+    ],
+    why: 'Even the best individual setup gets dragged down when its sector is under distribution. Check whether your watchlist tickers belong to today\'s lagging sectors before committing capital.',
+  },
+
+  scoreHistory: {
+    title: 'Score History',
+    subtitle: 'Composite Score Trend Over Time',
+    category: 'Composite',
+    description: 'Each point is a full composite score recalculation captured at refresh time. The trend line shows whether the thesis is building strength or deteriorating across sessions.',
+    levels: [
+      { range: 'Rising trend',    label: 'Improving',     color: C.green,  desc: 'Score rising over sessions — thesis building strength. Conviction is increasing.' },
+      { range: 'Flat',            label: 'Stable',        color: C.dim,    desc: 'Score holding steady — setup is neither improving nor deteriorating.' },
+      { range: 'Falling trend',   label: 'Deteriorating', color: C.red,    desc: 'Score declining — signals weakening across sessions. Re-evaluate the thesis.' },
+      { range: 'Spike + reversal', label: 'Fading',       color: C.amber,  desc: 'Burst then drop — possible false breakout or one-day catalyst already fading.' },
+    ],
+    why: 'A single score reading is a snapshot; the trend matters more. A stock rising from 45 → 60 over 5 sessions is more interesting than one stuck at 65 for a month. Trend = conviction building.',
+  },
+
   score: {
     title: 'Composite Score',
     subtitle: 'Weighted Technical + Fundamental + Sentiment',

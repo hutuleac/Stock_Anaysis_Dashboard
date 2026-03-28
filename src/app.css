@@ -26,6 +26,10 @@
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 }
 
+html {
+  font-size: 130%;
+}
+
 html, body {
   background: var(--color-surface-900);
   color: var(--color-text-primary);

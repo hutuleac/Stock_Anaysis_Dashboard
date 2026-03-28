@@ -90,22 +90,22 @@
 
 <!-- Market Context Bar -->
 <div class="border-b border-border bg-surface-800/30">
-  <div class="max-w-6xl mx-auto px-4">
+  <div class="max-w-[1800px] mx-auto px-4">
     <!-- Collapse toggle -->
     <button
       class="w-full flex items-center justify-between py-2 text-left"
       onclick={() => collapsed = !collapsed}
     >
-      <span class="text-[10px] uppercase tracking-widest text-text-muted font-medium">Market Context</span>
+      <span class="text-[13px] uppercase tracking-widest text-text-muted font-medium">Market Context</span>
       <span class="text-xs text-text-muted transition-transform {collapsed ? '' : 'rotate-180'}">▾</span>
     </button>
 
     <!-- Content -->
     {#if !collapsed}
-      <div class="flex items-center gap-6 pb-3 flex-wrap">
+      <div class="flex items-center gap-6 pb-3 flex-wrap overflow-x-auto">
         <!-- VIX -->
         <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.vix, current: vixPrice != null ? { value: vixPrice.toFixed(1), label: vixInfo.label, color: vixInfo.level === 'calm' ? '#22c55e' : vixInfo.level === 'normal' ? '#9ca3af' : vixInfo.level === 'elevated' ? '#f59e0b' : vixInfo.level === 'high' ? '#f97316' : '#ef4444' } : undefined })}>
-          <span class="text-[9px] uppercase tracking-wider text-text-muted">VIX</span>
+          <span class="text-[12px] uppercase tracking-wider text-text-muted">VIX</span>
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold font-mono {vixInfo.color}">
               {vixPrice != null ? vixPrice.toFixed(1) : '—'}
@@ -113,11 +113,11 @@
                 <span class="text-xs">{vixChange > 0 ? '↑' : '↓'}</span>
               {/if}
             </span>
-            <span class="text-[10px] font-semibold {vixInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">
+            <span class="text-[13px] font-semibold {vixInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">
               {vixInfo.label}
             </span>
           </div>
-          <span class="text-[10px] text-text-muted">{getVixAdvice(vixInfo.level)}</span>
+          <span class="text-[13px] text-text-muted">{getVixAdvice(vixInfo.level)}</span>
         </div>
 
         <!-- Divider -->
@@ -125,7 +125,7 @@
 
         <!-- SPY Trend -->
         <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.spyTrend, current: spyData?.dp != null ? { value: (spyData.dp > 0 ? '+' : '') + spyData.dp.toFixed(2) + '%', label: spyTrend.label, color: spyTrend.label === 'Bullish' ? '#22c55e' : spyTrend.label === 'Bearish' ? '#ef4444' : '#9ca3af' } : undefined })}>
-          <span class="text-[9px] uppercase tracking-wider text-text-muted">SPY Trend</span>
+          <span class="text-[12px] uppercase tracking-wider text-text-muted">SPY Trend</span>
           <div class="flex items-center gap-1.5">
             <span class="text-sm font-bold {spyTrend.color}">{spyTrend.direction}</span>
             <span class="text-sm font-medium {spyTrend.color}">{spyTrend.label}</span>
@@ -134,7 +134,7 @@
             {/if}
           </div>
           {#if spyData?.c != null}
-            <span class="text-[10px] text-text-muted font-mono">${spyData.c.toFixed(2)}</span>
+            <span class="text-[13px] text-text-muted font-mono">${spyData.c.toFixed(2)}</span>
           {/if}
         </div>
 
@@ -144,10 +144,10 @@
         <!-- Fear & Greed -->
         {#if fgInfo}
           <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.fearGreed, current: { value: String(fgInfo.score), label: fgInfo.label, color: fgInfo.score <= 25 ? '#ef4444' : fgInfo.score <= 40 ? '#f97316' : fgInfo.score <= 60 ? '#9ca3af' : fgInfo.score <= 75 ? '#f59e0b' : '#ef4444' } })}>
-            <span class="text-[9px] uppercase tracking-wider text-text-muted">Fear & Greed</span>
+            <span class="text-[12px] uppercase tracking-wider text-text-muted">Fear & Greed</span>
             <div class="flex items-center gap-2">
               <span class="text-sm font-bold font-mono {fgInfo.color}">{fgInfo.score}</span>
-              <span class="text-[10px] font-semibold {fgInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">{fgInfo.label}</span>
+              <span class="text-[13px] font-semibold {fgInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">{fgInfo.label}</span>
             </div>
             <!-- Gauge bar 0–100 -->
             <div class="w-20 h-1 bg-surface-700 rounded-full overflow-hidden">
@@ -163,8 +163,8 @@
         {/if}
 
         <!-- Sector Leaders -->
-        <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] uppercase tracking-wider text-text-muted">Leading</span>
+        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={TIPS.sectorLeaders}>
+          <span class="text-[12px] uppercase tracking-wider text-text-muted">Leading</span>
           <div class="flex items-center gap-2">
             {#each sectorInfo.leaders as s}
               <span class="text-xs font-mono">
@@ -182,8 +182,8 @@
         <div class="w-px h-8 bg-border"></div>
 
         <!-- Sector Laggards -->
-        <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] uppercase tracking-wider text-text-muted">Lagging</span>
+        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={TIPS.sectorLaggards}>
+          <span class="text-[12px] uppercase tracking-wider text-text-muted">Lagging</span>
           <div class="flex items-center gap-2">
             {#each sectorInfo.laggards as s}
               <span class="text-xs font-mono">

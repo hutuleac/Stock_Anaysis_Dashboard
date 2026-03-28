@@ -300,7 +300,7 @@
 <div class="min-h-screen bg-surface-900">
   <!-- Header -->
   <header class="border-b border-border bg-surface-800/50 backdrop-blur-sm sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <h1 class="text-lg font-bold text-text-primary tracking-tight">
           <span class="hidden sm:inline">Stock Dashboard</span>
@@ -404,7 +404,7 @@
   <MarketContextBar marketData={marketContextData} bind:collapsed={marketBarCollapsed} />
 
   <!-- Main content -->
-  <main class="max-w-6xl mx-auto px-4 py-6">
+  <main class="max-w-[1800px] mx-auto px-4 py-6">
     <MorningBrief />
     <WatchlistTable onTickerAdded={handleRefresh} />
 
@@ -427,7 +427,7 @@
           <span>{openPositions} open position{openPositions > 1 ? 's' : ''}</span>
         {/if}
         <span>{totalTrades} trade{totalTrades > 1 ? 's' : ''} logged</span>
-        <span class="ml-auto hidden sm:block text-[10px]">
+        <span class="ml-auto hidden sm:block text-[13px]">
           Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
           <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
           <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
@@ -436,7 +436,7 @@
       </div>
     {:else}
       <div class="mt-6 border-t border-border/50 pt-3 flex justify-end">
-        <span class="text-[10px] text-text-muted hidden sm:block">
+        <span class="text-[13px] text-text-muted hidden sm:block">
           Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
           <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
           <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
