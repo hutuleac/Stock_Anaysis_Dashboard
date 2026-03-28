@@ -180,7 +180,7 @@ export async function fetchTDQuote(symbol) {
 // Returns values array sorted ascending (oldest first), ready for lightweight-charts
 export async function fetchTimeSeries(symbol, interval, outputsize) {
   const cacheType = interval === '1h' ? 'ts_1h' : 'ts_1day';
-  return fetchWithCache(cacheType, `${symbol}_${interval}`, async () => {
+  return fetchWithCache(cacheType, `${symbol}_${interval}_${outputsize}`, async () => {
     const json = await fetchTD(
       `/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputsize}&order=ASC`
     );
