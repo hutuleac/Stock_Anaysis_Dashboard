@@ -185,7 +185,16 @@
                 v: vals.map(v => parseInt(v.volume, 10)),
               };
               const localInd = computeIndicatorsFromCandles(synthetic);
-              if (localInd) results[ticker.symbol].indicators = localInd;
+              if (localInd) {
+                results[ticker.symbol].indicators = localInd;
+                // Build local volume fallback so Volume cell shows for all tickers
+                const vols = synthetic.v.filter(v => v > 0);
+                if (vols.length >= 20) {
+                  const vol = vols[vols.length - 1];
+                  const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
+                  results[ticker.symbol].tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
+                }
+              }
 
               // Weekly trend from same data (resample: take every 5th bar)
               const weeklyTrend = computeWeeklyTrend(synthetic);
@@ -194,7 +203,15 @@
           } else {
             const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
             const localInd = computeIndicatorsFromCandles(candleRes?.data);
-            if (localInd) results[ticker.symbol].indicators = localInd;
+            if (localInd) {
+              results[ticker.symbol].indicators = localInd;
+              const vols = (candleRes?.data?.v ?? []).filter(v => v > 0);
+              if (vols.length >= 20) {
+                const vol = vols[vols.length - 1];
+                const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
+                results[ticker.symbol].tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
+              }
+            }
 
             const weeklyFromTs = toTs - 52 * 7 * 86400;
             const weeklyRes = await fetchCandles(ticker.symbol, 'W', weeklyFromTs, toTs);
@@ -210,10 +227,12 @@
           try {
             const tdInd = await fetchIndicators(ticker.symbol);
             if (tdInd && results[ticker.symbol]) {
-              // Merge indicators: TD wins, local fills gaps
+              // Merge indicators: TD wins for non-null values, local fills gaps
+              const { quote: _q, ...tdFields } = tdInd;
+              const tdNonNull = Object.fromEntries(Object.entries(tdFields).filter(([, v]) => v !== null && v !== undefined));
               results[ticker.symbol].indicators = {
                 ...results[ticker.symbol].indicators,
-                ...tdInd,
+                ...tdNonNull,
                 source: 'twelvedata',
               };
 
