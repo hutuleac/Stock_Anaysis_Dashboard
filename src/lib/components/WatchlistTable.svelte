@@ -2,6 +2,8 @@
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
+  import { tooltip as tipAction } from '../actions/tooltip.js';
+  import { TIPS } from '../tooltipDefs.js';
   import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
   import ReplayPanel from './ReplayPanel.svelte';
   import { getChecklist } from '../stores/checklist.svelte.js';
@@ -300,7 +302,9 @@
               <span class="text-xs font-mono {(quote?.dp ?? 0) >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">{formatPct(quote?.dp)}</span>
             </div>
             {#if score.score !== null}
-              <div class="flex items-center gap-1.5">
+              {@const scoreCssColorM = score.score >= 70 ? '#22c55e' : score.score >= 58 ? '#f59e0b' : score.score <= 30 ? '#ef4444' : score.score <= 42 ? '#f97316' : '#9ca3af'}
+              {@const scoreLabelM = score.score >= 70 ? 'Bullish' : score.score >= 58 ? 'Positive' : score.score <= 30 ? 'Bearish' : score.score <= 42 ? 'Negative' : 'Neutral'}
+              <div class="flex items-center gap-1.5 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: scoreLabelM, color: scoreCssColorM } })}>
                 <span class="font-mono font-semibold text-sm">{score.score}</span>
                 {#if velocity}
                   <span class="text-xs {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
@@ -445,7 +449,9 @@
               </td>
               <td class="px-3 py-3 text-right">
                 {#if score.score !== null}
-                  <div class="flex items-center justify-end gap-2">
+                  {@const scoreCssColor = score.score >= 70 ? '#22c55e' : score.score >= 58 ? '#f59e0b' : score.score <= 30 ? '#ef4444' : score.score <= 42 ? '#f97316' : '#9ca3af'}
+                  {@const scoreLabel = score.score >= 70 ? 'Bullish' : score.score >= 58 ? 'Positive' : score.score <= 30 ? 'Bearish' : score.score <= 42 ? 'Negative' : 'Neutral'}
+                  <div class="flex items-center justify-end gap-2 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: scoreLabel, color: scoreCssColor } })}>
                     <!-- Score sparkline -->
                     {#if scoreHistory.length >= 2}
                       {@const minS = Math.min(...scoreHistory.map(h => h.score))}

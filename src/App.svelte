@@ -14,6 +14,7 @@
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   import OnboardingModal from './lib/components/OnboardingModal.svelte';
   import MorningBrief from './lib/components/MorningBrief.svelte';
+  import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
 
   // Svelte action: auto-dismiss triggered alert banner after 15s
   function autoDismiss(node, id) {
@@ -448,3 +449,6 @@
 
 <!-- Settings Panel -->
 <SettingsPanel bind:open={settingsOpen} />
+
+<!-- Global rich tooltip overlay (portal pattern) -->
+<TooltipOverlay />
