@@ -120,13 +120,38 @@ export async function fetchBBands(symbol) {
   });
 }
 
+// ── Real-time quote ───────────────────────────────────────────────────────────
+// TTL=0 — never cached; always fresh on each refresh.
+export async function fetchTDQuote(symbol) {
+  try {
+    const json = await fetchTD(`/quote?symbol=${encodeURIComponent(symbol)}`);
+    return {
+      price:         parseFloat(json.close),
+      change:        parseFloat(json.change),
+      changePct:     parseFloat(json.percent_change),
+      prevClose:     parseFloat(json.previous_close),
+      volume:        parseInt(json.volume, 10),
+      avgVolume:     parseInt(json.average_volume, 10),
+      volumeRatio:   json.average_volume > 0
+                       ? parseInt(json.volume, 10) / parseInt(json.average_volume, 10)
+                       : null,
+      isMarketOpen:  json.is_market_open ?? null,
+      high52w:       parseFloat(json.fifty_two_week?.high),
+      low52w:        parseFloat(json.fifty_two_week?.low),
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ── Fetch all indicators for one symbol ──────────────────────────────────────
 export async function fetchIndicators(symbol) {
   if (!hasTDApiKey()) return null;
-  const [rsiRes, macdRes, bbRes] = await Promise.all([
+  const [rsiRes, macdRes, bbRes, quote] = await Promise.all([
     fetchRSI(symbol),
     fetchMACD(symbol),
     fetchBBands(symbol),
+    fetchTDQuote(symbol),
   ]);
 
   const rsiCurrent  = rsiRes.data?.[0]?.rsi ?? null;
@@ -147,5 +172,6 @@ export async function fetchIndicators(symbol) {
         : null)
       : null,
     bb,
+    quote,
   };
 }

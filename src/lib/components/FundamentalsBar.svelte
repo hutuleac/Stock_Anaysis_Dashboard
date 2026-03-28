@@ -54,6 +54,16 @@
     return ((t - price) / price * 100).toFixed(1);
   });
 
+  const tdQuote = $derived(data?.tdQuote ?? null);
+
+  function fmtVol(v) {
+    if (!v) return '—';
+    if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+    if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K';
+    return String(v);
+  }
+
   const metrics = $derived([
     {
       label: 'Mkt Cap',
@@ -159,6 +169,22 @@
         </div>
         <span class="text-[9px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : 'text-text-muted'}">
           {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : macd.histogram > 0 ? 'Bullish' : 'Bearish'}
+        </span>
+      </div>
+    {/if}
+
+    <!-- Volume ratio — from TwelveData live quote -->
+    {#if tdQuote?.volume && tdQuote?.avgVolume}
+      {@const ratio = tdQuote.volumeRatio}
+      {@const volColor = ratio >= 2 ? 'text-bull-strong' : ratio >= 1.5 ? 'text-uncertain' : ratio <= 0.4 ? 'text-text-muted' : 'text-text-primary'}
+      <div class="flex flex-col min-w-[90px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">Volume</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {volColor}">{fmtVol(tdQuote.volume)}</span>
+        </div>
+        <span class="text-[9px] {volColor}">
+          {ratio !== null ? ratio.toFixed(2) + '× avg' : ''}
+          {ratio >= 2 ? ' 🔥' : ratio <= 0.4 ? ' low' : ''}
         </span>
       </div>
     {/if}
