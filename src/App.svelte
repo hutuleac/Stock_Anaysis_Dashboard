@@ -1,7 +1,7 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchIndicators } from './lib/api/twelvedata.svelte.js';
-  import { computeIndicatorsFromCandles } from './lib/indicators.js';
+  import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
@@ -153,11 +153,17 @@
           setSectorAnswer(ticker.symbol, null);
         }
 
-        // Local indicators from Finnhub candles (always — no extra API key needed)
+        // Daily candles → local RSI/MACD indicators
         try {
           const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
           const localInd = computeIndicatorsFromCandles(candleRes?.data);
           if (localInd) results[ticker.symbol].indicators = localInd;
+
+          // Weekly candles → multi-timeframe trend confirmation
+          const weeklyFromTs = toTs - 52 * 7 * 86400; // ~1 year of weekly bars
+          const weeklyRes = await fetchCandles(ticker.symbol, 'W', weeklyFromTs, toTs);
+          const weeklyTrend = computeWeeklyTrend(weeklyRes?.data);
+          if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
         } catch { /* non-blocking */ }
       }
 

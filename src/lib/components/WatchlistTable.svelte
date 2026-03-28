@@ -3,6 +3,7 @@
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
   import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
+  import ReplayPanel from './ReplayPanel.svelte';
   import { getChecklist } from '../stores/checklist.svelte.js';
   import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
   import PreBuyChecklist from './PreBuyChecklist.svelte';
@@ -517,6 +518,9 @@
                       <EntryPanel symbol={ticker.symbol} />
                       <TradeLog symbol={ticker.symbol} />
                     </div>
+
+                    <!-- Replay / Backtest panel -->
+                    <ReplayPanel symbol={ticker.symbol} />
 
                     <!-- Per-ticker notes -->
                     <div class="mt-4 border-t border-border/30 pt-4">

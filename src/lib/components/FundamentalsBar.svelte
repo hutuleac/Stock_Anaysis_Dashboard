@@ -54,7 +54,8 @@
     return ((t - price) / price * 100).toFixed(1);
   });
 
-  const tdQuote = $derived(data?.tdQuote ?? null);
+  const tdQuote  = $derived(data?.tdQuote ?? null);
+  const weekly   = $derived(data?.weekly ?? null);
 
   function fmtVol(v) {
     if (!v) return '—';
@@ -170,6 +171,21 @@
         <span class="text-[9px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : 'text-text-muted'}">
           {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : macd.histogram > 0 ? 'Bullish' : 'Bearish'}
         </span>
+      </div>
+    {/if}
+
+    <!-- Weekly trend (multi-timeframe) -->
+    {#if weekly}
+      {@const trendColor = weekly.trend === 'up' ? 'text-bull-strong' : weekly.trend === 'down' ? 'text-bear-strong' : 'text-text-muted'}
+      {@const trendIcon = weekly.trend === 'up' ? '↑' : weekly.trend === 'down' ? '↓' : '→'}
+      <div class="flex flex-col min-w-[80px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">W.Trend</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {trendColor}">{trendIcon} {weekly.trend.toUpperCase()}</span>
+        </div>
+        {#if weekly.rsi !== null}
+          <span class="text-[9px] text-text-muted">W.RSI {weekly.rsi}</span>
+        {/if}
       </div>
     {/if}
 
