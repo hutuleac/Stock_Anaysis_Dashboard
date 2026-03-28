@@ -23,16 +23,19 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - CSV export — all tickers with score, sub-scores, price, sector, earnings countdown
 - BLOCKED badge — automatically shown when a hard warning is active
 
-### Scoring Engine (up to 11 signals)
+### Scoring Engine (up to 13 signals)
 
 | Category | Signals |
 |----------|---------|
-| **Technical 35%** | EMA50 position, MA200 regime, 52-week range, daily momentum, RSI(14), MACD crossover |
+| **Technical 35%** | EMA50 position, MA200 regime, 52-week range, daily momentum, RSI(14), MACD crossover, ADX trend strength, Stochastic %K momentum |
 | **Fundamental 45%** | P/E ratio, EPS growth YoY, analyst price target premium |
 | **Sentiment 20%** | News headline keywords (last 5), sector ETF trend, insider net buying (90d) |
 
-- T5 RSI(14) + T6 MACD computed locally from Finnhub candles — no extra API key needed
-- Optional TwelveData key adds Bollinger Band position and higher-precision indicator values
+- T5 RSI(14) + T6 MACD computed locally from candle data — no extra API key needed
+- T7 ADX(14): trend quality signal — strong trending + MACD direction = high conviction
+- T8 Stochastic(14,3,3): oversold/overbought zones + %K/%D crossover detection
+- EMA50 + MA200 fall back to locally-computed values when Finnhub metrics unavailable
+- Optional TwelveData key adds BBands, ADX, Stochastic, and higher-precision indicator values
 - Score badges: `STRONG` · `LEAN LONG` · `NEUTRAL` · `LEAN SHORT` · `STRONG SHORT` · `BLOCKED`
 - Confidence band: `(factors/total)` shows how many signals had live data
 - T/F/S sub-score mini bars inline per row
@@ -46,7 +49,7 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 
 **Data panels**
 - News panel — last 6 headlines with bull/bear/neutral sentiment dots + timeAgo
-- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · Analyst Target · Insider 90d net shares · 52w range bar · RSI(14) · MACD · BB position (when TwelveData key set)
+- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · Analyst Target · Insider 90d net shares · 52w range bar · RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · Weekly trend · Volume ratio
 - Score history chart — full-width SVG with area fill, delta header, 50-point reference line
 
 **Decision flow (left → right)**
@@ -92,7 +95,7 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 ## Setup
 
 1. Get a free API key from [finnhub.io/register](https://finnhub.io/register)
-2. *(Optional)* Get a free TwelveData key from [twelvedata.com/register](https://twelvedata.com/register) for RSI/MACD/BBands precision
+2. *(Optional)* Get a free TwelveData key from [twelvedata.com/register](https://twelvedata.com/register) — unlocks price charts (1D/5D/1M–1Y), RSI/MACD/BBands/ADX/Stochastic precision indicators (8 credits/min, 800/day free tier)
 3. Clone and install:
    ```bash
    git clone https://github.com/hutuleac/Stock_Anaysis_Dashboard
@@ -132,7 +135,11 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - **Default watchlist** — first-time users see TSLA · SKM · SOFI · GOOGL · AMZN · HOOD immediately; no empty state
 - **Startup hydration** — on every open the app loads last-cached quotes, scores, indicators, and news instantly without hitting any API; data only updates when Refresh is clicked
 - **Intraday candles** — 1D (1h bars) and 5D (1h bars) timeframes on the price chart with 15-min cache
-- **Browser push notifications** — price alerts fire a system notification even when the tab is in the background
+- **TwelveData as primary chart source** — all 6 timeframes (1D/5D/1M–1Y) via `/time_series`; 365 daily bars fetched once, `setVisibleRange` zooms per timeframe; shared cache eliminates duplicate API calls
+- **ADX(14) signal (T7)** — trend strength scoring: strong trending + MACD direction = high conviction; Ranging/Emerging/Trending/Strong pill in Fundamentals Bar
+- **Stochastic(14,3,3) signal (T8)** — %K/%D oversold/overbought zones + crossover detection; bull/bear cross badge in Fundamentals Bar
+- **EMA50 + MA200 local fallback** — computed from cached candles so Fundamentals Bar always shows values even without Finnhub metrics
+- **Credit budget** — 6 indicators × ~6 tickers = 36 credits/refresh (~22 full refreshes/day on free tier)
 
 ### v0.4 (2026-03-28)
 - **Local RSI(14) + MACD** computed from Finnhub candles — T5/T6 scoring active for all users with no extra API key
