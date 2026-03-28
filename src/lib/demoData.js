@@ -1,0 +1,92 @@
+// Hardcoded demo data shown on first open when no API keys are configured.
+// All values are realistic but fictional — for illustration only.
+
+export const DEMO_TICKERS = [
+  { symbol: 'AAPL', name: 'Apple Inc.',        sector: 'Technology',            sectorETF: 'XLK' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp.',       sector: 'Technology',            sectorETF: 'XLK' },
+  { symbol: 'TSLA', name: 'Tesla Inc.',         sector: 'Consumer Cyclical',     sectorETF: 'XLY' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.',    sector: 'Consumer Cyclical',     sectorETF: 'XLY' },
+  { symbol: 'MSFT', name: 'Microsoft Corp.',    sector: 'Technology',            sectorETF: 'XLK' },
+];
+
+export const DEMO_MARKET_DATA = {
+  AAPL: {
+    quote:       { data: { c: 214.50, d: -2.61, dp: -1.2,  pc: 217.11 }, stale: true },
+    earnings:    { data: { earningsCalendar: [{ date: '2026-07-24', symbol: 'AAPL' }] }, stale: true },
+    metrics:     { data: { metric: { marketCapitalization: 3200, peNormalizedAnnual: 31.2, peBasicExclExtraTTM: 31.2, epsGrowthTTMYoy: 7.8, epsGrowth3Y: 12.4, '50DayMovingAverage': 221.80, '200DayMovingAverage': 206.40, '52WeekHigh': 237.49, '52WeekLow': 164.08 } }, stale: true },
+    priceTarget: { data: { targetMean: 245.00, targetHigh: 275.00, targetLow: 180.00 }, stale: true },
+    insider:     { data: { data: [{ transactionType: 'P-PURCHASE', share: 2500 }, { transactionType: 'S-SALE', share: 1800 }] }, stale: true },
+    news:        { data: [], stale: true },
+    indicators:  { rsi: 47.3, rsiDirection: 'falling', rsiZScore: -0.7, macd: { macd: -0.42, signal: -0.18, histogram: -0.24 }, macdCrossover: null, adx: 24.1, stochK: 34.2, stochD: 38.5, stochCross: null, bb: { upper: 228.5, middle: 214.0, lower: 199.5 }, ema20: 216.8, ema50: 221.80, ema200: 206.40, source: 'demo' },
+    tdQuote:     { volume: 58_200_000, avgVolume: 62_000_000, volumeRatio: 0.94 },
+    weekly:      { trend: 'down', rsi: 44.2, ema10: 218.5, aboveEma: false, atr: 4.2, macd: { macd: -1.2, signal: -0.8, histogram: -0.4 } },
+    sectorTrend: false,
+  },
+  NVDA: {
+    quote:       { data: { c: 875.40, d: 20.62, dp: 2.4,   pc: 854.78 }, stale: true },
+    earnings:    { data: { earningsCalendar: [{ date: '2026-05-28', symbol: 'NVDA' }] }, stale: true },
+    metrics:     { data: { metric: { marketCapitalization: 2150, peNormalizedAnnual: 68.4, peBasicExclExtraTTM: 68.4, epsGrowthTTMYoy: 112.5, epsGrowth3Y: 84.2, '50DayMovingAverage': 845.20, '200DayMovingAverage': 712.80, '52WeekHigh': 974.00, '52WeekLow': 460.30 } }, stale: true },
+    priceTarget: { data: { targetMean: 950.00, targetHigh: 1200.00, targetLow: 700.00 }, stale: true },
+    insider:     { data: { data: [{ transactionType: 'P-PURCHASE', share: 8000 }, { transactionType: 'P-PURCHASE', share: 3500 }] }, stale: true },
+    news:        { data: [], stale: true },
+    indicators:  { rsi: 62.1, rsiDirection: 'rising', rsiZScore: 1.2, macd: { macd: 1.82, signal: 1.24, histogram: 0.58 }, macdCrossover: null, adx: 31.5, stochK: 71.3, stochD: 65.2, stochCross: 'bullish_cross', bb: { upper: 910.0, middle: 850.0, lower: 790.0 }, ema20: 862.0, ema50: 845.20, ema200: 712.80, source: 'demo' },
+    tdQuote:     { volume: 45_800_000, avgVolume: 38_500_000, volumeRatio: 1.19 },
+    weekly:      { trend: 'up', rsi: 65.4, ema10: 840.0, aboveEma: true, atr: 18.4, macd: { macd: 3.8, signal: 2.1, histogram: 1.7 } },
+    sectorTrend: false,
+  },
+  TSLA: {
+    quote:       { data: { c: 248.80, d: -2.01, dp: -0.8,  pc: 250.81 }, stale: true },
+    earnings:    { data: { earningsCalendar: [{ date: '2026-04-22', symbol: 'TSLA' }] }, stale: true },
+    metrics:     { data: { metric: { marketCapitalization: 795, peNormalizedAnnual: 58.7, peBasicExclExtraTTM: 58.7, epsGrowthTTMYoy: 14.2, epsGrowth3Y: 62.1, '50DayMovingAverage': 255.40, '200DayMovingAverage': 231.10, '52WeekHigh': 299.29, '52WeekLow': 138.80 } }, stale: true },
+    priceTarget: { data: { targetMean: 295.00, targetHigh: 400.00, targetLow: 150.00 }, stale: true },
+    insider:     { data: { data: [{ transactionType: 'S-SALE', share: 12000 }, { transactionType: 'S-SALE', share: 8400 }] }, stale: true },
+    news:        { data: [], stale: true },
+    indicators:  { rsi: 51.4, rsiDirection: 'flat', rsiZScore: 0.1, macd: { macd: 0.08, signal: 0.02, histogram: 0.06 }, macdCrossover: null, adx: 18.9, stochK: 52.4, stochD: 54.1, stochCross: null, bb: { upper: 268.0, middle: 248.5, lower: 229.0 }, ema20: 251.2, ema50: 255.40, ema200: 231.10, source: 'demo' },
+    tdQuote:     { volume: 89_400_000, avgVolume: 95_000_000, volumeRatio: 0.94 },
+    weekly:      { trend: 'neutral', rsi: 51.0, ema10: 252.0, aboveEma: false, atr: 7.8, macd: { macd: 0.4, signal: 0.6, histogram: -0.2 } },
+    sectorTrend: false,
+  },
+  AMZN: {
+    quote:       { data: { c: 196.40, d: 0.59,  dp: 0.3,   pc: 195.81 }, stale: true },
+    earnings:    { data: { earningsCalendar: [{ date: '2026-04-30', symbol: 'AMZN' }] }, stale: true },
+    metrics:     { data: { metric: { marketCapitalization: 2100, peNormalizedAnnual: 42.8, peBasicExclExtraTTM: 42.8, epsGrowthTTMYoy: 58.4, epsGrowth3Y: 38.7, '50DayMovingAverage': 190.50, '200DayMovingAverage': 178.20, '52WeekHigh': 218.71, '52WeekLow': 151.61 } }, stale: true },
+    priceTarget: { data: { targetMean: 240.00, targetHigh: 285.00, targetLow: 185.00 }, stale: true },
+    insider:     { data: { data: [{ transactionType: 'P-PURCHASE', share: 6200 }] }, stale: true },
+    news:        { data: [], stale: true },
+    indicators:  { rsi: 54.8, rsiDirection: 'rising', rsiZScore: 0.4, macd: { macd: 0.42, signal: 0.18, histogram: 0.24 }, macdCrossover: null, adx: 27.3, stochK: 58.2, stochD: 52.1, stochCross: 'bullish_cross', bb: { upper: 210.0, middle: 193.5, lower: 177.0 }, ema20: 194.8, ema50: 190.50, ema200: 178.20, source: 'demo' },
+    tdQuote:     { volume: 32_100_000, avgVolume: 35_800_000, volumeRatio: 0.90 },
+    weekly:      { trend: 'up', rsi: 57.2, ema10: 191.0, aboveEma: true, atr: 5.1, macd: { macd: 0.9, signal: 0.5, histogram: 0.4 } },
+    sectorTrend: false,
+  },
+  MSFT: {
+    quote:       { data: { c: 378.90, d: -1.91, dp: -0.5,  pc: 380.81 }, stale: true },
+    earnings:    { data: { earningsCalendar: [{ date: '2026-04-29', symbol: 'MSFT' }] }, stale: true },
+    metrics:     { data: { metric: { marketCapitalization: 2815, peNormalizedAnnual: 34.1, peBasicExclExtraTTM: 34.1, epsGrowthTTMYoy: 21.3, epsGrowth3Y: 18.9, '50DayMovingAverage': 373.80, '200DayMovingAverage': 352.40, '52WeekHigh': 420.82, '52WeekLow': 309.45 } }, stale: true },
+    priceTarget: { data: { targetMean: 430.00, targetHigh: 520.00, targetLow: 360.00 }, stale: true },
+    insider:     { data: { data: [{ transactionType: 'S-SALE', share: 4200 }, { transactionType: 'P-PURCHASE', share: 1100 }] }, stale: true },
+    news:        { data: [], stale: true },
+    indicators:  { rsi: 53.2, rsiDirection: 'flat', rsiZScore: 0.2, macd: { macd: 0.68, signal: 0.42, histogram: 0.26 }, macdCrossover: null, adx: 29.4, stochK: 61.4, stochD: 58.7, stochCross: null, bb: { upper: 395.0, middle: 375.0, lower: 355.0 }, ema20: 377.4, ema50: 373.80, ema200: 352.40, source: 'demo' },
+    tdQuote:     { volume: 18_700_000, avgVolume: 22_400_000, volumeRatio: 0.83 },
+    weekly:      { trend: 'up', rsi: 56.1, ema10: 374.0, aboveEma: true, atr: 6.8, macd: { macd: 1.4, signal: 0.9, histogram: 0.5 } },
+    sectorTrend: false,
+  },
+};
+
+export const DEMO_MARKET_CONTEXT = {
+  vix:       { data: { c: 22.4, dp: 3.1  } },
+  spy:       { data: { c: 534.20, dp: -0.8 } },
+  fearGreed: { data: { score: 38, rating: 'Fear' } },
+  sectors: {
+    XLK:  { data: { dp: -1.1 } },
+    XLF:  { data: { dp:  0.4 } },
+    XLV:  { data: { dp:  0.2 } },
+    XLY:  { data: { dp: -0.9 } },
+    XLP:  { data: { dp:  0.6 } },
+    XLE:  { data: { dp: -0.3 } },
+    XLI:  { data: { dp: -0.5 } },
+    XLB:  { data: { dp: -0.2 } },
+    XLU:  { data: { dp:  0.8 } },
+    XLRE: { data: { dp:  0.1 } },
+    XLC:  { data: { dp: -0.7 } },
+  },
+};
