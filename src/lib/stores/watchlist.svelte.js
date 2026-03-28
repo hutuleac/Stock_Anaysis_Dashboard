@@ -72,6 +72,18 @@ export function reorderTickers(fromIndex, toIndex) {
   persistTickers();
 }
 
+// Load demo tickers without persisting — used in demo mode only
+export function loadDemoTickers(demoTickers) {
+  tickers = [...demoTickers];
+}
+
+// Clear demo tickers and seed defaults so user starts fresh after adding API keys
+export function clearDemoTickers() {
+  tickers = [...DEFAULT_TICKERS];
+  marketData = {};
+  persistTickers();
+}
+
 export function setMarketData(data) {
   marketData = { ...marketData, ...data };
 }

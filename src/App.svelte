@@ -2,7 +2,8 @@
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, hydrateFromCache } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchIndicators, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
-  import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
+  import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
+  import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
   import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
@@ -12,7 +13,7 @@
   import PortfolioStats from './lib/components/PortfolioStats.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
-  import OnboardingModal from './lib/components/OnboardingModal.svelte';
+  // OnboardingModal removed — demo mode replaces it
   import MorningBrief from './lib/components/MorningBrief.svelte';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
 
@@ -23,13 +24,22 @@
   }
 
   let settingsOpen = $state(false);
-  let showOnboarding = $state(!getApiKey());
+  let isDemoMode = $state(false);
   let lastRefreshed = $state(null);
   let offline = $state(!navigator.onLine);
   let refreshError = $state('');
   let marketContextData = $state(null);
   let marketBarCollapsed = $state(false);
   let marketStatus = $state(getMarketStatus());
+
+  // When a user enters API keys in Settings, exit demo mode and load real data
+  $effect(() => {
+    if (getApiKey() && isDemoMode) {
+      isDemoMode = false;
+      clearDemoTickers();
+      handleRefresh();
+    }
+  });
 
   function getMarketStatus() {
     const now = new Date();
@@ -106,11 +116,6 @@
         selectTicker(symbols[nextIdx]);
       }
     });
-  }
-
-  function handleOnboardingComplete() {
-    showOnboarding = false;
-    handleRefresh();
   }
 
   async function handleRefresh() {
@@ -305,6 +310,19 @@
   // Calling setMarketData twice causes the second call to replace (not merge)
   // per-ticker objects, losing fields from the first call.
   function hydrateStartup() {
+    // No API key — show demo dashboard instead of blank screen
+    if (!getApiKey()) {
+      loadDemoTickers(DEMO_TICKERS);
+      setMarketData(DEMO_MARKET_DATA);
+      marketContextData = DEMO_MARKET_CONTEXT;
+      setMarketContext({ vixPrice: 22.4, spyDowntrend: true, fearGreedValue: 38 });
+      for (const t of DEMO_TICKERS) {
+        setEarningsAnswer(t.symbol, getDaysToEarnings(DEMO_MARKET_DATA[t.symbol]?.earnings) ?? null);
+      }
+      isDemoMode = true;
+      return;
+    }
+
     const symbols = getSymbols();
     if (!symbols.length) return;
 
@@ -361,11 +379,6 @@
 
   hydrateStartup();
 </script>
-
-<!-- Onboarding -->
-{#if showOnboarding}
-  <OnboardingModal onComplete={handleOnboardingComplete} />
-{/if}
 
 <div class="min-h-screen bg-surface-900">
   <!-- Header -->
@@ -431,6 +444,20 @@
       </div>
     {/if}
   </header>
+
+  <!-- Demo mode banner -->
+  {#if isDemoMode}
+    <div class="px-4 py-2.5 text-center text-sm bg-surface-700/60 border-b border-border flex items-center justify-center gap-3 flex-wrap">
+      <span class="text-warning font-semibold">⚡ Demo Mode</span>
+      <span class="text-text-muted">Sample data only — not real market prices.</span>
+      <button
+        class="text-xs px-2.5 py-1 bg-bull-strong/20 text-bull-strong rounded hover:bg-bull-strong/30 transition-colors font-semibold"
+        onclick={() => settingsOpen = true}
+      >
+        Add API Keys to go live →
+      </button>
+    </div>
+  {/if}
 
   <!-- Offline banner -->
   {#if offline}
