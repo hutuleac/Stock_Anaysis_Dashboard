@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, hydrateFromCache } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchIndicators } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
@@ -218,6 +218,41 @@
     if (!date) return 'Never';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
+
+  // On startup: hydrate from cache without firing any API calls
+  function hydrateStartup() {
+    const symbols = getSymbols();
+    if (!symbols.length) return;
+
+    const results = hydrateFromCache(symbols);
+    const tickerList = getTickers();
+
+    for (const ticker of tickerList) {
+      const data = results[ticker.symbol];
+      if (!data) continue;
+
+      // Compute local indicators from cached daily candles
+      if (data._candlesDaily) {
+        const localInd = computeIndicatorsFromCandles(data._candlesDaily);
+        if (localInd) data.indicators = localInd;
+      }
+      // Weekly trend from cached weekly candles
+      if (data._candlesWeekly) {
+        const weeklyTrend = computeWeeklyTrend(data._candlesWeekly);
+        if (weeklyTrend) data.weekly = weeklyTrend;
+      }
+      delete data._candlesDaily;
+      delete data._candlesWeekly;
+
+      // Auto-answer earnings from cached data
+      const daysToEarnings = getDaysToEarnings(data.earnings);
+      setEarningsAnswer(ticker.symbol, daysToEarnings ?? null);
+    }
+
+    setMarketData(results);
+  }
+
+  hydrateStartup();
 </script>
 
 <!-- Onboarding -->
@@ -234,7 +269,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.4</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.5</span>
       </div>
 
       <div class="flex items-center gap-3">
