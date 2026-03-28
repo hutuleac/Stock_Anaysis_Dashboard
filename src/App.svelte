@@ -301,12 +301,14 @@
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // On startup: hydrate Finnhub-cached fields, then overlay the supplement
+  // On startup: merge Finnhub cache + supplement into one object, then set once.
+  // Calling setMarketData twice causes the second call to replace (not merge)
+  // per-ticker objects, losing fields from the first call.
   function hydrateStartup() {
     const symbols = getSymbols();
     if (!symbols.length) return;
 
-    // Step 1: load Finnhub-cached fields (quote, earnings, metrics, news, insider)
+    // Start with Finnhub-cached fields (quote, earnings, metrics, news, insider)
     const results = hydrateFromCache(symbols);
     const tickerList = getTickers();
     for (const ticker of tickerList) {
@@ -316,47 +318,45 @@
       if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
       delete data._candlesDaily;
       delete data._candlesWeekly;
-      setEarningsAnswer(ticker.symbol, getDaysToEarnings(data.earnings) ?? null);
     }
-    setMarketData(results);
 
-    // Step 2: overlay supplement (indicators, tdQuote, weekly, sectorTrend, marketContext)
-    // Saved separately to stay small (~50 KB) and avoid localStorage quota issues.
+    // Patch supplement fields directly into results (same object, no extra setMarketData call)
     try {
       const raw = localStorage.getItem('dashboard_supplement');
-      if (!raw) return;
-      const sup = JSON.parse(raw);
-      if (!sup?.tickers) return;
-
-      // Merge supplement fields on top of hydrated results
-      const overlay = {};
-      for (const sym of symbols) {
-        const s = sup.tickers[sym];
-        if (!s) continue;
-        overlay[sym] = {};
-        if (s.quote       != null) overlay[sym].quote       = s.quote;
-        if (s.earnings    != null) overlay[sym].earnings    = s.earnings;
-        if (s.metrics     != null) overlay[sym].metrics     = s.metrics;
-        if (s.priceTarget != null) overlay[sym].priceTarget = s.priceTarget;
-        if (s.insider     != null) overlay[sym].insider     = s.insider;
-        if (s.indicators  != null) overlay[sym].indicators  = s.indicators;
-        if (s.tdQuote     != null) overlay[sym].tdQuote     = s.tdQuote;
-        if (s.weekly      != null) overlay[sym].weekly      = s.weekly;
-        if (s.sectorTrend != null) overlay[sym].sectorTrend = s.sectorTrend;
+      if (raw) {
+        const sup = JSON.parse(raw);
+        if (sup?.tickers) {
+          for (const sym of symbols) {
+            const s = sup.tickers[sym];
+            if (!s || !results[sym]) continue;
+            if (s.quote       != null) results[sym].quote       = s.quote;
+            if (s.earnings    != null) results[sym].earnings    = s.earnings;
+            if (s.metrics     != null) results[sym].metrics     = s.metrics;
+            if (s.priceTarget != null) results[sym].priceTarget = s.priceTarget;
+            if (s.insider     != null) results[sym].insider     = s.insider;
+            if (s.indicators  != null) results[sym].indicators  = s.indicators;
+            if (s.tdQuote     != null) results[sym].tdQuote     = s.tdQuote;
+            if (s.weekly      != null) results[sym].weekly      = s.weekly;
+            if (s.sectorTrend != null) results[sym].sectorTrend = s.sectorTrend;
+          }
+          if (sup.marketContextData) {
+            marketContextData = sup.marketContextData;
+            setMarketContext({
+              vixPrice:       sup.marketContextData.vix?.data?.c        ?? null,
+              spyDowntrend:   (sup.marketContextData.spy?.data?.dp ?? 0) < -0.5,
+              fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
+            });
+          }
+          if (sup.ts) lastRefreshed = new Date(sup.ts);
+        }
       }
-      if (Object.keys(overlay).length) setMarketData(overlay);
-
-      // Restore market context
-      if (sup.marketContextData) {
-        marketContextData = sup.marketContextData;
-        setMarketContext({
-          vixPrice:       sup.marketContextData.vix?.data?.c      ?? null,
-          spyDowntrend:   (sup.marketContextData.spy?.data?.dp ?? 0) < -0.5,
-          fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
-        });
-      }
-      if (sup.ts) lastRefreshed = new Date(sup.ts);
     } catch { /* corrupted supplement — non-fatal */ }
+
+    // Single setMarketData call with fully merged data
+    for (const ticker of tickerList) {
+      setEarningsAnswer(ticker.symbol, getDaysToEarnings(results[ticker.symbol]?.earnings) ?? null);
+    }
+    setMarketData(results);
   }
 
   hydrateStartup();
