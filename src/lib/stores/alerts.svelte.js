@@ -7,8 +7,18 @@ try {
   if (saved) alerts = JSON.parse(saved);
 } catch { /* noop */ }
 
+try {
+  const savedTriggered = localStorage.getItem('alerts_triggered');
+  if (savedTriggered) triggered = JSON.parse(savedTriggered);
+} catch { /* noop */ }
+
 function persist() {
   try { localStorage.setItem('price_alerts', JSON.stringify(alerts)); }
+  catch { /* noop */ }
+}
+
+function persistTriggered() {
+  try { localStorage.setItem('alerts_triggered', JSON.stringify(triggered)); }
   catch { /* noop */ }
 }
 
@@ -29,7 +39,10 @@ export function removeAlert(id) {
 
 export function dismissTriggered(id) {
   const idx = triggered.findIndex(t => t.id === id);
-  if (idx !== -1) triggered.splice(idx, 1);
+  if (idx !== -1) {
+    triggered.splice(idx, 1);
+    persistTriggered();
+  }
 }
 
 function fireNotification(alert) {
@@ -65,6 +78,7 @@ export function checkAlerts(marketData) {
     alerts.length = 0;
     alerts.push(...remaining);
     persist();
+    persistTriggered();
     newlyTriggered.forEach(fireNotification);
   }
 }

@@ -557,11 +557,21 @@
                       }}
                     >Set Alert</button>
                     {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
+                      {@const distPct = quote?.c ? ((alert.targetPrice - quote.c) / quote.c * 100) : null}
                       <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
                         {alert.direction} ${alert.targetPrice.toFixed(2)}
+                        {#if distPct !== null}
+                          <span class="font-mono {Math.abs(distPct) < 3 ? 'text-warning' : 'text-text-muted'}">({distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%)</span>
+                        {/if}
                         <button class="hover:text-danger ml-1" onclick={() => removeAlert(alert.id)}>✕</button>
                       </span>
                     {/each}
+                    {#if typeof Notification !== 'undefined' && Notification.permission === 'default'}
+                      <button
+                        class="text-[10px] px-2 py-1 bg-surface-600 rounded text-text-muted hover:text-text-secondary transition-colors"
+                        onclick={() => Notification.requestPermission()}
+                      >Enable notifications</button>
+                    {/if}
                   </div>
                 </td>
               </tr>

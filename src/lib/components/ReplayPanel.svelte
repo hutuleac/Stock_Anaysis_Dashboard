@@ -1,4 +1,5 @@
 <script>
+  import { onDestroy } from 'svelte';
   import { fetchCandles } from '../api/finnhub.svelte.js';
   import { computeSnapshotAt } from '../indicators.js';
 
@@ -8,6 +9,26 @@
   let raw       = $state(null);
   let loading   = $state(false);
   let sliderIdx = $state(0);
+  let playing   = $state(false);
+  let speedMs   = $state(600); // ms per step
+  let playTimer = null;
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    playing = false;
+  }
+
+  function togglePlay() {
+    if (playing) { stopPlay(); return; }
+    if (sliderIdx >= totalCandles - 1) sliderIdx = 0;
+    playing = true;
+    playTimer = setInterval(() => {
+      if (sliderIdx >= totalCandles - 1) { stopPlay(); return; }
+      sliderIdx++;
+    }, speedMs);
+  }
+
+  onDestroy(stopPlay);
 
   async function load() {
     if (raw) return; // already loaded (cached)
@@ -25,11 +46,19 @@
     if (open) load();
   }
 
-  const snapshot = $derived(
-    raw && open ? computeSnapshotAt(raw, sliderIdx) : null
-  );
-
+  const snapshot     = $derived(raw && open ? computeSnapshotAt(raw, sliderIdx) : null);
+  const prevSnapshot = $derived(raw && open && sliderIdx > 0 ? computeSnapshotAt(raw, sliderIdx - 1) : null);
   const totalCandles = $derived(raw?.c?.length ?? 0);
+
+  const READING_ORDER = ['BEARISH', 'LEANING SHORT', 'NEUTRAL', 'LEANING LONG', 'BULLISH'];
+  const readingTrend = $derived(() => {
+    if (!snapshot || !prevSnapshot) return null;
+    const c = READING_ORDER.indexOf(snapshot.reading);
+    const p = READING_ORDER.indexOf(prevSnapshot.reading);
+    if (c > p) return 'improved';
+    if (c < p) return 'worsened';
+    return 'unchanged';
+  });
 
   function fmtDate(d) {
     if (!d) return '—';
@@ -91,6 +120,25 @@
       {:else if !raw}
         <p class="text-xs text-text-muted">No candle data available. Hit Refresh first.</p>
       {:else}
+        <!-- Play controls -->
+        <div class="flex items-center gap-2">
+          <button
+            class="flex items-center gap-1.5 text-xs px-3 py-1 rounded transition-colors {playing ? 'bg-warning/20 text-warning hover:bg-warning/30' : 'bg-surface-700 text-text-secondary hover:bg-surface-600'}"
+            onclick={togglePlay}
+          >{playing ? '⏸ Pause' : '▶ Play'}</button>
+          <select
+            class="text-[10px] bg-surface-700 border border-border rounded px-1.5 py-1 text-text-muted"
+            bind:value={speedMs}
+            onchange={stopPlay}
+          >
+            <option value={1200}>0.5×</option>
+            <option value={600}>1×</option>
+            <option value={300}>2×</option>
+            <option value={150}>4×</option>
+          </select>
+          <span class="text-[10px] text-text-muted ml-auto font-mono">{sliderIdx + 1} / {totalCandles}</span>
+        </div>
+
         <!-- Date slider -->
         <div class="flex items-center gap-3">
           <span class="text-[10px] text-text-muted w-20 shrink-0 font-mono">
@@ -101,6 +149,7 @@
             min="0"
             max={totalCandles - 1}
             bind:value={sliderIdx}
+            oninput={stopPlay}
             class="flex-1 accent-bull-strong"
           />
           <span class="text-[10px] text-text-muted w-20 shrink-0 font-mono text-right">
@@ -111,15 +160,23 @@
         {#if snapshot}
           {@const rs = readingStyle()}
           {@const sp = sparkPts()}
+          {@const rt = readingTrend()}
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Left: OHLCV + reading -->
             <div class="bg-surface-700/50 rounded-lg p-3 border border-border/40 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-text-secondary">{fmtDate(snapshot.date)}</span>
-                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded border {rs.color} {rs.bg} {rs.border}">
-                  {snapshot.reading}
-                </span>
+                <div class="flex items-center gap-1.5">
+                  {#if rt === 'improved'}
+                    <span class="text-[10px] text-bull-strong" title="Reading improved vs prior candle">↑</span>
+                  {:else if rt === 'worsened'}
+                    <span class="text-[10px] text-bear-strong" title="Reading worsened vs prior candle">↓</span>
+                  {/if}
+                  <span class="text-xs font-mono font-bold px-2 py-0.5 rounded border {rs.color} {rs.bg} {rs.border}">
+                    {snapshot.reading}
+                  </span>
+                </div>
               </div>
               <div class="grid grid-cols-3 gap-2 text-[11px]">
                 <div>
@@ -198,6 +255,21 @@
                     </span>
                   {:else}
                     <span class="text-text-muted">—</span>
+                  {/if}
+                </div>
+                <!-- ADX -->
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-text-muted">ADX(14)</span>
+                  {#if snapshot.adx != null}
+                    {@const adxColor = snapshot.adx > 30 ? 'text-bull-strong' : snapshot.adx > 20 ? 'text-uncertain' : 'text-text-muted'}
+                    <span class="font-mono font-semibold {adxColor}">
+                      {snapshot.adx}
+                      <span class="font-normal text-text-muted ml-1">
+                        {snapshot.adx > 40 ? 'Strong' : snapshot.adx > 25 ? 'Trending' : snapshot.adx > 20 ? 'Weak' : 'Ranging'}
+                      </span>
+                    </span>
+                  {:else}
+                    <span class="text-text-muted">Need 29+ candles</span>
                   {/if}
                 </div>
               </div>

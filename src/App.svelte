@@ -15,6 +15,12 @@
   import OnboardingModal from './lib/components/OnboardingModal.svelte';
   import MorningBrief from './lib/components/MorningBrief.svelte';
 
+  // Svelte action: auto-dismiss triggered alert banner after 15s
+  function autoDismiss(node, id) {
+    const t = setTimeout(() => dismissTriggered(id), 15000);
+    return { destroy() { clearTimeout(t); } };
+  }
+
   let settingsOpen = $state(false);
   let showOnboarding = $state(!getApiKey());
   let lastRefreshed = $state(null);
@@ -372,11 +378,14 @@
     </div>
   {/if}
 
-  <!-- Price alert notifications -->
+  <!-- Price alert notifications (auto-dismiss after 15s) -->
   {#each getTriggered() as alert (alert.id)}
-    <div class="bg-bull-strong/10 border-b border-bull-strong/30 px-4 py-2 flex items-center justify-between">
+    <div
+      class="bg-bull-strong/10 border-b border-bull-strong/30 px-4 py-2 flex items-center justify-between"
+      use:autoDismiss={alert.id}
+    >
       <span class="text-sm text-bull-strong font-semibold">
-        🔔 {alert.symbol} hit ${alert.targetPrice.toFixed(2)} — now at ${alert.currentPrice.toFixed(2)}
+        🔔 {alert.symbol} hit ${alert.targetPrice.toFixed(2)} — now ${alert.currentPrice.toFixed(2)} ({alert.direction === 'above' ? '+' : ''}{(((alert.currentPrice - alert.targetPrice) / alert.targetPrice) * 100).toFixed(1)}%)
       </span>
       <button class="text-xs text-text-muted hover:text-text-secondary ml-4" onclick={() => dismissTriggered(alert.id)}>dismiss</button>
     </div>
