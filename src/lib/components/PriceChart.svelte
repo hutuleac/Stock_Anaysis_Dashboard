@@ -167,6 +167,10 @@
     });
     ro.observe(container);
 
+    // Initial load — $effect runs before onMount in Svelte 5, so chart is null
+    // when the effect first fires. Call loadCandles() directly here instead.
+    loadCandles();
+
     return () => {
       ro.disconnect();
     };
