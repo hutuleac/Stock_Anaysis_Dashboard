@@ -1,5 +1,7 @@
 <script>
   import { getTickerData } from '../stores/watchlist.svelte.js';
+  import { computeScore } from '../scoring.js';
+  import { rsiTooltip, macdTooltip, adxTooltip, stochTooltip, rsiZScoreTooltip, convictionTooltip } from '../tooltips.js';
 
   let { symbol } = $props();
 
@@ -56,6 +58,7 @@
 
   const tdQuote  = $derived(data?.tdQuote ?? null);
   const weekly   = $derived(data?.weekly ?? null);
+  const score    = $derived(computeScore(data));
 
   function fmtVol(v) {
     if (!v) return '—';
@@ -151,14 +154,20 @@
     {#if data?.indicators?.rsi != null}
       {@const rsi = data.indicators.rsi}
       {@const rsiDir = data.indicators.rsiDirection}
+      {@const rsiZ = data.indicators.rsiZScore}
       {@const rsiColor = rsi < 30 ? 'text-bull-strong' : rsi < 40 ? 'text-uncertain' : rsi > 70 ? 'text-danger' : rsi > 60 ? 'text-warning' : 'text-text-primary'}
-      <div class="flex flex-col min-w-[70px]">
+      <div class="flex flex-col min-w-[70px]" title={rsiTooltip(rsi)}>
         <span class="text-[10px] text-text-muted uppercase tracking-wider">RSI 14</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold {rsiColor}">{rsi.toFixed(1)}</span>
           <span class="text-[10px] text-text-muted">{rsiDir === 'rising' ? '↑' : rsiDir === 'falling' ? '↓' : '→'}</span>
         </div>
-        <span class="text-[9px] {rsiColor}">{rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}</span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9px] {rsiColor}">{rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}</span>
+          {#if rsiZ != null}
+            <span class="text-[9px] text-text-muted font-mono" title={rsiZScoreTooltip(rsiZ)}>z{rsiZ >= 0 ? '+' : ''}{rsiZ.toFixed(1)}</span>
+          {/if}
+        </div>
       </div>
     {/if}
 
@@ -167,7 +176,7 @@
       {@const macd = data.indicators.macd}
       {@const cross = data.indicators.macdCrossover}
       {@const histColor = macd.histogram > 0 ? 'text-bull-strong' : 'text-bear-strong'}
-      <div class="flex flex-col min-w-[80px]">
+      <div class="flex flex-col min-w-[80px]" title={macdTooltip(macd, cross)}>
         <span class="text-[10px] text-text-muted uppercase tracking-wider">MACD</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold {histColor}">{macd.histogram > 0 ? '+' : ''}{macd.histogram.toFixed(2)}</span>
@@ -183,7 +192,7 @@
       {@const adx = data.indicators.adx}
       {@const adxLabel = adx > 30 ? 'Strong' : adx > 25 ? 'Trending' : adx > 20 ? 'Emerging' : 'Ranging'}
       {@const adxColor = adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-uncertain' : 'text-text-muted'}
-      <div class="flex flex-col min-w-[70px]">
+      <div class="flex flex-col min-w-[70px]" title={adxTooltip(adx)}>
         <span class="text-[10px] text-text-muted uppercase tracking-wider">ADX 14</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold {adxColor}">{adx.toFixed(1)}</span>
@@ -198,7 +207,7 @@
       {@const d = data.indicators.stochD}
       {@const cross = data.indicators.stochCross}
       {@const stochColor = k < 20 ? 'text-bull-strong' : k > 80 ? 'text-danger' : k < 35 ? 'text-uncertain' : 'text-text-primary'}
-      <div class="flex flex-col min-w-[80px]">
+      <div class="flex flex-col min-w-[80px]" title={stochTooltip(k, cross)}>
         <span class="text-[10px] text-text-muted uppercase tracking-wider">Stoch %K</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold {stochColor}">{k.toFixed(1)}</span>
@@ -209,6 +218,18 @@
         <span class="text-[9px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : stochColor}">
           {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : k < 20 ? 'Oversold' : k > 80 ? 'Overbought' : k < 35 ? 'Mild OS' : 'Neutral'}
         </span>
+      </div>
+    {/if}
+
+    <!-- Conviction — signal agreement score -->
+    {#if score.conviction != null}
+      <div class="flex flex-col min-w-[80px]" title={convictionTooltip(score.conviction, score.convictionLabel)}>
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">Conviction</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-uncertain' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}
+          <span class="text-sm font-mono font-semibold {convColor}">{score.conviction}%</span>
+        </div>
+        <span class="text-[9px] {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}">{score.convictionLabel}</span>
       </div>
     {/if}
 
