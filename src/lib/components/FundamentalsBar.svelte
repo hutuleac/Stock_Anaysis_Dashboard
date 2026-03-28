@@ -132,6 +132,54 @@
       </div>
     {/if}
 
+    <!-- RSI(14) — from TwelveData if available -->
+    {#if data?.indicators?.rsi != null}
+      {@const rsi = data.indicators.rsi}
+      {@const rsiDir = data.indicators.rsiDirection}
+      {@const rsiColor = rsi < 30 ? 'text-bull-strong' : rsi < 40 ? 'text-uncertain' : rsi > 70 ? 'text-danger' : rsi > 60 ? 'text-warning' : 'text-text-primary'}
+      <div class="flex flex-col min-w-[70px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">RSI 14</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {rsiColor}">{rsi.toFixed(1)}</span>
+          <span class="text-[10px] text-text-muted">{rsiDir === 'rising' ? '↑' : rsiDir === 'falling' ? '↓' : '→'}</span>
+        </div>
+        <span class="text-[9px] {rsiColor}">{rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}</span>
+      </div>
+    {/if}
+
+    <!-- MACD — from TwelveData if available -->
+    {#if data?.indicators?.macd != null}
+      {@const macd = data.indicators.macd}
+      {@const cross = data.indicators.macdCrossover}
+      {@const histColor = macd.histogram > 0 ? 'text-bull-strong' : 'text-bear-strong'}
+      <div class="flex flex-col min-w-[80px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">MACD</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {histColor}">{macd.histogram > 0 ? '+' : ''}{macd.histogram.toFixed(2)}</span>
+        </div>
+        <span class="text-[9px] {cross === 'bullish_cross' ? 'text-bull-strong font-semibold' : cross === 'bearish_cross' ? 'text-danger font-semibold' : 'text-text-muted'}">
+          {cross === 'bullish_cross' ? '⚡ Bull cross' : cross === 'bearish_cross' ? '⚡ Bear cross' : macd.histogram > 0 ? 'Bullish' : 'Bearish'}
+        </span>
+      </div>
+    {/if}
+
+    <!-- BB position — from TwelveData if available -->
+    {#if data?.indicators?.bb != null && price}
+      {@const bb = data.indicators.bb}
+      {@const bbPct = ((price - bb.lower) / (bb.upper - bb.lower) * 100)}
+      {@const bbColor = bbPct < 15 ? 'text-bull-strong' : bbPct > 85 ? 'text-danger' : 'text-text-primary'}
+      <div class="flex flex-col min-w-[100px]">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">BB Position</span>
+        <div class="flex items-center gap-1.5 mt-1.5">
+          <div class="flex-1 relative h-1 bg-surface-600 rounded-full min-w-[60px]">
+            <div class="absolute h-2.5 w-0.5 rounded-full -top-[3px] {bbColor === 'text-bull-strong' ? 'bg-bull-strong' : bbColor === 'text-danger' ? 'bg-danger' : 'bg-text-secondary'}" style="left: {Math.max(0, Math.min(100, bbPct))}%"></div>
+          </div>
+          <span class="text-[10px] font-mono {bbColor}">{bbPct.toFixed(0)}%</span>
+        </div>
+        <span class="text-[9px] {bbColor}">{bbPct < 15 ? 'Near lower band' : bbPct > 85 ? 'Near upper band' : 'Mid-band'}</span>
+      </div>
+    {/if}
+
     <!-- 52-week range bar -->
     {#if pos52w() !== null}
       <div class="flex flex-col min-w-[120px]">
