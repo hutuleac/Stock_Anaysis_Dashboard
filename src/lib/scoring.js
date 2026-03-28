@@ -68,8 +68,8 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
-  // T2: Price vs MA200 (long-term regime)
-  const ma200 = metrics['200DayMovingAverage'] ?? ind?.ma200;
+  // T2: Price vs EMA200 (long-term regime)
+  const ma200 = metrics['200DayMovingAverage'] ?? ind?.ema200;
   if (ma200 && quote.c) {
     const pct = ((quote.c - ma200) / ma200) * 100;
     const v = pct > 5 ? 1 : pct > 0 ? 0.7 : pct > -10 ? 0.3 : 0;
@@ -405,19 +405,19 @@ export function generateThesis(tickerData, scoreResult) {
   const ema50 = metrics['50DayMovingAverage'] ?? ind?.ema50;
   if (ema50 && quote.c) {
     const pct = ((quote.c - ema50) / ema50) * 100;
-    if (pct > 5)       bulls.push(`Price is ${pct.toFixed(1)}% above the 50-day MA — momentum is intact.`);
-    else if (pct > 0)  bulls.push(`Holding just above the 50-day MA — a constructive setup.`);
-    else if (pct > -5) bears.push(`Trading ${Math.abs(pct).toFixed(1)}% below the 50-day MA — trend is weakening.`);
-    else               bears.push(`Price is well below the 50-day MA (${Math.abs(pct).toFixed(1)}%) — technical structure is broken.`);
+    if (pct > 5)       bulls.push(`Price is ${pct.toFixed(1)}% above the EMA50 — momentum is intact.`);
+    else if (pct > 0)  bulls.push(`Holding just above the EMA50 — a constructive setup.`);
+    else if (pct > -5) bears.push(`Trading ${Math.abs(pct).toFixed(1)}% below the EMA50 — trend is weakening.`);
+    else               bears.push(`Price is well below the EMA50 (${Math.abs(pct).toFixed(1)}%) — technical structure is broken.`);
   }
 
-  const ma200 = metrics['200DayMovingAverage'] ?? ind?.ma200;
+  const ma200 = metrics['200DayMovingAverage'] ?? ind?.ema200;
   if (ma200 && quote.c) {
     const pct = ((quote.c - ma200) / ma200) * 100;
-    if (pct > 5)       bulls.push(`Above the 200-day MA — long-term bull regime confirmed.`);
-    else if (pct > 0)  bulls.push(`Just above the 200-day MA — long-term trend borderline bullish.`);
-    else if (pct > -10) bears.push(`Below the 200-day MA — long-term trend is bearish.`);
-    else               bears.push(`Deep below the 200-day MA (${Math.abs(pct).toFixed(1)}%) — avoid until reclaimed.`);
+    if (pct > 5)       bulls.push(`Above the EMA200 — long-term bull regime confirmed.`);
+    else if (pct > 0)  bulls.push(`Just above the EMA200 — long-term trend borderline bullish.`);
+    else if (pct > -10) bears.push(`Below the EMA200 — long-term trend is bearish.`);
+    else               bears.push(`Deep below the EMA200 (${Math.abs(pct).toFixed(1)}%) — avoid until reclaimed.`);
   }
 
   const high52 = metrics['52WeekHigh'];

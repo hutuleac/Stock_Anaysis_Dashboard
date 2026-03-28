@@ -177,9 +177,8 @@ export function computeIndicatorsFromCandles(raw) {
   const ema50arr = emaArray(closes, 50);
   const ema20 = ema20arr.length > 0 ? Math.round(ema20arr[ema20arr.length - 1] * 100) / 100 : null;
   const ema50 = ema50arr.length > 0 ? Math.round(ema50arr[ema50arr.length - 1] * 100) / 100 : null;
-  const ma200 = closes.length >= 200
-    ? Math.round((closes.slice(-200).reduce((s, v) => s + v, 0) / 200) * 100) / 100
-    : null;
+  const ema200arr = emaArray(closes, 200);
+  const ema200 = ema200arr.length > 0 ? Math.round(ema200arr[ema200arr.length - 1] * 100) / 100 : null;
 
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
@@ -195,7 +194,7 @@ export function computeIndicatorsFromCandles(raw) {
     bb: null,
     ema20,
     ema50,
-    ma200,
+    ema200,
     source: 'local',
   };
 }

@@ -62,13 +62,11 @@
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
-  function computeMA(candles, period) {
-    return candles.reduce((acc, c, i) => {
-      if (i < period - 1) return acc;
-      const slice = candles.slice(i - period + 1, i + 1);
-      acc.push({ time: c.time, value: slice.reduce((s, x) => s + x.close, 0) / period });
-      return acc;
-    }, []);
+  function computeEMA(candles, period) {
+    if (!candles.length) return [];
+    const k = 2 / (period + 1);
+    let ema = candles[0].close;
+    return candles.map(c => { ema = c.close * k + ema * (1 - k); return { time: c.time, value: ema }; });
   }
 
   function normalizeTime(t) {
@@ -310,10 +308,10 @@
       series.setData(candles.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
 
       if (showMA && !tf.intraday) {
-        const ma50  = computeMA(candles, 50);
-        const ma200 = computeMA(candles, 200);
-        if (ma50.length)  ma50Series?.setData(ma50);
-        if (ma200.length) ma200Series?.setData(ma200);
+        const ema50  = computeEMA(candles, 50);
+        const ema200 = computeEMA(candles, 200);
+        if (ema50.length)  ma50Series?.setData(ema50);
+        if (ema200.length) ma200Series?.setData(ema200);
       } else {
         ma50Series?.setData([]);
         ma200Series?.setData([]);
@@ -448,13 +446,13 @@
       <!-- MA toggle (daily only) -->
       {#if !isIntraday}
         <div class="flex items-center gap-1 border-r border-border pr-2">
-          <button class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}" onclick={() => showMA = !showMA} title="Toggle moving averages">
+          <button class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}" onclick={() => showMA = !showMA} title="Toggle EMA overlays">
             <span class="inline-block w-2 h-0.5 bg-amber-400 rounded"></span>
-            <span class="text-text-muted">50</span>
+            <span class="text-text-muted">EMA50</span>
           </button>
-          <button class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}" onclick={() => showMA = !showMA} title="Toggle moving averages">
+          <button class="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors {showMA ? 'opacity-100' : 'opacity-40'}" onclick={() => showMA = !showMA} title="Toggle EMA overlays">
             <span class="inline-block w-2 h-0.5 bg-blue-400 rounded"></span>
-            <span class="text-text-muted">200</span>
+            <span class="text-text-muted">EMA200</span>
           </button>
         </div>
       {/if}
