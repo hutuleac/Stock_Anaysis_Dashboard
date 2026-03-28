@@ -123,6 +123,47 @@ function computeADXLocal(highs, lows, closes, period = 14) {
   return Math.round(adxArr[adxArr.length - 1] * 10) / 10;
 }
 
+// ── Stochastic %K/%D ─────────────────────────────────────────────────────────
+function computeStoch(highs, lows, closes, kPeriod = 14, dPeriod = 3) {
+  if (!closes || closes.length < kPeriod + dPeriod) return null;
+  const kArr = [];
+  for (let i = kPeriod - 1; i < closes.length; i++) {
+    const slice_h = highs.slice(i - kPeriod + 1, i + 1);
+    const slice_l = lows.slice(i - kPeriod + 1, i + 1);
+    const hh = Math.max(...slice_h);
+    const ll = Math.min(...slice_l);
+    kArr.push(hh === ll ? 50 : (closes[i] - ll) / (hh - ll) * 100);
+  }
+  if (kArr.length < dPeriod) return null;
+  const dArr = [];
+  for (let i = dPeriod - 1; i < kArr.length; i++) {
+    dArr.push(kArr.slice(i - dPeriod + 1, i + 1).reduce((s, v) => s + v, 0) / dPeriod);
+  }
+  const k = kArr[kArr.length - 1];
+  const d = dArr[dArr.length - 1];
+  const kPrev = kArr[kArr.length - 2] ?? null;
+  const dPrev = dArr[dArr.length - 2] ?? null;
+  const cross =
+    kPrev !== null && dPrev !== null && k > d && kPrev <= dPrev ? 'bullish_cross' :
+    kPrev !== null && dPrev !== null && k < d && kPrev >= dPrev ? 'bearish_cross' :
+    null;
+  return { k: Math.round(k * 10) / 10, d: Math.round(d * 10) / 10, cross };
+}
+
+// ── Bollinger Bands(20, 2) ────────────────────────────────────────────────────
+function computeBBLocal(closes, period = 20, mult = 2) {
+  if (!closes || closes.length < period) return null;
+  const slice = closes.slice(-period);
+  const mean = slice.reduce((s, v) => s + v, 0) / period;
+  const variance = slice.reduce((s, v) => s + (v - mean) ** 2, 0) / period;
+  const stddev = Math.sqrt(variance);
+  return {
+    upper: Math.round((mean + mult * stddev) * 100) / 100,
+    middle: Math.round(mean * 100) / 100,
+    lower: Math.round((mean - mult * stddev) * 100) / 100,
+  };
+}
+
 // ── ATR(14) from OHLC arrays ─────────────────────────────────────────────────
 export function computeATR(highs, lows, closes, period = 14) {
   if (!closes || closes.length < period + 1) return null;
@@ -169,6 +210,8 @@ export function computeIndicatorsFromCandles(raw) {
   if (!raw?.c || raw.s !== 'ok' || raw.c.length < 30) return null;
 
   const closes = raw.c;
+  const highs  = raw.h ?? [];
+  const lows   = raw.l ?? [];
   const [rsiCurr, rsiPrev] = computeRSIPair(closes);
   const macdResult = computeMACD(closes);
 
@@ -179,6 +222,11 @@ export function computeIndicatorsFromCandles(raw) {
   const ema50 = ema50arr.length > 0 ? Math.round(ema50arr[ema50arr.length - 1] * 100) / 100 : null;
   const ema200arr = emaArray(closes, 200);
   const ema200 = ema200arr.length > 0 ? Math.round(ema200arr[ema200arr.length - 1] * 100) / 100 : null;
+
+  // Local ADX, Stoch, BB — eliminates dependency on TwelveData rate-limited endpoints
+  const adxVal = highs.length >= closes.length ? computeADXLocal(highs, lows, closes) : null;
+  const stochResult = highs.length >= closes.length ? computeStoch(highs, lows, closes) : null;
+  const bbResult = computeBBLocal(closes);
 
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
@@ -191,7 +239,11 @@ export function computeIndicatorsFromCandles(raw) {
     rsiZScore: computeRSIZScore(closes),
     macd: macdResult ? macdResult.current : null,
     macdCrossover: macdResult ? macdResult.crossover : null,
-    bb: null,
+    adx: adxVal,
+    stochK: stochResult?.k ?? null,
+    stochD: stochResult?.d ?? null,
+    stochCross: stochResult?.cross ?? null,
+    bb: bbResult,
     ema20,
     ema50,
     ema200,
