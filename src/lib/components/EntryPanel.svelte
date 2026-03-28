@@ -44,6 +44,7 @@
   });
 
   const currentPrice = $derived(data?.quote?.data?.c ?? null);
+  const dp = $derived(data?.quote?.data?.dp ?? null);
   const stopLoss = $derived(parseFloat(checklist.stopLoss) || null);
 
   // Risk calculations
@@ -151,7 +152,6 @@
       {/if}
 
       <!-- High-volatility day warning -->
-      {@const dp = data?.quote?.data?.dp ?? null}
       {#if dp !== null && Math.abs(dp) >= 5}
         <div class="flex items-center gap-3 px-3 py-2 rounded-lg border {dp >= 5 ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}">
           <span class="text-lg">🌊</span>
