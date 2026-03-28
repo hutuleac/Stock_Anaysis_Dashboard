@@ -266,12 +266,19 @@
       lastRefreshed = new Date();
       try { localStorage.setItem('lastRefreshed', String(lastRefreshed.getTime())); } catch { /* noop */ }
 
-      // Persist only computed/TD-specific data — Finnhub caches its own fields already.
-      // Keeping this small (~50 KB) avoids localStorage quota issues.
+      // Persist all UI-critical fields to supplement (~100 KB).
+      // Excludes only news (large, non-critical for scores/indicators).
+      // First remove the old large snapshot key to free quota space.
+      try { localStorage.removeItem('dashboard_snapshot'); } catch { /* noop */ }
       try {
         const supplement = {};
         for (const [sym, d] of Object.entries(results)) {
           supplement[sym] = {
+            quote:       d.quote       ?? null,
+            earnings:    d.earnings    ?? null,
+            metrics:     d.metrics     ?? null,
+            priceTarget: d.priceTarget ?? null,
+            insider:     d.insider     ?? null,
             indicators:  d.indicators  ?? null,
             tdQuote:     d.tdQuote     ?? null,
             weekly:      d.weekly      ?? null,
@@ -327,6 +334,11 @@
         const s = sup.tickers[sym];
         if (!s) continue;
         overlay[sym] = {};
+        if (s.quote       != null) overlay[sym].quote       = s.quote;
+        if (s.earnings    != null) overlay[sym].earnings    = s.earnings;
+        if (s.metrics     != null) overlay[sym].metrics     = s.metrics;
+        if (s.priceTarget != null) overlay[sym].priceTarget = s.priceTarget;
+        if (s.insider     != null) overlay[sym].insider     = s.insider;
         if (s.indicators  != null) overlay[sym].indicators  = s.indicators;
         if (s.tdQuote     != null) overlay[sym].tdQuote     = s.tdQuote;
         if (s.weekly      != null) overlay[sym].weekly      = s.weekly;
