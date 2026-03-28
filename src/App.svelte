@@ -265,6 +265,20 @@
 
       lastRefreshed = new Date();
       try { localStorage.setItem('lastRefreshed', String(lastRefreshed.getTime())); } catch { /* noop */ }
+
+      // Persist full enriched snapshot so next page load shows all data instantly
+      try {
+        const trimmed = {};
+        for (const [sym, d] of Object.entries(results)) {
+          // Limit news to 5 articles to keep snapshot size small
+          trimmed[sym] = { ...d, news: d.news?.data ? { ...d.news, data: d.news.data.slice(0, 5) } : d.news };
+        }
+        localStorage.setItem('dashboard_snapshot', JSON.stringify({
+          results: trimmed,
+          marketContextData,
+          ts: lastRefreshed.getTime(),
+        }));
+      } catch { /* quota exceeded — non-fatal */ }
     } catch (err) {
       refreshError = err.message;
     }
@@ -275,36 +289,68 @@
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // On startup: hydrate from cache without firing any API calls
+  // On startup: restore full snapshot saved after last refresh
   function hydrateStartup() {
     const symbols = getSymbols();
     if (!symbols.length) return;
 
+    // Try full enriched snapshot first (includes TD indicators, volume, market context)
+    try {
+      const raw = localStorage.getItem('dashboard_snapshot');
+      if (raw) {
+        const snapshot = JSON.parse(raw);
+        if (snapshot?.results) {
+          setMarketData(snapshot.results);
+          if (snapshot.marketContextData) {
+            marketContextData = snapshot.marketContextData;
+            setMarketContext({
+              vixPrice:       snapshot.marketContextData.vix?.data?.c ?? null,
+              spyDowntrend:   (snapshot.marketContextData.spy?.data?.dp ?? 0) < -0.5,
+              fearGreedValue: snapshot.marketContextData.fearGreed?.data?.score ?? null,
+            });
+          }
+          if (snapshot.ts) lastRefreshed = new Date(snapshot.ts);
+
+          // Restore checklist auto-answers for tickers in snapshot
+          const tickerList = getTickers();
+          for (const ticker of tickerList) {
+            const data = snapshot.results[ticker.symbol];
+            if (!data) continue;
+            const daysToEarnings = getDaysToEarnings(data.earnings);
+            setEarningsAnswer(ticker.symbol, daysToEarnings ?? null);
+          }
+
+          // For any tickers added after the snapshot, fall back to individual cache
+          const missing = symbols.filter(s => !snapshot.results[s]);
+          if (missing.length) {
+            const fallback = hydrateFromCache(missing);
+            const tickerList2 = getTickers().filter(t => missing.includes(t.symbol));
+            for (const ticker of tickerList2) {
+              const data = fallback[ticker.symbol];
+              if (!data) continue;
+              if (data._candlesDaily) { const ind = computeIndicatorsFromCandles(data._candlesDaily); if (ind) data.indicators = ind; }
+              if (data._candlesWeekly) { const wt = computeWeeklyTrend(data._candlesWeekly); if (wt) data.weekly = wt; }
+              delete data._candlesDaily; delete data._candlesWeekly;
+              setEarningsAnswer(ticker.symbol, getDaysToEarnings(data.earnings) ?? null);
+            }
+            setMarketData(fallback);
+          }
+          return;
+        }
+      }
+    } catch { /* corrupted snapshot — fall through to cache hydration */ }
+
+    // No snapshot yet — fall back to individual Finnhub cache entries
     const results = hydrateFromCache(symbols);
     const tickerList = getTickers();
-
     for (const ticker of tickerList) {
       const data = results[ticker.symbol];
       if (!data) continue;
-
-      // Compute local indicators from cached daily candles
-      if (data._candlesDaily) {
-        const localInd = computeIndicatorsFromCandles(data._candlesDaily);
-        if (localInd) data.indicators = localInd;
-      }
-      // Weekly trend from cached weekly candles
-      if (data._candlesWeekly) {
-        const weeklyTrend = computeWeeklyTrend(data._candlesWeekly);
-        if (weeklyTrend) data.weekly = weeklyTrend;
-      }
-      delete data._candlesDaily;
-      delete data._candlesWeekly;
-
-      // Auto-answer earnings from cached data
-      const daysToEarnings = getDaysToEarnings(data.earnings);
-      setEarningsAnswer(ticker.symbol, daysToEarnings ?? null);
+      if (data._candlesDaily) { const ind = computeIndicatorsFromCandles(data._candlesDaily); if (ind) data.indicators = ind; }
+      if (data._candlesWeekly) { const wt = computeWeeklyTrend(data._candlesWeekly); if (wt) data.weekly = wt; }
+      delete data._candlesDaily; delete data._candlesWeekly;
+      setEarningsAnswer(ticker.symbol, getDaysToEarnings(data.earnings) ?? null);
     }
-
     setMarketData(results);
   }
 
