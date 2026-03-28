@@ -1,6 +1,7 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchIndicators } from './lib/api/twelvedata.svelte.js';
+  import { computeIndicatorsFromCandles } from './lib/indicators.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol } from './lib/stores/watchlist.svelte.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
   import { getPositions } from './lib/stores/portfolio.svelte.js';
@@ -119,10 +120,12 @@
       } catch { /* non-blocking — market context is informational */ }
 
       const results = await refreshAll(symbols);
-      setMarketData(results);
 
-      // Process auto-answers for checklist
+      // Per-ticker enrichment: checklist auto-answers + indicators
       const tickers = getTickers();
+      const toTs = Math.floor(Date.now() / 1000);
+      const fromTs = toTs - 90 * 86400; // 90 days — enough for MACD(26+9) + RSI(14)
+
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
         if (!data) continue;
@@ -130,12 +133,12 @@
         // Earnings auto-answer (Q2)
         const daysToEarnings = getDaysToEarnings(data.earnings);
         if (data.earnings.stale && !data.earnings.data) {
-          setEarningsAnswer(ticker.symbol, null); // API failed
+          setEarningsAnswer(ticker.symbol, null);
         } else {
-          setEarningsAnswer(ticker.symbol, daysToEarnings ?? 999); // no earnings = safe
+          setEarningsAnswer(ticker.symbol, daysToEarnings ?? 999);
         }
 
-        // Sector trend auto-answer (Q3) + store for scoring engine
+        // Sector trend auto-answer (Q3)
         try {
           const etfQuote = await fetchSectorETFQuote(ticker.sector);
           if (etfQuote.stale && !etfQuote.data) {
@@ -149,19 +152,34 @@
         } catch {
           setSectorAnswer(ticker.symbol, null);
         }
+
+        // Local indicators from Finnhub candles (always — no extra API key needed)
+        try {
+          const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
+          const localInd = computeIndicatorsFromCandles(candleRes?.data);
+          if (localInd) results[ticker.symbol].indicators = localInd;
+        } catch { /* non-blocking */ }
       }
 
-      // Fetch TwelveData technical indicators (if key configured)
+      // TwelveData indicators — override/extend local ones if key configured
       if (hasTDApiKey()) {
         for (const ticker of tickers) {
           try {
-            const indicators = await fetchIndicators(ticker.symbol);
-            if (indicators && results[ticker.symbol]) {
-              results[ticker.symbol].indicators = indicators;
+            const tdInd = await fetchIndicators(ticker.symbol);
+            if (tdInd && results[ticker.symbol]) {
+              // Merge: TD values win, local fills gaps (e.g. if TD call fails)
+              results[ticker.symbol].indicators = {
+                ...results[ticker.symbol].indicators,
+                ...tdInd,
+                source: 'twelvedata',
+              };
             }
           } catch { /* non-blocking */ }
         }
       }
+
+      // Commit all enriched data to the store at once
+      setMarketData(results);
 
       // Check price alerts
       checkAlerts(results);
