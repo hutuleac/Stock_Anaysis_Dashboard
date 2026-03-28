@@ -222,6 +222,30 @@
       </div>
     {/if}
 
+    <!-- T/F/S sub-scores + regime weights -->
+    {#if score.score != null}
+      {@const wT = Math.round((score.weights?.tech ?? 0.35) * 100)}
+      {@const wF = Math.round((score.weights?.fund ?? 0.45) * 100)}
+      {@const wS = Math.round((score.weights?.sent ?? 0.20) * 100)}
+      {@const isRegime = score.regimeNote != null}
+      <div class="flex flex-col min-w-[120px]" title="T/F/S sub-scores with active weights{isRegime ? ' (regime-adjusted)' : ''}">
+        <span class="text-[10px] text-text-muted uppercase tracking-wider">T / F / S</span>
+        <div class="flex items-center gap-2 mt-1">
+          {#each [['T', score.technical, wT], ['F', score.fundamental, wF], ['S', score.sentiment, wS]] as [lbl, val, wt]}
+            {#if val !== null}
+              <div class="flex flex-col items-center gap-0.5" title="{lbl === 'T' ? 'Technical' : lbl === 'F' ? 'Fundamental' : 'Sentiment'}: {val} (weight {wt}%)">
+                <span class="text-[9px] text-text-muted">{lbl}</span>
+                <div class="w-6 h-8 bg-surface-600 rounded-sm overflow-hidden flex flex-col-reverse">
+                  <div class="w-full rounded-sm {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}" style="height:{val}%"></div>
+                </div>
+                <span class="text-[9px] font-mono {isRegime ? 'text-warning' : 'text-text-muted'}">{wt}%</span>
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <!-- Conviction — signal agreement score -->
     {#if score.conviction != null}
       {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-uncertain' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}
@@ -253,9 +277,22 @@
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold {trendColor}">{trendIcon} {weekly.trend.toUpperCase()}</span>
         </div>
-        {#if weekly.rsi !== null}
-          <span class="text-[9px] text-text-muted">W.RSI {weekly.rsi}</span>
-        {/if}
+        <div class="flex flex-col gap-0.5 mt-0.5">
+          {#if weekly.rsi !== null}
+            <span class="text-[9px] text-text-muted">W.RSI {weekly.rsi}</span>
+          {/if}
+          {#if weekly.ema10 !== null && price}
+            {@const aboveW = price > weekly.ema10}
+            <span class="text-[9px] {aboveW ? 'text-bull-strong' : 'text-bear-strong'}" title="Weekly EMA10: ${weekly.ema10.toFixed(2)}">
+              {aboveW ? '▲' : '▼'} W.EMA10
+            </span>
+          {/if}
+          {#if weekly.macd !== null}
+            <span class="text-[9px] {weekly.macd.histogram > 0 ? 'text-bull-strong' : 'text-bear-strong'}">
+              W.MACD {weekly.macd.histogram > 0 ? 'bull' : 'bear'}
+            </span>
+          {/if}
+        </div>
       </div>
     {/if}
 
