@@ -16,6 +16,7 @@
   let error = $state('');
   let showMA = $state(true);
   let timeframe = $state('3M');
+  let chartReady = $state(false);
 
   const stopLossPrice = $derived(() => {
     const val = parseFloat(getChecklist(symbol).stopLoss);
@@ -161,9 +162,8 @@
       wickDownColor:    CHART_COLORS.downWick,
     });
 
-    // Initial load — $effect runs before onMount in Svelte 5, so chart is null
-    // when the effect first fires. Call loadCandles() directly here instead.
-    loadCandles();
+    // Signal that chart is ready — triggers the $effect below to call loadCandles()
+    chartReady = true;
   });
 
   onDestroy(() => {
@@ -172,11 +172,11 @@
   });
 
   $effect(() => {
-    // Re-fetch when timeframe, symbol, or MA toggle changes
+    // Runs on initial mount (after onMount sets chartReady) and on any param change
     timeframe;
     symbol;
     showMA;
-    if (chart) loadCandles();
+    if (chartReady) loadCandles();
   });
 
   $effect(() => {
