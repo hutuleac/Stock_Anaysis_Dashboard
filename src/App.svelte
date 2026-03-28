@@ -266,16 +266,21 @@
       lastRefreshed = new Date();
       try { localStorage.setItem('lastRefreshed', String(lastRefreshed.getTime())); } catch { /* noop */ }
 
-      // Persist full enriched snapshot so next page load shows all data instantly
+      // Persist only computed/TD-specific data — Finnhub caches its own fields already.
+      // Keeping this small (~50 KB) avoids localStorage quota issues.
       try {
-        const trimmed = {};
+        const supplement = {};
         for (const [sym, d] of Object.entries(results)) {
-          // Limit news to 5 articles to keep snapshot size small
-          trimmed[sym] = { ...d, news: d.news?.data ? { ...d.news, data: d.news.data.slice(0, 5) } : d.news };
+          supplement[sym] = {
+            indicators:  d.indicators  ?? null,
+            tdQuote:     d.tdQuote     ?? null,
+            weekly:      d.weekly      ?? null,
+            sectorTrend: d.sectorTrend ?? null,
+          };
         }
-        localStorage.setItem('dashboard_snapshot', JSON.stringify({
-          results: trimmed,
-          marketContextData,
+        localStorage.setItem('dashboard_supplement', JSON.stringify({
+          tickers: supplement,
+          marketContextData: marketContextData ?? null,
           ts: lastRefreshed.getTime(),
         }));
       } catch { /* quota exceeded — non-fatal */ }
@@ -289,69 +294,57 @@
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // On startup: restore full snapshot saved after last refresh
+  // On startup: hydrate Finnhub-cached fields, then overlay the supplement
   function hydrateStartup() {
     const symbols = getSymbols();
     if (!symbols.length) return;
 
-    // Try full enriched snapshot first (includes TD indicators, volume, market context)
-    try {
-      const raw = localStorage.getItem('dashboard_snapshot');
-      if (raw) {
-        const snapshot = JSON.parse(raw);
-        if (snapshot?.results) {
-          setMarketData(snapshot.results);
-          if (snapshot.marketContextData) {
-            marketContextData = snapshot.marketContextData;
-            setMarketContext({
-              vixPrice:       snapshot.marketContextData.vix?.data?.c ?? null,
-              spyDowntrend:   (snapshot.marketContextData.spy?.data?.dp ?? 0) < -0.5,
-              fearGreedValue: snapshot.marketContextData.fearGreed?.data?.score ?? null,
-            });
-          }
-          if (snapshot.ts) lastRefreshed = new Date(snapshot.ts);
-
-          // Restore checklist auto-answers for tickers in snapshot
-          const tickerList = getTickers();
-          for (const ticker of tickerList) {
-            const data = snapshot.results[ticker.symbol];
-            if (!data) continue;
-            const daysToEarnings = getDaysToEarnings(data.earnings);
-            setEarningsAnswer(ticker.symbol, daysToEarnings ?? null);
-          }
-
-          // For any tickers added after the snapshot, fall back to individual cache
-          const missing = symbols.filter(s => !snapshot.results[s]);
-          if (missing.length) {
-            const fallback = hydrateFromCache(missing);
-            const tickerList2 = getTickers().filter(t => missing.includes(t.symbol));
-            for (const ticker of tickerList2) {
-              const data = fallback[ticker.symbol];
-              if (!data) continue;
-              if (data._candlesDaily) { const ind = computeIndicatorsFromCandles(data._candlesDaily); if (ind) data.indicators = ind; }
-              if (data._candlesWeekly) { const wt = computeWeeklyTrend(data._candlesWeekly); if (wt) data.weekly = wt; }
-              delete data._candlesDaily; delete data._candlesWeekly;
-              setEarningsAnswer(ticker.symbol, getDaysToEarnings(data.earnings) ?? null);
-            }
-            setMarketData(fallback);
-          }
-          return;
-        }
-      }
-    } catch { /* corrupted snapshot — fall through to cache hydration */ }
-
-    // No snapshot yet — fall back to individual Finnhub cache entries
+    // Step 1: load Finnhub-cached fields (quote, earnings, metrics, news, insider)
     const results = hydrateFromCache(symbols);
     const tickerList = getTickers();
     for (const ticker of tickerList) {
       const data = results[ticker.symbol];
       if (!data) continue;
-      if (data._candlesDaily) { const ind = computeIndicatorsFromCandles(data._candlesDaily); if (ind) data.indicators = ind; }
-      if (data._candlesWeekly) { const wt = computeWeeklyTrend(data._candlesWeekly); if (wt) data.weekly = wt; }
-      delete data._candlesDaily; delete data._candlesWeekly;
+      if (data._candlesDaily)  { const ind = computeIndicatorsFromCandles(data._candlesDaily);  if (ind) data.indicators = ind; }
+      if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
+      delete data._candlesDaily;
+      delete data._candlesWeekly;
       setEarningsAnswer(ticker.symbol, getDaysToEarnings(data.earnings) ?? null);
     }
     setMarketData(results);
+
+    // Step 2: overlay supplement (indicators, tdQuote, weekly, sectorTrend, marketContext)
+    // Saved separately to stay small (~50 KB) and avoid localStorage quota issues.
+    try {
+      const raw = localStorage.getItem('dashboard_supplement');
+      if (!raw) return;
+      const sup = JSON.parse(raw);
+      if (!sup?.tickers) return;
+
+      // Merge supplement fields on top of hydrated results
+      const overlay = {};
+      for (const sym of symbols) {
+        const s = sup.tickers[sym];
+        if (!s) continue;
+        overlay[sym] = {};
+        if (s.indicators  != null) overlay[sym].indicators  = s.indicators;
+        if (s.tdQuote     != null) overlay[sym].tdQuote     = s.tdQuote;
+        if (s.weekly      != null) overlay[sym].weekly      = s.weekly;
+        if (s.sectorTrend != null) overlay[sym].sectorTrend = s.sectorTrend;
+      }
+      if (Object.keys(overlay).length) setMarketData(overlay);
+
+      // Restore market context
+      if (sup.marketContextData) {
+        marketContextData = sup.marketContextData;
+        setMarketContext({
+          vixPrice:       sup.marketContextData.vix?.data?.c      ?? null,
+          spyDowntrend:   (sup.marketContextData.spy?.data?.dp ?? 0) < -0.5,
+          fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
+        });
+      }
+      if (sup.ts) lastRefreshed = new Date(sup.ts);
+    } catch { /* corrupted supplement — non-fatal */ }
   }
 
   hydrateStartup();
