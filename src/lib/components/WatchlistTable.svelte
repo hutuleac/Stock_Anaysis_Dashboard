@@ -286,7 +286,7 @@
             <div class="flex items-center gap-2">
               <span class="font-mono font-bold text-text-primary">{ticker.symbol}</span>
               {#if daysToEarnings !== null && daysToEarnings <= 14}
-                <span class="text-[10px] font-semibold text-warning bg-warning/10 px-1 rounded">E {daysToEarnings}d</span>
+                <span class="text-[13px] font-semibold text-warning bg-warning/10 px-1 rounded">E {daysToEarnings}d</span>
               {/if}
               {#if data?.quote?.stale}
                 <span class="text-warning text-xs" title="Stale data">⚠</span>
@@ -312,10 +312,10 @@
                   </span>
                 {/if}
                 {#if score.convictionLabel}
-                  <span class="text-[10px] text-text-muted">{score.convictionLabel}</span>
+                  <span class="text-[13px] text-text-muted">{score.convictionLabel}</span>
                 {/if}
                 {#if scoreZ != null}
-                  <span class="text-[9px] font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
+                  <span class="text-[12px] font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
                 {/if}
               </div>
             {/if}
@@ -327,16 +327,16 @@
               {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
                 {#if val !== null}
                   <div class="flex items-center gap-0.5">
-                    <span class="text-[9px] text-text-muted">{label}</span>
+                    <span class="text-[12px] text-text-muted">{label}</span>
                     <div class="w-10 h-1 bg-surface-600 rounded-full overflow-hidden">
                       <div class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}" style="width:{val}%"></div>
                     </div>
-                    <span class="text-[9px] font-mono text-text-muted">{val}</span>
+                    <span class="text-[12px] font-mono text-text-muted">{val}</span>
                   </div>
                 {/if}
               {/each}
               {#if score.regimeNote || score.spyPenaltyApplied}
-                <span class="text-[9px] text-warning ml-1">⚡</span>
+                <span class="text-[12px] text-warning ml-1">⚡</span>
               {/if}
             </div>
           {/if}
@@ -394,7 +394,7 @@
             <th class="px-3 py-3 text-right cursor-pointer hover:text-text-secondary" onclick={() => handleSort('score')}>
               Score {sortBy === 'score' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
-            <th class="px-3 py-3 text-center hidden sm:table-cell">Setup</th>
+            <th class="px-3 py-3 text-center hidden sm:table-cell cursor-default" use:tipAction={TIPS.setupBadge}>Setup</th>
             <th class="px-3 py-3 text-center hidden md:table-cell cursor-pointer hover:text-text-secondary" onclick={() => handleSort('earnings')}>
               Earnings {sortBy === 'earnings' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
@@ -433,7 +433,7 @@
                     <span class="text-warning text-xs" title="Stale data">⚠</span>
                   {/if}
                   {#if hasNotes(ticker.symbol)}
-                    <span class="text-[10px] text-uncertain" title="Has notes">📝</span>
+                    <span class="text-[13px] text-uncertain" title="Has notes">📝</span>
                   {/if}
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
@@ -474,12 +474,12 @@
                       >{velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}</span>
                     {/if}
                     {#if score.convictionLabel}
-                      <span class="text-[10px] hidden md:inline {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}"
+                      <span class="text-[13px] hidden md:inline {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}"
                         title="{score.conviction}% signal agreement"
                       >{score.convictionLabel}</span>
                     {/if}
                     {#if scoreZ != null}
-                      <span class="text-[9px] font-mono text-text-muted hidden lg:inline" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
+                      <span class="text-[12px] font-mono text-text-muted hidden lg:inline" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
                     {/if}
                     <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
                   </div>
@@ -488,7 +488,7 @@
                     {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
                       {#if val !== null}
                         <div class="flex items-center gap-0.5" title="{label === 'T' ? `Technical (${Math.round((score.weights?.tech ?? 0.35)*100)}%)` : label === 'F' ? `Fundamental (${Math.round((score.weights?.fund ?? 0.45)*100)}%)` : `Sentiment (${Math.round((score.weights?.sent ?? 0.20)*100)}%)`}: {val}">
-                          <span class="text-[9px] text-text-muted">{label}</span>
+                          <span class="text-[12px] text-text-muted">{label}</span>
                           <div class="w-6 h-1 bg-surface-600 rounded-full overflow-hidden">
                             <div
                               class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}"
@@ -574,7 +574,7 @@
                     {/each}
                     {#if typeof Notification !== 'undefined' && Notification.permission === 'default'}
                       <button
-                        class="text-[10px] px-2 py-1 bg-surface-600 rounded text-text-muted hover:text-text-secondary transition-colors"
+                        class="text-[13px] px-2 py-1 bg-surface-600 rounded text-text-muted hover:text-text-secondary transition-colors"
                         onclick={() => Notification.requestPermission()}
                       >Enable notifications</button>
                     {/if}
@@ -610,7 +610,7 @@
                       {@const lastPtCoords = lastPt ? lastPt.split(',').map(Number) : null}
                       <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
                         <div class="flex items-center justify-between mb-2">
-                          <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Score History</p>
+                          <p class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.scoreHistory}>Score History</p>
                           <div class="flex items-center gap-3 text-xs">
                             <span class="text-text-muted font-mono">{firstScore} → {lastScore}</span>
                             <span class="font-mono font-semibold {scoreDelta > 0 ? 'text-bull-strong' : scoreDelta < 0 ? 'text-bear-strong' : 'text-text-muted'}">
@@ -658,7 +658,7 @@
                     <!-- Per-ticker notes -->
                     <div class="mt-4 border-t border-border/30 pt-4">
                       <label class="block">
-                        <span class="text-[10px] text-text-muted uppercase tracking-wider mb-1.5 block">
+                        <span class="text-[13px] text-text-muted uppercase tracking-wider mb-1.5 block">
                           Notes — {ticker.symbol}
                         </span>
                         <textarea

@@ -3,6 +3,8 @@
   import { computeScore, getBadgeStyle, getDaysToEarnings } from '../scoring.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
   import { selectTicker } from '../stores/watchlist.svelte.js';
+  import { tooltip as tipAction } from '../actions/tooltip.js';
+  import { TIPS } from '../tooltipDefs.js';
 
   let collapsed = $state(false);
 
@@ -72,7 +74,7 @@
 
           <!-- Top Setups -->
           <div>
-            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2">Top Setups</p>
+            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 cursor-default" use:tipAction={TIPS.topSetups}>Top Setups</p>
             {#if b.topSetups.length}
               <div class="space-y-1.5">
                 {#each b.topSetups as s}
@@ -94,7 +96,7 @@
 
           <!-- Earnings Warnings -->
           <div>
-            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2">Earnings Soon</p>
+            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 cursor-default" use:tipAction={TIPS.earningsSoon}>Earnings Soon</p>
             {#if b.earningsWarnings.length}
               <div class="space-y-1.5">
                 {#each b.earningsWarnings as s}
@@ -116,7 +118,7 @@
 
           <!-- Big Movers -->
           <div>
-            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2">Big Movers Today</p>
+            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 cursor-default" use:tipAction={TIPS.bigMovers}>Big Movers Today</p>
             {#if b.movers.length}
               <div class="space-y-1.5">
                 {#each b.movers as s}
@@ -138,7 +140,7 @@
 
           <!-- Blocked -->
           <div>
-            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2">Blocked</p>
+            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 cursor-default" use:tipAction={TIPS.blockedTickers}>Blocked</p>
             {#if b.blocked.length}
               <div class="space-y-1.5">
                 {#each b.blocked as s}
