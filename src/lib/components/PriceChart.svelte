@@ -35,11 +35,11 @@
   let showVolumeProfile = $state(false);
   let vpBars            = $state([]);  // {y, height, width, isHVN}
 
-  // Sub-pane toggles
+  // Sub-pane toggles — VOL and MACD are mutually exclusive; RSI overlays in the sub-pane
   let showVolumeBars = $state(true);
   let showMACD       = $state(false);
-  let showRSI        = $state(false);
-  let showBB         = $state(false);
+  let showRSI        = $state(true);
+  let showBB         = $state(true);
 
   // Annotations (PT lines + earnings markers)
   let showAnnotations = $state(true);
@@ -69,11 +69,11 @@
 
   const isIntraday = $derived(TIMEFRAMES[timeframe]?.intraday ?? false);
 
+  // Fixed 4/5 + 1/5 split: main pane 400px, sub-pane 100px
+  const MAIN_H = 400;
+  const SUB_H  = 100;
   const chartHeight = $derived(
-    300
-    + (showVolumeBars ? 80 : 0)
-    + (showMACD && !isIntraday ? 120 : 0)
-    + (showRSI && !isIntraday ? 100 : 0)
+    (showVolumeBars || (showMACD && !isIntraday)) ? MAIN_H + SUB_H : MAIN_H
   );
 
   const CHART_COLORS = {
@@ -325,7 +325,7 @@
   function rebuildSubPanes() {
     if (!chart || !chartReady) return;
 
-    // Remove BB overlays from pane 0 first
+    // Remove BB overlays from pane 0
     if (bbUpperSeries)  { try { chart.removeSeries(bbUpperSeries); }  catch {} bbUpperSeries  = null; }
     if (bbMiddleSeries) { try { chart.removeSeries(bbMiddleSeries); } catch {} bbMiddleSeries = null; }
     if (bbLowerSeries)  { try { chart.removeSeries(bbLowerSeries); }  catch {} bbLowerSeries  = null; }
@@ -337,45 +337,54 @@
       try { chart.removePane(i); } catch {}
     }
 
-    let nextPane = 1;
-
-    if (showVolumeBars) {
-      volumeSeries = chart.addSeries(HistogramSeries, {
-        priceLineVisible: false, lastValueVisible: false,
-      }, nextPane++);
-      if (allCandles.length) setVolumeData();
-    }
-
     const canDoIndicators = !isIntraday && allCandles.length > 34;
 
-    if (showMACD && canDoIndicators) {
-      const p = nextPane++;
-      macdHistSeries = chart.addSeries(HistogramSeries, {
-        priceLineVisible: false, lastValueVisible: false,
-      }, p);
-      macdLineSeries = chart.addSeries(LineSeries, {
-        color: '#3b82f6', lineWidth: 1,
-        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-      }, p);
-      macdSignalSeries = chart.addSeries(LineSeries, {
-        color: '#f59e0b', lineWidth: 1,
-        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-      }, p);
-      if (allCandles.length) setMACDData();
+    // Pane 1 — VOL or MACD (mutually exclusive) + RSI overlay
+    const showSubPane = showVolumeBars || (showMACD && canDoIndicators);
+    if (showSubPane) {
+      if (showVolumeBars) {
+        // Volume histogram — default (right) scale
+        volumeSeries = chart.addSeries(HistogramSeries, {
+          priceLineVisible: false, lastValueVisible: false,
+        }, 1);
+        if (allCandles.length) setVolumeData();
+      } else if (showMACD && canDoIndicators) {
+        // MACD histogram + lines — default (right) scale
+        macdHistSeries = chart.addSeries(HistogramSeries, {
+          priceLineVisible: false, lastValueVisible: false,
+        }, 1);
+        macdLineSeries = chart.addSeries(LineSeries, {
+          color: '#3b82f6', lineWidth: 1,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        }, 1);
+        macdSignalSeries = chart.addSeries(LineSeries, {
+          color: '#f59e0b', lineWidth: 1,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        }, 1);
+        if (allCandles.length) setMACDData();
+      }
+
+      // RSI overlaid in the same sub-pane on its own scale (left side)
+      if (showRSI && canDoIndicators) {
+        rsiSeries = chart.addSeries(LineSeries, {
+          color: '#a78bfa', lineWidth: 1,
+          priceScaleId: 'rsi',
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        }, 1);
+        rsiSeries.createPriceLine({ price: 70, color: '#ef444450', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+        rsiSeries.createPriceLine({ price: 30, color: '#22c55e50', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+        rsiSeries.createPriceLine({ price: 50, color: '#ffffff18', lineWidth: 1, lineStyle: 3, axisLabelVisible: false });
+        if (allCandles.length) setRSIData();
+      }
+
+      // Enforce 4/5 main + 1/5 sub-pane height split
+      try {
+        const p = chart.panes();
+        if (p.length >= 2) { p[0].setHeight(MAIN_H); p[1].setHeight(SUB_H); }
+      } catch {}
     }
 
-    if (showRSI && canDoIndicators) {
-      const p = nextPane++;
-      rsiSeries = chart.addSeries(LineSeries, {
-        color: '#a78bfa', lineWidth: 1,
-        priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false,
-      }, p);
-      rsiSeries.createPriceLine({ price: 70, color: '#ef444450', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
-      rsiSeries.createPriceLine({ price: 30, color: '#22c55e50', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
-      rsiSeries.createPriceLine({ price: 50, color: '#ffffff18', lineWidth: 1, lineStyle: 3, axisLabelVisible: false });
-      if (allCandles.length) setRSIData();
-    }
-
+    // BB bands — overlay on main pane (pane 0)
     if (showBB && allCandles.length > 19) {
       bbUpperSeries = chart.addSeries(LineSeries, {
         color: '#8b5cf680', lineWidth: 1, lineStyle: 2,
@@ -580,26 +589,30 @@
           onclick={() => showVolumeProfile = !showVolumeProfile}
         >▣</button>
         <button
-          class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showVolumeBars ? 'text-bull-strong' : 'text-text-muted opacity-40'}"
-          title="Volume bars"
-          onclick={() => showVolumeBars = !showVolumeBars}
-        >VOL</button>
-        <button
           class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showBB ? 'text-violet-400' : 'text-text-muted opacity-40'}"
           title="Bollinger Bands (20,2)"
           onclick={() => showBB = !showBB}
         >BB</button>
         {#if !isIntraday}
           <button
-            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showMACD ? 'text-blue-400' : 'text-text-muted opacity-40'}"
-            title="MACD (12,26,9)"
-            onclick={() => showMACD = !showMACD}
-          >MACD</button>
-          <button
             class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showRSI ? 'text-violet-300' : 'text-text-muted opacity-40'}"
-            title="RSI (14)"
+            title="RSI (14) — overlaid on sub-pane"
             onclick={() => showRSI = !showRSI}
           >RSI</button>
+        {/if}
+        <!-- VOL / MACD — mutually exclusive sub-pane selector -->
+        <span class="text-border mx-0.5">|</span>
+        <button
+          class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showVolumeBars ? 'text-bull-strong' : 'text-text-muted opacity-40'}"
+          title="Volume bars"
+          onclick={() => { showVolumeBars = true; showMACD = false; }}
+        >VOL</button>
+        {#if !isIntraday}
+          <button
+            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showMACD ? 'text-blue-400' : 'text-text-muted opacity-40'}"
+            title="MACD (12,26,9) — replaces VOL"
+            onclick={() => { showMACD = true; showVolumeBars = false; }}
+          >MACD</button>
         {/if}
       </div>
 
