@@ -453,18 +453,22 @@
                   {@const scoreLabel = score.score >= 70 ? 'Bullish' : score.score >= 58 ? 'Positive' : score.score <= 30 ? 'Bearish' : score.score <= 42 ? 'Negative' : 'Neutral'}
                   <div class="flex items-center justify-end gap-2 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: scoreLabel, color: scoreCssColor } })}>
                     <!-- Score sparkline: flex-shrink-0 prevents compression; padded y-range keeps line off edges -->
-                    {#if scoreHistory.length >= 2}
-                      {@const minS = Math.min(...scoreHistory.map(h => h.score))}
-                      {@const maxS = Math.max(...scoreHistory.map(h => h.score))}
-                      {@const range = Math.max(maxS - minS, 1)}
+                    {#if scoreHistory.length >= 1}
                       {@const W = 32} {@const H = 14} {@const PAD = 2}
-                      {@const pts = scoreHistory.map((h, i) => {
-                        const x = (i / (scoreHistory.length - 1)) * W;
-                        const y = range < 2
-                          ? H / 2
-                          : PAD + (H - 2 * PAD) - ((h.score - minS) / range) * (H - 2 * PAD);
-                        return `${x},${y}`;
-                      }).join(' ')}
+                      {@const pts = scoreHistory.length === 1
+                        ? `0,${H / 2} ${W},${H / 2}`
+                        : (() => {
+                            const minS = Math.min(...scoreHistory.map(h => h.score));
+                            const maxS = Math.max(...scoreHistory.map(h => h.score));
+                            const range = Math.max(maxS - minS, 1);
+                            return scoreHistory.map((h, i) => {
+                              const x = (i / (scoreHistory.length - 1)) * W;
+                              const y = range < 2
+                                ? H / 2
+                                : PAD + (H - 2 * PAD) - ((h.score - minS) / range) * (H - 2 * PAD);
+                              return `${x},${y}`;
+                            }).join(' ');
+                          })()}
                       <svg width={W} height={H} class="hidden sm:block opacity-70 flex-shrink-0 self-center" title="Score trend">
                         <polyline points={pts} fill="none" stroke={velocity?.direction === 'down' ? '#ef4444' : '#22c55e'} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
