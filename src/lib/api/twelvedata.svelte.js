@@ -10,7 +10,7 @@ const CACHE_TTL = {
   bbands:  3600,
   adx:     3600,
   stoch:   3600,
-  tdquote: 0,
+  tdquote: 60,     // 1-minute cache — prevents hammering on each refresh
   ts_1day: 86400,  // daily candles — 24h
   ts_1h:   900,    // intraday candles — 15 min
 };
@@ -49,14 +49,57 @@ function writeCache(key, data) {
   } catch { /* quota — non-critical */ }
 }
 
+// ── Rate limiter: sliding-window, max 8 calls per 60 s ───────────────────────
+const RL_MAX    = 8;
+const RL_WIN_MS = 60_000;
+const _rlStamps = [];   // timestamps of calls inside the current window
+const _rlQueue  = [];   // { fn, resolve, reject }
+let   _rlBusy   = false;
+
+async function _drainQueue() {
+  if (_rlBusy) return;
+  _rlBusy = true;
+  while (_rlQueue.length) {
+    const now = Date.now();
+    while (_rlStamps.length && now - _rlStamps[0] >= RL_WIN_MS) _rlStamps.shift();
+    if (_rlStamps.length < RL_MAX) {
+      _rlStamps.push(Date.now());
+      const { fn, resolve, reject } = _rlQueue.shift();
+      try { resolve(await fn()); } catch (e) { reject(e); }
+    } else {
+      const delay = RL_WIN_MS - (Date.now() - _rlStamps[0]) + 150;
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  _rlBusy = false;
+}
+
+function enqueueRequest(fn) {
+  return new Promise((resolve, reject) => {
+    _rlQueue.push({ fn, resolve, reject });
+    _drainQueue();
+  });
+}
+
 async function fetchTD(path) {
   if (!tdApiKey) throw new Error('No TwelveData API key');
-  const url = `${BASE}${path}&apikey=${tdApiKey}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.status === 'error') throw new Error(json.message || 'TwelveData error');
-  return json;
+  return enqueueRequest(async () => {
+    const url = `${BASE}${path}&apikey=${tdApiKey}`;
+    const res = await fetch(url);
+    if (res.status === 429) {
+      // Server-side rate limit hit — wait a full window and retry once
+      await new Promise(r => setTimeout(r, 61_000));
+      const r2  = await fetch(url);
+      if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
+      const j2  = await r2.json();
+      if (j2.status === 'error') throw new Error(j2.message || 'TwelveData error');
+      return j2;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.status === 'error') throw new Error(json.message || 'TwelveData error');
+    return json;
+  });
 }
 
 async function fetchWithCache(type, symbol, fetcher) {
@@ -151,27 +194,25 @@ export async function fetchStoch(symbol) {
 }
 
 // ── Real-time quote ───────────────────────────────────────────────────────────
-// TTL=0 — never cached; always fresh on each refresh.
+// TTL=60s — short cache prevents duplicate calls within a single refresh cycle.
 export async function fetchTDQuote(symbol) {
-  try {
+  return fetchWithCache('tdquote', symbol, async () => {
     const json = await fetchTD(`/quote?symbol=${encodeURIComponent(symbol)}`);
     return {
-      price:         parseFloat(json.close),
-      change:        parseFloat(json.change),
-      changePct:     parseFloat(json.percent_change),
-      prevClose:     parseFloat(json.previous_close),
-      volume:        parseInt(json.volume, 10),
-      avgVolume:     parseInt(json.average_volume, 10),
-      volumeRatio:   json.average_volume > 0
-                       ? parseInt(json.volume, 10) / parseInt(json.average_volume, 10)
-                       : null,
-      isMarketOpen:  json.is_market_open ?? null,
-      high52w:       parseFloat(json.fifty_two_week?.high),
-      low52w:        parseFloat(json.fifty_two_week?.low),
+      price:        parseFloat(json.close),
+      change:       parseFloat(json.change),
+      changePct:    parseFloat(json.percent_change),
+      prevClose:    parseFloat(json.previous_close),
+      volume:       parseInt(json.volume, 10),
+      avgVolume:    parseInt(json.average_volume, 10),
+      volumeRatio:  json.average_volume > 0
+                      ? parseInt(json.volume, 10) / parseInt(json.average_volume, 10)
+                      : null,
+      isMarketOpen: json.is_market_open ?? null,
+      high52w:      parseFloat(json.fifty_two_week?.high),
+      low52w:       parseFloat(json.fifty_two_week?.low),
     };
-  } catch {
-    return null;
-  }
+  });
 }
 
 // ── OHLCV candle series ───────────────────────────────────────────────────────
@@ -194,7 +235,7 @@ export async function fetchTimeSeries(symbol, interval, outputsize) {
 // Per ticker: RSI + MACD + BBands + ADX + Stoch = 5 credits. 6 tickers = 30 credits/refresh.
 export async function fetchIndicators(symbol) {
   if (!hasTDApiKey()) return null;
-  const [rsiRes, macdRes, bbRes, adxRes, stochRes, quote] = await Promise.all([
+  const [rsiRes, macdRes, bbRes, adxRes, stochRes, quoteRes] = await Promise.all([
     fetchRSI(symbol),
     fetchMACD(symbol),
     fetchBBands(symbol),
@@ -202,6 +243,7 @@ export async function fetchIndicators(symbol) {
     fetchStoch(symbol),
     fetchTDQuote(symbol),
   ]);
+  const quote = quoteRes?.data ?? null;
 
   const rsiCurrent  = rsiRes.data?.[0]?.rsi ?? null;
   const rsiPrev     = rsiRes.data?.[1]?.rsi ?? null;

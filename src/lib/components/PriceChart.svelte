@@ -1,9 +1,10 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { createChart, CandlestickSeries, LineSeries, ColorType } from 'lightweight-charts';
+  import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType } from 'lightweight-charts';
   import { fetchCandles, fetchHistoricalEarnings } from '../api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTimeSeries } from '../api/twelvedata.svelte.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
+  import { computeMACDSeries, computeRSISeries, computeBBSeries } from '../indicators.js';
 
   let { symbol, priceTarget = null } = $props();
 
@@ -13,16 +14,32 @@
   let ma50Series     = null;
   let ma200Series    = null;
   let stopLine       = null;
+  // Sub-pane series
+  let volumeSeries    = null;
+  let macdHistSeries  = null;
+  let macdLineSeries  = null;
+  let macdSignalSeries = null;
+  let rsiSeries       = null;
+  let bbUpperSeries   = null;
+  let bbMiddleSeries  = null;
+  let bbLowerSeries   = null;
   let loading        = $state(true);
   let error          = $state('');
   let showMA         = $state(true);
   let timeframe      = $state('3M');
   let chartReady     = $state(false);
+  let candleCount    = $state(0);      // triggers sub-pane rebuild when candles load
 
   // Volume profile
   let allCandles        = [];          // full candles with volume (not reactive — large)
   let showVolumeProfile = $state(false);
   let vpBars            = $state([]);  // {y, height, width, isHVN}
+
+  // Sub-pane toggles
+  let showVolumeBars = $state(true);
+  let showMACD       = $state(false);
+  let showRSI        = $state(false);
+  let showBB         = $state(false);
 
   // Annotations (PT lines + earnings markers)
   let showAnnotations = $state(true);
@@ -51,6 +68,13 @@
   };
 
   const isIntraday = $derived(TIMEFRAMES[timeframe]?.intraday ?? false);
+
+  const chartHeight = $derived(
+    300
+    + (showVolumeBars ? 80 : 0)
+    + (showMACD && !isIntraday ? 120 : 0)
+    + (showRSI && !isIntraday ? 100 : 0)
+  );
 
   const CHART_COLORS = {
     background: '#0f1117', grid: '#1e2130', text: '#8b95a5',
@@ -262,6 +286,113 @@
     }
   }
 
+  // ─── Sub-pane data setters ──────────────────────────────────────────────────
+
+  function setVolumeData() {
+    if (!volumeSeries || !allCandles.length) return;
+    volumeSeries.setData(allCandles.map(c => ({
+      time: c.time, value: c.volume ?? 0,
+      color: c.close >= c.open ? '#22c55e80' : '#ef444480',
+    })));
+  }
+
+  function setMACDData() {
+    if (!macdLineSeries || !allCandles.length) return;
+    const macd = computeMACDSeries(allCandles);
+    if (!macd) return;
+    macdHistSeries?.setData(macd.histogram);
+    macdLineSeries.setData(macd.macdLine);
+    macdSignalSeries?.setData(macd.signalLine);
+  }
+
+  function setRSIData() {
+    if (!rsiSeries || !allCandles.length) return;
+    const rsi = computeRSISeries(allCandles);
+    if (rsi) rsiSeries.setData(rsi);
+  }
+
+  function setBBData() {
+    if (!bbUpperSeries || !allCandles.length) return;
+    const bb = computeBBSeries(allCandles);
+    if (!bb) return;
+    bbUpperSeries.setData(bb.upper);
+    bbMiddleSeries?.setData(bb.middle);
+    bbLowerSeries?.setData(bb.lower);
+  }
+
+  // ─── Sub-pane lifecycle (rebuild on toggle change or new candle data) ────────
+
+  function rebuildSubPanes() {
+    if (!chart || !chartReady) return;
+
+    // Remove BB overlays from pane 0 first
+    if (bbUpperSeries)  { try { chart.removeSeries(bbUpperSeries); }  catch {} bbUpperSeries  = null; }
+    if (bbMiddleSeries) { try { chart.removeSeries(bbMiddleSeries); } catch {} bbMiddleSeries = null; }
+    if (bbLowerSeries)  { try { chart.removeSeries(bbLowerSeries); }  catch {} bbLowerSeries  = null; }
+    volumeSeries = macdHistSeries = macdLineSeries = macdSignalSeries = rsiSeries = null;
+
+    // Remove all sub-panes (highest index first to avoid shift bugs)
+    const panes = chart.panes();
+    for (let i = panes.length - 1; i >= 1; i--) {
+      try { chart.removePane(i); } catch {}
+    }
+
+    let nextPane = 1;
+
+    if (showVolumeBars) {
+      volumeSeries = chart.addSeries(HistogramSeries, {
+        priceLineVisible: false, lastValueVisible: false,
+      }, nextPane++);
+      if (allCandles.length) setVolumeData();
+    }
+
+    const canDoIndicators = !isIntraday && allCandles.length > 34;
+
+    if (showMACD && canDoIndicators) {
+      const p = nextPane++;
+      macdHistSeries = chart.addSeries(HistogramSeries, {
+        priceLineVisible: false, lastValueVisible: false,
+      }, p);
+      macdLineSeries = chart.addSeries(LineSeries, {
+        color: '#3b82f6', lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      }, p);
+      macdSignalSeries = chart.addSeries(LineSeries, {
+        color: '#f59e0b', lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      }, p);
+      if (allCandles.length) setMACDData();
+    }
+
+    if (showRSI && canDoIndicators) {
+      const p = nextPane++;
+      rsiSeries = chart.addSeries(LineSeries, {
+        color: '#a78bfa', lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false,
+      }, p);
+      rsiSeries.createPriceLine({ price: 70, color: '#ef444450', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+      rsiSeries.createPriceLine({ price: 30, color: '#22c55e50', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+      rsiSeries.createPriceLine({ price: 50, color: '#ffffff18', lineWidth: 1, lineStyle: 3, axisLabelVisible: false });
+      if (allCandles.length) setRSIData();
+    }
+
+    if (showBB && allCandles.length > 19) {
+      bbUpperSeries = chart.addSeries(LineSeries, {
+        color: '#8b5cf680', lineWidth: 1, lineStyle: 2,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      }, 0);
+      bbMiddleSeries = chart.addSeries(LineSeries, {
+        color: '#8b5cf640', lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      }, 0);
+      bbLowerSeries = chart.addSeries(LineSeries, {
+        color: '#8b5cf680', lineWidth: 1, lineStyle: 2,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      }, 0);
+      setBBData();
+    }
+  }
+
   // ─── Main candle loader ─────────────────────────────────────────────────────
 
   async function loadCandles() {
@@ -303,8 +434,9 @@
         })).sort((a, b) => a.time - b.time);
       }
 
-      allCandles = candles;
-      // Strip volume from chart data (lightweight-charts CandlestickSeries ignores it, but be explicit)
+      allCandles  = candles;
+      candleCount = candles.length;
+      // Strip volume from candlestick series (sub-panes handle volume separately)
       series.setData(candles.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
 
       if (showMA && !tf.intraday) {
@@ -405,6 +537,12 @@
       else vpBars = [];
     }
   });
+
+  // Sub-pane indicators (rebuild series when toggles or candle data changes)
+  $effect(() => {
+    showVolumeBars; showMACD; showRSI; showBB; chartReady; candleCount;
+    if (chartReady) rebuildSubPanes();
+  });
 </script>
 
 <div class="bg-surface-900 rounded-lg border border-border overflow-hidden">
@@ -441,6 +579,28 @@
           title="Volume profile"
           onclick={() => showVolumeProfile = !showVolumeProfile}
         >▣</button>
+        <button
+          class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showVolumeBars ? 'text-bull-strong' : 'text-text-muted opacity-40'}"
+          title="Volume bars"
+          onclick={() => showVolumeBars = !showVolumeBars}
+        >VOL</button>
+        <button
+          class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showBB ? 'text-violet-400' : 'text-text-muted opacity-40'}"
+          title="Bollinger Bands (20,2)"
+          onclick={() => showBB = !showBB}
+        >BB</button>
+        {#if !isIntraday}
+          <button
+            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showMACD ? 'text-blue-400' : 'text-text-muted opacity-40'}"
+            title="MACD (12,26,9)"
+            onclick={() => showMACD = !showMACD}
+          >MACD</button>
+          <button
+            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showRSI ? 'text-violet-300' : 'text-text-muted opacity-40'}"
+            title="RSI (14)"
+            onclick={() => showRSI = !showRSI}
+          >RSI</button>
+        {/if}
       </div>
 
       <!-- MA toggle (daily only) -->
@@ -483,12 +643,12 @@
   {/if}
 
   <!-- Chart area -->
-  <div class="relative" style="height: 380px;">
-    <div bind:this={container} style="width:100%;height:380px;"></div>
+  <div class="relative" style="height: {chartHeight}px;">
+    <div bind:this={container} style="width:100%;height:{chartHeight}px;"></div>
 
-    <!-- Volume profile SVG (right-anchored horizontal bars) -->
+    <!-- Volume profile SVG (right-anchored horizontal bars — constrained to main pane) -->
     {#if showVolumeProfile && vpBars.length}
-      <svg class="absolute inset-0 w-full pointer-events-none" style="height:380px;" aria-hidden="true">
+      <svg class="absolute inset-0 w-full pointer-events-none" style="height:300px;" aria-hidden="true">
         {#each vpBars as bar}
           <rect
             x="{(container?.clientWidth ?? 600) - bar.width - 4}"
@@ -501,7 +661,7 @@
 
     <!-- Rectangle drawings SVG -->
     {#if rectCoords.length}
-      <svg class="absolute inset-0 w-full pointer-events-none" style="height:380px;" aria-hidden="true">
+      <svg class="absolute inset-0 w-full pointer-events-none" style="height:300px;" aria-hidden="true">
         {#each rectCoords as r}
           <rect x={r.x} y={r.y} width={Math.max(r.w, 2)} height={Math.max(r.h, 2)}
             fill="#f59e0b0d" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,3" rx="1"/>

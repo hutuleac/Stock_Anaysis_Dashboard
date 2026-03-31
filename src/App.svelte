@@ -1,6 +1,6 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, hydrateFromCache } from './lib/api/finnhub.svelte.js';
-  import { hasTDApiKey, fetchIndicators, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
+  import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
@@ -226,31 +226,21 @@
         } catch { /* non-blocking */ }
       }
 
-      // TwelveData — live quote + indicators override local ones if key configured
+      // TwelveData — live quote enrichment only (indicators already computed locally from candles)
+      // This is 1 credit/ticker instead of 6; all RSI/MACD/BB/ADX/Stoch come from local computation above.
       if (hasTDApiKey()) {
         for (const ticker of tickers) {
           try {
-            const tdInd = await fetchIndicators(ticker.symbol);
-            if (tdInd && results[ticker.symbol]) {
-              // Merge indicators: TD wins for non-null values, local fills gaps
-              const { quote: _q, ...tdFields } = tdInd;
-              const tdNonNull = Object.fromEntries(Object.entries(tdFields).filter(([, v]) => v !== null && v !== undefined));
-              results[ticker.symbol].indicators = {
-                ...results[ticker.symbol].indicators,
-                ...tdNonNull,
-                source: 'twelvedata',
-              };
-
-              // Merge live quote: overwrite Finnhub price/change with TD values
-              const q = tdInd.quote;
-              if (q?.price && results[ticker.symbol].quote?.data) {
+            const qRes = await fetchTDQuote(ticker.symbol);
+            const q = qRes?.data;
+            if (q?.price && results[ticker.symbol]) {
+              if (results[ticker.symbol].quote?.data) {
                 results[ticker.symbol].quote.data.c  = q.price;
                 results[ticker.symbol].quote.data.d  = q.change;
                 results[ticker.symbol].quote.data.dp = q.changePct;
                 results[ticker.symbol].quote.data.pc = q.prevClose;
               }
-              // Store full TD quote for volume ratio display
-              if (q) results[ticker.symbol].tdQuote = q;
+              results[ticker.symbol].tdQuote = q;
             }
           } catch { /* non-blocking */ }
         }
