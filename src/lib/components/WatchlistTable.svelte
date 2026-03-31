@@ -14,6 +14,7 @@
   import TradeLog from './TradeLog.svelte';
   import NewsPanel from './NewsPanel.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
+  import PaperTradePanel from './PaperTradePanel.svelte';
 
   let { onTickerAdded = () => {} } = $props();
 
@@ -663,6 +664,11 @@
                       <PreBuyChecklist symbol={ticker.symbol} />
                       <EntryPanel symbol={ticker.symbol} />
                       <TradeLog symbol={ticker.symbol} />
+                    </div>
+
+                    <!-- Paper Trades — forward-test a trade idea, track it over time -->
+                    <div class="mt-4 border-t border-border/30 pt-4">
+                      <PaperTradePanel symbol={ticker.symbol} />
                     </div>
 
                     <!-- Replay / Backtest panel -->

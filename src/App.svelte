@@ -11,6 +11,7 @@
   import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import PortfolioStats from './lib/components/PortfolioStats.svelte';
+  import PaperTradesOverview from './lib/components/PaperTradesOverview.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   // OnboardingModal removed — demo mode replaces it
@@ -496,6 +497,7 @@
     <WatchlistTable onTickerAdded={handleRefresh} />
 
     <PortfolioStats />
+    <PaperTradesOverview />
 
     <!-- Portfolio summary strip -->
     {#if getTrades().length > 0 || getPositions().length > 0}
