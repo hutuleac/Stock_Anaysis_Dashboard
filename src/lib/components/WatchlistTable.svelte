@@ -452,44 +452,53 @@
                   {@const scoreCssColor = score.score >= 70 ? '#22c55e' : score.score >= 58 ? '#f59e0b' : score.score <= 30 ? '#ef4444' : score.score <= 42 ? '#f97316' : '#9ca3af'}
                   {@const scoreLabel = score.score >= 70 ? 'Bullish' : score.score >= 58 ? 'Positive' : score.score <= 30 ? 'Bearish' : score.score <= 42 ? 'Negative' : 'Neutral'}
                   <div class="flex items-center justify-end gap-2 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: scoreLabel, color: scoreCssColor } })}>
-                    <!-- Score sparkline -->
+                    <!-- Score sparkline: flex-shrink-0 prevents compression; padded y-range keeps line off edges -->
                     {#if scoreHistory.length >= 2}
                       {@const minS = Math.min(...scoreHistory.map(h => h.score))}
                       {@const maxS = Math.max(...scoreHistory.map(h => h.score))}
-                      {@const range = Math.max(maxS - minS, 10)}
-                      {@const W = 32} {@const H = 14}
-                      {@const pts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * W},${H - ((h.score - minS) / range) * H}`).join(' ')}
-                      <svg width={W} height={H} class="hidden sm:block opacity-60" title="Score trend">
+                      {@const range = Math.max(maxS - minS, 1)}
+                      {@const W = 32} {@const H = 14} {@const PAD = 2}
+                      {@const pts = scoreHistory.map((h, i) => {
+                        const x = (i / (scoreHistory.length - 1)) * W;
+                        const y = range < 2
+                          ? H / 2
+                          : PAD + (H - 2 * PAD) - ((h.score - minS) / range) * (H - 2 * PAD);
+                        return `${x},${y}`;
+                      }).join(' ')}
+                      <svg width={W} height={H} class="hidden sm:block opacity-70 flex-shrink-0 self-center" title="Score trend">
                         <polyline points={pts} fill="none" stroke={velocity?.direction === 'down' ? '#ef4444' : '#22c55e'} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     {/if}
-                    <span
-                      class="font-mono font-semibold"
-                      title="{score.regimeNote ? score.regimeNote + '. ' : ''}{score.spyPenaltyApplied ? 'SPY downtrend penalty applied.' : ''}"
-                    >{score.score}{score.regimeNote || score.spyPenaltyApplied ? '*' : ''}</span>
-                    {#if velocity}
+                    <!-- Score number + arrow + label + fraction on the same baseline -->
+                    <div class="flex items-baseline gap-1">
                       <span
-                        class="text-xs font-mono {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}"
-                        title="3-day delta: {velocity.delta > 0 ? '+' : ''}{velocity.delta}"
-                      >{velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}</span>
-                    {/if}
-                    {#if score.convictionLabel}
-                      <span class="text-[13px] hidden md:inline {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}"
-                        title="{score.conviction}% signal agreement"
-                      >{score.convictionLabel}</span>
-                    {/if}
-                    {#if scoreZ != null}
-                      <span class="text-[12px] font-mono text-text-muted hidden lg:inline" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
-                    {/if}
-                    <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
+                        class="font-mono font-semibold tabular-nums"
+                        title="{score.regimeNote ? score.regimeNote + '. ' : ''}{score.spyPenaltyApplied ? 'SPY downtrend penalty applied.' : ''}"
+                      >{score.score}{score.regimeNote || score.spyPenaltyApplied ? '*' : ''}</span>
+                      {#if velocity}
+                        <span
+                          class="text-xs font-mono {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}"
+                          title="3-day delta: {velocity.delta > 0 ? '+' : ''}{velocity.delta}"
+                        >{velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}</span>
+                      {/if}
+                      {#if score.convictionLabel}
+                        <span class="text-[13px] hidden md:inline w-[5rem] text-right {score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}"
+                          title="{score.conviction}% signal agreement"
+                        >{score.convictionLabel}</span>
+                      {/if}
+                      {#if scoreZ != null}
+                        <span class="text-[12px] font-mono text-text-muted hidden lg:inline" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
+                      {/if}
+                      <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
+                    </div>
                   </div>
                   <!-- T/F/S sub-score bars -->
-                  <div class="hidden sm:flex items-center gap-1 mt-1 justify-end">
+                  <div class="hidden sm:flex items-center gap-1.5 mt-1 justify-end">
                     {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
                       {#if val !== null}
                         <div class="flex items-center gap-0.5" title="{label === 'T' ? `Technical (${Math.round((score.weights?.tech ?? 0.35)*100)}%)` : label === 'F' ? `Fundamental (${Math.round((score.weights?.fund ?? 0.45)*100)}%)` : `Sentiment (${Math.round((score.weights?.sent ?? 0.20)*100)}%)`}: {val}">
-                          <span class="text-[12px] text-text-muted">{label}</span>
-                          <div class="w-6 h-1 bg-surface-600 rounded-full overflow-hidden">
+                          <span class="text-[11px] text-text-muted font-mono">{label}</span>
+                          <div class="w-7 h-1 bg-surface-600 rounded-full overflow-hidden">
                             <div
                               class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}"
                               style="width:{val}%"

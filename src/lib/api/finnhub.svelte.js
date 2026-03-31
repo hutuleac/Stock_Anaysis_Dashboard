@@ -71,6 +71,7 @@ async function fetchFinnhub(path) {
   const url = `https://finnhub.io/api/v1${path}&token=${apiKey}`;
   const res = await fetch(url);
   if (res.status === 429) throw new Error('RATE_LIMITED');
+  if (res.status === 403) throw new Error('FORBIDDEN'); // endpoint not available on current plan
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -79,14 +80,25 @@ async function fetchWithCache(type, symbol, fetcher) {
   const key = cacheKey(type, symbol);
   const ttl = CACHE_TTL[type] || 0;
   const cached = readCache(key, ttl);
-  if (cached) return { data: cached, stale: false };
+  if (cached !== null) return { data: cached, stale: false };
+
+  // Also respect a 403 tombstone (null stored with 24h TTL)
+  const tombstoneKey = `${key}_403`;
+  if (readCache(tombstoneKey, 86400) === false) {
+    return { data: null, stale: false, error: 'FORBIDDEN' };
+  }
 
   try {
     const data = await fetcher();
     writeCache(key, data);
     return { data, stale: false };
   } catch (err) {
-    // On failure, try to return stale cache
+    if (err.message === 'FORBIDDEN') {
+      // Cache the 403 for 24h to avoid hammering a restricted endpoint
+      try { localStorage.setItem(tombstoneKey, JSON.stringify({ data: false, ts: Date.now() })); } catch { /* noop */ }
+      return { data: null, stale: false, error: 'FORBIDDEN' };
+    }
+    // On other failures, try to return stale cache
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
@@ -154,9 +166,9 @@ export async function searchTicker(query) {
   if (!query || query.length < 1) return [];
   return fetchWithCache('search', query, async () => {
     const result = await fetchFinnhub(`/search?q=${encodeURIComponent(query)}`);
-    // Filter to common stocks on US exchanges
+    // Filter to common stocks + ADRs on US exchanges (no dot = no foreign suffixes)
     return (result.result || []).filter(r =>
-      r.type === 'Common Stock' && !r.symbol.includes('.')
+      (r.type === 'Common Stock' || r.type === 'ADR') && !r.symbol.includes('.')
     ).slice(0, 10);
   });
 }
