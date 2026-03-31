@@ -4,23 +4,56 @@ let tickers = $state([]);
 let selectedSymbol = $state(null);
 let marketData = $state({});
 
-const DEFAULT_TICKERS = [
+// Built-in fallback defaults — used only when no user-configured defaults exist
+const HARDCODED_DEFAULTS = [
+  { symbol: 'AMZN',  name: 'Amazon.com Inc',    sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc',       sector: 'Communication Services', sectorETF: 'XLC' },
+  { symbol: 'SKM',   name: 'SK Telecom',         sector: 'Communication Services', sectorETF: 'XLC' },
   { symbol: 'TSLA',  name: 'Tesla Inc',          sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
-  { symbol: 'SKM',   name: 'SK Telecom',          sector: 'Communication Services', sectorETF: 'XLC' },
-  { symbol: 'SOFI',  name: 'SoFi Technologies',   sector: 'Financial Services',     sectorETF: 'XLF' },
-  { symbol: 'GOOGL', name: 'Alphabet Inc',         sector: 'Communication Services', sectorETF: 'XLC' },
-  { symbol: 'AMZN',  name: 'Amazon.com Inc',       sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
-  { symbol: 'HOOD',  name: 'Robinhood Markets',    sector: 'Financial Services',     sectorETF: 'XLF' },
+  { symbol: 'HOOD',  name: 'Robinhood Markets',  sector: 'Financial Services',     sectorETF: 'XLF' },
+  { symbol: 'NVDA',  name: 'NVIDIA Corporation', sector: 'Technology',             sectorETF: 'XLK' },
+  { symbol: 'SOFI',  name: 'SoFi Technologies',  sector: 'Financial Services',     sectorETF: 'XLF' },
 ];
 
-// Initialize from localStorage or seed with defaults on first run
+// User-configurable defaults — persisted separately from active watchlist
+let defaultTickers = $state([]);
+try {
+  const savedDefaults = localStorage.getItem('watchlist_defaults');
+  defaultTickers = savedDefaults ? JSON.parse(savedDefaults) : [...HARDCODED_DEFAULTS];
+} catch { defaultTickers = [...HARDCODED_DEFAULTS]; }
+
+function persistDefaults() {
+  try { localStorage.setItem('watchlist_defaults', JSON.stringify(defaultTickers)); } catch { /* noop */ }
+}
+
+export function getDefaultTickers() { return defaultTickers; }
+
+export function addDefaultTicker(symbol, name) {
+  if (defaultTickers.some(t => t.symbol === symbol)) return false;
+  defaultTickers.push({ symbol, name: name || symbol, sector: 'Unknown', sectorETF: 'SPY' });
+  persistDefaults();
+  return true;
+}
+
+export function removeDefaultTicker(symbol) {
+  const idx = defaultTickers.findIndex(t => t.symbol === symbol);
+  if (idx !== -1) defaultTickers.splice(idx, 1);
+  persistDefaults();
+}
+
+export function resetDefaultTickers() {
+  defaultTickers = [...HARDCODED_DEFAULTS];
+  persistDefaults();
+}
+
+// Initialize watchlist from localStorage or seed with defaults on first run
 try {
   const saved = localStorage.getItem('watchlist');
   if (saved) tickers = JSON.parse(saved);
 } catch { /* noop */ }
 
 if (tickers.length === 0) {
-  tickers = [...DEFAULT_TICKERS];
+  tickers = [...defaultTickers];
   try { localStorage.setItem('watchlist', JSON.stringify(tickers)); } catch { /* noop */ }
 }
 
@@ -79,7 +112,7 @@ export function loadDemoTickers(demoTickers) {
 
 // Clear demo tickers and seed defaults so user starts fresh after adding API keys
 export function clearDemoTickers() {
-  tickers = [...DEFAULT_TICKERS];
+  tickers = [...defaultTickers];
   marketData = {};
   persistTickers();
 }

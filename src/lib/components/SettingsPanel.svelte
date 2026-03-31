@@ -2,6 +2,7 @@
   import { getApiKey, setApiKey } from '../api/finnhub.svelte.js';
   import { getTDApiKey, setTDApiKey } from '../api/twelvedata.svelte.js';
   import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
+  import { getDefaultTickers, addDefaultTicker, removeDefaultTicker, resetDefaultTickers, addTicker } from '../stores/watchlist.svelte.js';
 
   let { open = $bindable(false) } = $props();
 
@@ -18,6 +19,28 @@
     saveMessage = result === 'granted' ? 'Notifications enabled' : 'Permission denied';
     setTimeout(() => saveMessage = '', 2500);
   }
+  let defaultInput = $state('');
+
+  async function addToDefaults() {
+    const sym = defaultInput.trim().toUpperCase();
+    if (!sym) return;
+    addDefaultTicker(sym, sym);
+    defaultInput = '';
+    saveMessage = `${sym} added to defaults`;
+    setTimeout(() => saveMessage = '', 2000);
+  }
+
+  async function loadDefaultsToWatchlist() {
+    const defaults = getDefaultTickers();
+    let added = 0;
+    for (const t of defaults) {
+      const ok = await addTicker(t.symbol, t.name);
+      if (ok) added++;
+    }
+    saveMessage = added > 0 ? `Added ${added} ticker${added > 1 ? 's' : ''} to watchlist` : 'All defaults already in watchlist';
+    setTimeout(() => saveMessage = '', 2500);
+  }
+
   let portfolioText = $state('');
   let portfolioValueInput = $state(getPortfolioValue() > 0 ? String(getPortfolioValue()) : '');
   let saveMessage = $state('');
@@ -144,6 +167,53 @@
         </p>
       </div>
 
+      <!-- Default Watchlist -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-text-secondary">Default Watchlist</span>
+          <button
+            class="text-xs text-text-muted hover:text-text-secondary underline transition-colors"
+            onclick={() => { resetDefaultTickers(); saveMessage = 'Reset to built-in defaults'; setTimeout(() => saveMessage = '', 2000); }}
+          >Reset</button>
+        </div>
+        <!-- Chips -->
+        <div class="flex flex-wrap gap-1.5 min-h-[2rem]">
+          {#each getDefaultTickers() as t (t.symbol)}
+            <span class="flex items-center gap-1 px-2 py-0.5 bg-surface-700 border border-border rounded-full text-xs text-text-primary">
+              {t.symbol}
+              <button
+                class="text-text-muted hover:text-bear-strong transition-colors leading-none"
+                onclick={() => removeDefaultTicker(t.symbol)}
+                aria-label="Remove {t.symbol}"
+              >×</button>
+            </span>
+          {/each}
+          {#if getDefaultTickers().length === 0}
+            <span class="text-xs text-text-muted italic">No defaults — add tickers below</span>
+          {/if}
+        </div>
+        <!-- Add ticker -->
+        <div class="flex gap-2">
+          <input
+            type="text"
+            placeholder="e.g. AAPL"
+            maxlength="10"
+            class="w-32 bg-surface-700 border border-border rounded px-3 py-1.5 text-text-primary font-mono text-sm uppercase placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50"
+            bind:value={defaultInput}
+            onkeydown={(e) => e.key === 'Enter' && addToDefaults()}
+          />
+          <button
+            class="px-3 py-1.5 bg-surface-700 border border-border text-text-secondary text-sm rounded hover:text-text-primary hover:border-bull-strong/50 transition"
+            onclick={addToDefaults}
+          >Add</button>
+          <button
+            class="px-3 py-1.5 bg-bull-strong text-surface-900 font-semibold text-sm rounded hover:brightness-110 transition"
+            onclick={loadDefaultsToWatchlist}
+          >Load to Watchlist</button>
+        </div>
+        <p class="text-xs text-text-muted">These tickers are added automatically on first launch. "Load to Watchlist" adds any missing ones now.</p>
+      </div>
+
       <!-- Portfolio Value (for position sizing) -->
       <div class="space-y-2">
         <label class="block">
@@ -243,7 +313,7 @@
         <button
           class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
           onclick={() => {
-            const keep = ['watchlist', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'lastRefreshed'];
+            const keep = ['watchlist', 'watchlist_defaults', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'lastRefreshed'];
             // Preserve per-ticker notes
             for (let i = 0; i < localStorage.length; i++) {
               const k = localStorage.key(i);
