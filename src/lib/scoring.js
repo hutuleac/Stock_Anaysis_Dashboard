@@ -342,7 +342,9 @@ export function getScoreVelocity(symbol) {
     if (raw) history = JSON.parse(raw);
   } catch { return null; }
 
-  if (history.length < 2) return null;
+  if (history.length === 0) return null;
+  // Only 1 snapshot — can't compute direction yet, show flat
+  if (history.length === 1) return { delta: 0, direction: 'flat' };
 
   const now = Date.now();
   const current = history[history.length - 1];

@@ -314,10 +314,10 @@
           class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
           onclick={() => {
             const keep = ['watchlist', 'watchlist_defaults', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'lastRefreshed'];
-            // Preserve per-ticker notes
+            // Preserve per-ticker notes and score velocity history
             for (let i = 0; i < localStorage.length; i++) {
               const k = localStorage.key(i);
-              if (k?.startsWith('note_')) keep.push(k);
+              if (k?.startsWith('note_') || k?.startsWith('sv_')) keep.push(k);
             }
             const toDelete = [];
             for (let i = 0; i < localStorage.length; i++) {
