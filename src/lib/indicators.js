@@ -296,6 +296,83 @@ export function computeWeeklyTrend(raw) {
   };
 }
 
+// ── Time-series versions for charting (return [{time, value}] arrays) ────────
+
+export function computeMACDSeries(candles, fast = 12, slow = 26, signal = 9) {
+  if (!candles || candles.length < slow + signal) return null;
+  const closes = candles.map(c => c.close);
+  const times  = candles.map(c => c.time);
+
+  const ema12 = emaArray(closes, fast);
+  const ema26 = emaArray(closes, slow);
+
+  const macdVals = [], macdTimes = [];
+  for (let i = slow - 1; i < closes.length; i++) {
+    macdVals.push(ema12[i] - ema26[i]);
+    macdTimes.push(times[i]);
+  }
+
+  if (macdVals.length < signal) return null;
+  const signalVals = emaArray(macdVals, signal);
+  if (!signalVals.length) return null;
+
+  const macdLine = [], signalLine = [], histogram = [];
+  for (let i = signal - 1; i < macdVals.length; i++) {
+    const t = macdTimes[i];
+    const m = macdVals[i];
+    const s = signalVals[i];
+    const h = m - s;
+    const prevH = i > signal - 1 ? macdVals[i - 1] - signalVals[i - 1] : null;
+    macdLine.push({ time: t, value: m });
+    signalLine.push({ time: t, value: s });
+    histogram.push({ time: t, value: h, color: prevH === null || h >= prevH ? '#22c55e' : '#ef4444' });
+  }
+
+  return { macdLine, signalLine, histogram };
+}
+
+export function computeRSISeries(candles, period = 14) {
+  if (!candles || candles.length < period + 1) return null;
+  const closes = candles.map(c => c.close);
+  const result = [];
+
+  let avgGain = 0, avgLoss = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff > 0) avgGain += diff; else avgLoss -= diff;
+  }
+  avgGain /= period;
+  avgLoss /= period;
+  result.push({ time: candles[period].time, value: avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss) });
+
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + Math.max(diff, 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + Math.max(-diff, 0)) / period;
+    result.push({ time: candles[i].time, value: avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss) });
+  }
+
+  return result;
+}
+
+export function computeBBSeries(candles, period = 20, mult = 2) {
+  if (!candles || candles.length < period) return null;
+  const closes = candles.map(c => c.close);
+  const upper = [], middle = [], lower = [];
+
+  for (let i = period - 1; i < closes.length; i++) {
+    const slice   = closes.slice(i - period + 1, i + 1);
+    const mean    = slice.reduce((s, v) => s + v, 0) / period;
+    const stddev  = Math.sqrt(slice.reduce((s, v) => s + (v - mean) ** 2, 0) / period);
+    const t = candles[i].time;
+    upper.push({ time: t, value: mean + mult * stddev });
+    middle.push({ time: t, value: mean });
+    lower.push({ time: t, value: mean - mult * stddev });
+  }
+
+  return { upper, middle, lower };
+}
+
 // ── Replay: compute technical snapshot at a specific candle index ─────────────
 // Used by ReplayPanel to scrub through historical dates.
 export function computeSnapshotAt(raw, index) {
