@@ -3,6 +3,7 @@
   import { getTDApiKey, setTDApiKey } from '../api/twelvedata.svelte.js';
   import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
   import { getDefaultTickers, addDefaultTicker, removeDefaultTicker, resetDefaultTickers, addTicker } from '../stores/watchlist.svelte.js';
+  import { getPaperTrades } from '../stores/papertrades.svelte.js';
 
   let { open = $bindable(false) } = $props();
 
@@ -39,6 +40,39 @@
     }
     saveMessage = added > 0 ? `Added ${added} ticker${added > 1 ? 's' : ''} to watchlist` : 'All defaults already in watchlist';
     setTimeout(() => saveMessage = '', 2500);
+  }
+
+  function exportPaperTrades() {
+    const data = JSON.stringify(getPaperTrades(), null, 2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    a.download = `paper-trades-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+  }
+
+  function importPaperTrades() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!Array.isArray(parsed)) throw new Error('Invalid format');
+          localStorage.setItem('papertrades', JSON.stringify(parsed));
+          saveMessage = `Imported ${parsed.length} paper trade${parsed.length !== 1 ? 's' : ''} — reload to apply`;
+          setTimeout(() => saveMessage = '', 4000);
+        } catch {
+          saveMessage = 'Import failed — invalid JSON file';
+          setTimeout(() => saveMessage = '', 3000);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   }
 
   let portfolioText = $state('');
@@ -310,6 +344,22 @@
         <p class="text-xs text-text-muted">
           All data is stored in your browser's localStorage. Nothing is sent to any server except Finnhub API calls.
         </p>
+
+        <!-- Paper trades backup -->
+        <div class="space-y-1.5">
+          <span class="text-xs font-medium text-text-secondary block">Paper Trades Backup</span>
+          <div class="flex gap-2">
+            <button
+              class="px-3 py-1.5 text-xs bg-surface-700 border border-border text-text-secondary rounded hover:text-text-primary hover:border-bull-strong/50 transition"
+              onclick={exportPaperTrades}
+            >↓ Export JSON</button>
+            <button
+              class="px-3 py-1.5 text-xs bg-surface-700 border border-border text-text-secondary rounded hover:text-text-primary hover:border-bull-strong/50 transition"
+              onclick={importPaperTrades}
+            >↑ Import JSON</button>
+          </div>
+          <p class="text-xs text-text-muted">Export to back up or transfer paper trades to another device / URL.</p>
+        </div>
         <button
           class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
           onclick={() => {
