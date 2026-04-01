@@ -1,4 +1,4 @@
-# Stock Analysis Dashboard v0.8
+# Stock Analysis Dashboard v0.9
 
 A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
 
@@ -49,9 +49,14 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 ### Expanded Row (per ticker, click to open)
 
 **Charts**
-- Candlestick chart — 1M / 3M / 6M / 1Y (TradingView lightweight-charts)
+- Candlestick chart — 1D / 5D / 1M / 3M / 6M / 1Y (TradingView lightweight-charts)
 - MA50 (amber) + MA200 (blue) overlays with toggle button
 - Stop-loss price line auto-drawn from checklist input
+- **Volume bars** sub-pane (default on) — green/red colored, toggleable
+- **MACD** sub-pane (12,26,9) — histogram + line + signal with crossover coloring; exclusive with volume
+- **RSI(14)** overlaid on volume/MACD pane — 70/30 reference lines, toggleable
+- **Bollinger Bands(20,2)** overlay on main pane — default on, toggleable
+- Dynamic chart height adjusts to active sub-panes
 
 **Data panels**
 - News panel — last 6 headlines with bull/bear/neutral sentiment dots + timeAgo
@@ -70,6 +75,13 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
    - Position sizing — 2% rule: recommended shares, cost, % of portfolio, max loss
    - Scenario table — Base (1:2 R:R), Extended (1:3), Stop-out
 3. **Trade Log** — BUY/SELL entries, FIFO realized P&L, unrealized P&L, CSV export
+4. **Paper Trades** — record a hypothetical BUY/SELL today and track it over weeks/months:
+   - Snapshots score, badge, conviction, and thesis bulls/bears at entry time
+   - Live unrealized P&L ($ + %), days held, score-at-entry vs score-now comparison
+   - Verdict badge: **CONFIRMED** (price moved your way) / **AGAINST** / **FLAT**
+   - Inline close form captures exit price + exit score snapshot for post-mortem
+   - **Paper Trades Overview** panel on main dashboard: table of all open ideas + W/L/P&L summary
+   - ⚠️ Data lives in `localStorage` (per-browser, per-domain) — use Settings → Export to back up across devices
 
 **Notes**
 - Free-text note field per ticker — auto-saves on every keystroke
@@ -91,7 +103,7 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - Collapsible
 
 ### App-level
-- **Default watchlist** — opens pre-loaded with TSLA · SKM · SOFI · GOOGL · AMZN · HOOD on first run
+- **Default watchlist** — opens pre-loaded with AMZN · GOOGL · SKM · TSLA · HOOD · NVDA · SOFI; fully editable in Settings (add/remove/reset, persisted separately from active watchlist)
 - **Startup hydration** — last fetched data is shown immediately on load from cache; no auto-fetch on open
 - Market hours indicator — OPEN/CLOSED + countdown (ET), updates every minute
 - Auto-refresh — Off / 5 / 15 / 30 min, only fires when market is open
@@ -139,6 +151,15 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 ---
 
 ## Changelog
+
+### v0.9 (2026-04-01)
+- **Paper Trades** — record a hypothetical BUY/SELL, snapshot score + thesis at entry, track live P&L and CONFIRMED/AGAINST verdict over weeks/months; close with exit score snapshot; Paper Trades Overview panel on main dashboard
+- **Chart sub-panes** — Volume bars (default on), MACD histogram/line/signal, RSI(14) with 30/70 lines, Bollinger Bands overlay; VOL and MACD are exclusive (one at a time); dynamic chart height
+- **Configurable default watchlist** — editable in Settings (chip UI, add/remove/reset); updated to AMZN · GOOGL · SKM · TSLA · HOOD · NVDA · SOFI
+- **TwelveData rate limiter** — sliding-window queue (8 calls/min) prevents hitting free tier limits; progressive retry on 429
+- **Finnhub 403 tombstone** — restricted endpoints cached for 24h to stop repeated console errors
+- **ADR ticker search** — SKM and other ADRs now appear in search results
+- **Score arrow/sparkline fix** — shows → flat arrow and center line even with just 1 snapshot; `sv_*` keys now preserved by Clear API Cache
 
 ### v0.8 (2026-03-28)
 - **Score z-score display** — surfaced in WatchlistTable (desktop, lg+) and Fundamentals Bar; shows how many std-devs current score is above/below its 90-day mean
