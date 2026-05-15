@@ -144,7 +144,7 @@
       // Per-ticker enrichment: checklist auto-answers + indicators
       const tickers = getTickers();
       const toTs = Math.floor(Date.now() / 1000);
-      const fromTs = toTs - 250 * 86400; // 250 days — enough for EMA200
+      const fromTs = toTs - 365 * 86400; // 365 calendar days ≈ 260 trading days — required for EMA200
 
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -202,8 +202,16 @@
                 }
               }
 
-              // Weekly trend from same data (resample: take every 5th bar)
-              const weeklyTrend = computeWeeklyTrend(synthetic);
+              // Weekly trend — resample daily to weekly by taking every 5th bar
+              const wIdx = synthetic.c.map((_, i) => i).filter(i => i % 5 === 0);
+              const weeklyRaw = {
+                s: 'ok',
+                c: wIdx.map(i => synthetic.c[i]),
+                h: wIdx.map(i => synthetic.h[i]),
+                l: wIdx.map(i => synthetic.l[i]),
+                t: wIdx.map(i => synthetic.t[i]),
+              };
+              const weeklyTrend = computeWeeklyTrend(weeklyRaw);
               if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
             }
           } else {

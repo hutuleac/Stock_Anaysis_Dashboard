@@ -1,6 +1,4 @@
-// Local indicator computation from OHLC candle data (Finnhub format)
-// Produces the same shape as twelvedata.svelte.js fetchIndicators()
-// so the scoring engine is source-agnostic.
+// Local indicator computation from OHLC candle data (Finnhub / TwelveData format)
 
 // ── EMA helper ───────────────────────────────────────────────────────────────
 export function emaArray(values, period) {
@@ -183,7 +181,7 @@ export function computeATR(highs, lows, closes, period = 14) {
 // Returns how many std-devs the current RSI is above/below its recent average.
 // e.g. +1.8 = RSI unusually high vs recent history; -1.5 = unusually low.
 export function computeRSIZScore(closes, period = 14) {
-  if (!closes || closes.length < period + 30) return null;
+  if (!closes || closes.length < period + 10) return null;
 
   const windowSize = Math.min(closes.length - period, 90);
   const startIdx = closes.length - windowSize;
@@ -224,8 +222,12 @@ export function computeIndicatorsFromCandles(raw) {
   const ema200 = ema200arr.length > 0 ? Math.round(ema200arr[ema200arr.length - 1] * 100) / 100 : null;
 
   // Local ADX, Stoch, BB — eliminates dependency on TwelveData rate-limited endpoints
-  const adxVal = highs.length >= closes.length ? computeADXLocal(highs, lows, closes) : null;
-  const stochResult = highs.length >= closes.length ? computeStoch(highs, lows, closes) : null;
+  const hasOHLC = highs.length >= closes.length && lows.length >= closes.length;
+  if (!hasOHLC) {
+    console.warn(`computeIndicatorsFromCandles: OHLC length mismatch — highs:${highs.length} lows:${lows.length} closes:${closes.length} — ADX/Stoch will be null`);
+  }
+  const adxVal = hasOHLC ? computeADXLocal(highs, lows, closes) : null;
+  const stochResult = hasOHLC ? computeStoch(highs, lows, closes) : null;
   const bbResult = computeBBLocal(closes);
 
   return {
