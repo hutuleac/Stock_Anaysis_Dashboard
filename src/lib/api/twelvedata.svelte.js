@@ -1,15 +1,10 @@
-// TwelveData API — technical indicators layer
-// Supplements Finnhub; used for RSI(14), MACD, Bollinger Bands.
-// Free tier: 8 credits/min, 800/day. Each indicator call = 1 credit.
+// TwelveData API — real-time quote + OHLCV candle series
+// Indicators are computed locally from candles (see indicators.js).
+// Free tier: 8 credits/min, 800/day.
 
 const BASE = 'https://api.twelvedata.com';
 
 const CACHE_TTL = {
-  rsi:     3600,
-  macd:    3600,
-  bbands:  3600,
-  adx:     3600,
-  stoch:   3600,
   tdquote: 60,     // 1-minute cache — prevents hammering on each refresh
   ts_1day: 86400,  // daily candles — 24h
   ts_1h:   900,    // intraday candles — 15 min
@@ -121,78 +116,6 @@ async function fetchWithCache(type, symbol, fetcher) {
   }
 }
 
-// ── RSI(14) ──────────────────────────────────────────────────────────────────
-export async function fetchRSI(symbol) {
-  return fetchWithCache('rsi', symbol, async () => {
-    const json = await fetchTD(
-      `/rsi?symbol=${encodeURIComponent(symbol)}&interval=1day&time_period=14&outputsize=2`
-    );
-    // Return last 2 values so we can detect direction
-    return (json.values || []).slice(0, 2).map(v => ({
-      datetime: v.datetime,
-      rsi: parseFloat(v.rsi),
-    }));
-  });
-}
-
-// ── MACD(12,26,9) ────────────────────────────────────────────────────────────
-export async function fetchMACD(symbol) {
-  return fetchWithCache('macd', symbol, async () => {
-    const json = await fetchTD(
-      `/macd?symbol=${encodeURIComponent(symbol)}&interval=1day&fast_period=12&slow_period=26&signal_period=9&outputsize=2`
-    );
-    return (json.values || []).slice(0, 2).map(v => ({
-      datetime: v.datetime,
-      macd:       parseFloat(v.macd),
-      signal:     parseFloat(v.macd_signal),
-      histogram:  parseFloat(v.macd_hist),
-    }));
-  });
-}
-
-// ── Bollinger Bands(20,2) ────────────────────────────────────────────────────
-export async function fetchBBands(symbol) {
-  return fetchWithCache('bbands', symbol, async () => {
-    const json = await fetchTD(
-      `/bbands?symbol=${encodeURIComponent(symbol)}&interval=1day&time_period=20&sd=2&outputsize=1`
-    );
-    const v = json.values?.[0];
-    if (!v) return null;
-    return {
-      datetime:   v.datetime,
-      upper:      parseFloat(v.upper_band),
-      middle:     parseFloat(v.middle_band),
-      lower:      parseFloat(v.lower_band),
-    };
-  });
-}
-
-// ── ADX(14) ──────────────────────────────────────────────────────────────────
-export async function fetchADX(symbol) {
-  return fetchWithCache('adx', symbol, async () => {
-    const json = await fetchTD(
-      `/adx?symbol=${encodeURIComponent(symbol)}&interval=1day&time_period=14&outputsize=1`
-    );
-    const v = json.values?.[0];
-    if (!v) return null;
-    return { datetime: v.datetime, adx: parseFloat(v.adx) };
-  });
-}
-
-// ── Stochastic(14,3,3) ───────────────────────────────────────────────────────
-export async function fetchStoch(symbol) {
-  return fetchWithCache('stoch', symbol, async () => {
-    const json = await fetchTD(
-      `/stoch?symbol=${encodeURIComponent(symbol)}&interval=1day&outputsize=2`
-    );
-    return (json.values || []).slice(0, 2).map(v => ({
-      datetime: v.datetime,
-      slowK: parseFloat(v.slow_k),
-      slowD: parseFloat(v.slow_d),
-    }));
-  });
-}
-
 // ── Real-time quote ───────────────────────────────────────────────────────────
 // TTL=60s — short cache prevents duplicate calls within a single refresh cycle.
 export async function fetchTDQuote(symbol) {
@@ -230,52 +153,3 @@ export async function fetchTimeSeries(symbol, interval, outputsize) {
   });
 }
 
-// ── Fetch all indicators for one symbol ──────────────────────────────────────
-// Free tier: 8 credits/min, 800/day. Each indicator call = 1 credit.
-// Per ticker: RSI + MACD + BBands + ADX + Stoch = 5 credits. 6 tickers = 30 credits/refresh.
-export async function fetchIndicators(symbol) {
-  if (!hasTDApiKey()) return null;
-  const [rsiRes, macdRes, bbRes, adxRes, stochRes, quoteRes] = await Promise.all([
-    fetchRSI(symbol),
-    fetchMACD(symbol),
-    fetchBBands(symbol),
-    fetchADX(symbol),
-    fetchStoch(symbol),
-    fetchTDQuote(symbol),
-  ]);
-  const quote = quoteRes?.data ?? null;
-
-  const rsiCurrent  = rsiRes.data?.[0]?.rsi ?? null;
-  const rsiPrev     = rsiRes.data?.[1]?.rsi ?? null;
-  const macdCurrent = macdRes.data?.[0] ?? null;
-  const macdPrev    = macdRes.data?.[1] ?? null;
-  const bb          = bbRes.data ?? null;
-  const adx         = adxRes.data?.adx ?? null;
-  const stochCurr   = stochRes.data?.[0] ?? null;
-  const stochPrev   = stochRes.data?.[1] ?? null;
-
-  const stochCross = (stochCurr && stochPrev)
-    ? (stochCurr.slowK > stochCurr.slowD && stochPrev.slowK <= stochPrev.slowD ? 'bullish_cross'
-      : stochCurr.slowK < stochCurr.slowD && stochPrev.slowK >= stochPrev.slowD ? 'bearish_cross'
-      : null)
-    : null;
-
-  return {
-    rsi:  rsiCurrent,
-    rsiDirection: (rsiCurrent !== null && rsiPrev !== null)
-      ? (rsiCurrent > rsiPrev ? 'rising' : rsiCurrent < rsiPrev ? 'falling' : 'flat')
-      : null,
-    macd: macdCurrent,
-    macdCrossover: (macdCurrent && macdPrev)
-      ? (macdCurrent.histogram > 0 && macdPrev.histogram <= 0 ? 'bullish_cross'
-        : macdCurrent.histogram < 0 && macdPrev.histogram >= 0 ? 'bearish_cross'
-        : null)
-      : null,
-    bb,
-    adx,
-    stochK: stochCurr?.slowK ?? null,
-    stochD: stochCurr?.slowD ?? null,
-    stochCross,
-    quote,
-  };
-}
