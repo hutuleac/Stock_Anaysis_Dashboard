@@ -2,6 +2,7 @@
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, hydrateFromCache } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
+  import { computeSetupSignals } from './lib/signals.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
@@ -209,10 +210,13 @@
                 c: wIdx.map(i => synthetic.c[i]),
                 h: wIdx.map(i => synthetic.h[i]),
                 l: wIdx.map(i => synthetic.l[i]),
+                v: wIdx.map(i => synthetic.v[i]),
                 t: wIdx.map(i => synthetic.t[i]),
               };
               const weeklyTrend = computeWeeklyTrend(weeklyRaw);
               if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
+              const setups = computeSetupSignals(weeklyRaw);
+              if (setups) results[ticker.symbol].setups = setups;
             }
           } else {
             const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
@@ -231,6 +235,8 @@
             const weeklyRes = await fetchCandles(ticker.symbol, 'W', weeklyFromTs, toTs);
             const weeklyTrend = computeWeeklyTrend(weeklyRes?.data);
             if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
+            const setups = computeSetupSignals(weeklyRes?.data);
+            if (setups) results[ticker.symbol].setups = setups;
           }
         } catch { /* non-blocking */ }
       }
@@ -286,6 +292,7 @@
             indicators:  d.indicators  ?? null,
             tdQuote:     d.tdQuote     ?? null,
             weekly:      d.weekly      ?? null,
+            setups:      d.setups      ?? null,
             sectorTrend: d.sectorTrend ?? null,
           };
         }
@@ -333,6 +340,7 @@
       if (!data) continue;
       if (data._candlesDaily)  { const ind = computeIndicatorsFromCandles(data._candlesDaily);  if (ind) data.indicators = ind; }
       if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
+      if (data._candlesWeekly) { const st  = computeSetupSignals(data._candlesWeekly);          if (st)  data.setups    = st;  }
       delete data._candlesDaily;
       delete data._candlesWeekly;
     }
@@ -354,6 +362,7 @@
             if (s.indicators  != null) results[sym].indicators  = s.indicators;
             if (s.tdQuote     != null) results[sym].tdQuote     = s.tdQuote;
             if (s.weekly      != null) results[sym].weekly      = s.weekly;
+            if (s.setups      != null) results[sym].setups      = s.setups;
             if (s.sectorTrend != null) results[sym].sectorTrend = s.sectorTrend;
           }
           if (sup.marketContextData) {
