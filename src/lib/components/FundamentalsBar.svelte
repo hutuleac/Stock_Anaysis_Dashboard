@@ -60,6 +60,9 @@
   const tdQuote  = $derived(data?.tdQuote ?? null);
   const weekly   = $derived(data?.weekly ?? null);
   const setups   = $derived(data?.setups ?? null);
+  // Prefer profile2 market cap (USD) over the metrics value, which is in the
+  // company's reporting currency (e.g. KRW for ADRs like SKM). Both in millions.
+  const mktCap   = $derived(data?.profile?.marketCapitalization ?? m['marketCapitalization'] ?? null);
   const score    = $derived(computeScore(data));
   const scoreZ   = $derived(computeScoreZScore(symbol));
 
@@ -81,7 +84,7 @@
   const metrics = $derived([
     {
       label: 'Mkt Cap',
-      value: fmtBig(m['marketCapitalization'] ? m['marketCapitalization'] * 1e6 : null),
+      value: fmtBig(mktCap ? mktCap * 1e6 : null),
       note: null,
     },
     {
