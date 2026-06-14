@@ -96,6 +96,7 @@ Offline-first stock analysis dashboard for retail swing traders. Svelte 5 + Vite
 src/lib/
   indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch)
   scoring.js          — 9-signal scoring engine, thesis generator, badge logic
+  signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
@@ -115,6 +116,7 @@ src/lib/
 tests/
   indicators.test.js  — 37 unit tests for indicators.js
   scoring.test.js     — 42 unit tests for scoring.js
+  signals.test.js     — 32 unit tests for signals.js
 ```
 
 ## Scoring engine (scoring.js)
@@ -135,6 +137,16 @@ tests/
 - **Bollinger Bands(20,2):** Population std dev (÷period). Matches TradingView.
 - **ADX(14):** Full Wilder-smoothed +DM/−DM/TR pipeline.
 - **Stochastic(14,3,3):** Raw %K, 3-bar SMA for %D, crossover on sign change.
+
+## Setup signals (signals.js)
+
+Leading-signal layer on **weekly** candles (adapted from the range-finder crypto project's signal engine). Two separately-scored setups per ticker:
+- **Pullback / Accumulation** (0–10): bullish RSI divergence + downtrend exhaustion + volume dry-up + lower-half range position. Buy weakness before the turn.
+- **Momentum / Breakout** (0–10): BB squeeze resolving + structure breakout + volume expansion + weekly EMA reclaim. Buy strength as a trend starts.
+
+Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaWeeks }`. Entry point `computeSetupSignals(weeklyRaw)`; returns null if < 20 weekly bars. Wired into App.svelte on the existing weekly candle fetch (all three paths: TwelveData, Finnhub, cache-hydrate) — zero new API calls. Range position is computed from the weekly candles themselves, not Finnhub 52w metrics, keeping signals.js self-contained.
+
+**Inversions from the crypto source** (grid bots want chop; we want trends): high ADX/trend is positive for momentum, divergence is used long-only (bullish at lows), and everything runs on weekly not 4H. Crypto-only inputs (funding, OI, order-flow CVD) were dropped. Squeeze COMPRESSING is gated on bandwidth percentile (scale-agnostic across tickers), not an absolute bandwidth level.
 
 ## Known conventions / gotchas
 
