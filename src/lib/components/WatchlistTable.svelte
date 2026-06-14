@@ -459,7 +459,7 @@
                   {/if}
                   {#if topSetup(data?.setups)}
                     {@const su = topSetup(data?.setups)}
-                    <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {setupBadgeClass(su.readiness)} hidden md:inline" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
+                    <span class="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
                       {su.kind} {su.readiness}
                     </span>
                   {/if}
