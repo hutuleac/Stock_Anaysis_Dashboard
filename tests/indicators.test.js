@@ -7,6 +7,8 @@ import {
   computeRSIZScore,
   computeIndicatorsFromCandles,
   computeWeeklyTrend,
+  priceReturn,
+  computeRelativeStrength,
 } from '../src/lib/indicators.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -323,5 +325,58 @@ describe('computeWeeklyTrend', () => {
     const raw = candles(rising(50, 2));
     const result = computeWeeklyTrend(raw);
     expect(result.aboveEma).toBe(true);
+  });
+});
+
+// ─── priceReturn ─────────────────────────────────────────────────────────────
+
+describe('priceReturn', () => {
+  it('returns null when not enough bars', () => {
+    expect(priceReturn([100, 101], 21)).toBeNull();
+    expect(priceReturn(null, 21)).toBeNull();
+  });
+
+  it('computes percent return over the lookback window', () => {
+    // 22 bars: first 100, last 110, lookback 21 → (110-100)/100 = 10%
+    const closes = [100, ...Array.from({ length: 20 }, () => 105), 110];
+    expect(priceReturn(closes, 21)).toBeCloseTo(10, 5);
+  });
+
+  it('is negative for a decline', () => {
+    const closes = [200, ...Array.from({ length: 20 }, () => 180), 150];
+    expect(priceReturn(closes, 21)).toBeCloseTo(-25, 5);
+  });
+});
+
+// ─── computeRelativeStrength ─────────────────────────────────────────────────
+
+describe('computeRelativeStrength', () => {
+  it('returns null fields when series too short', () => {
+    const r = computeRelativeStrength([100, 101], [100, 101]);
+    expect(r.rs1m).toBeNull();
+    expect(r.rs3m).toBeNull();
+  });
+
+  it('positive RS when stock outperforms SPY (1M)', () => {
+    // stock +20% over 21 bars, SPY +5% → RS = +15
+    const stock = [100, ...Array(20).fill(110), 120];
+    const spy   = [100, ...Array(20).fill(102), 105];
+    const r = computeRelativeStrength(stock, spy);
+    expect(r.rs1m).toBeCloseTo(15, 1);
+  });
+
+  it('negative RS when stock underperforms SPY', () => {
+    const stock = [100, ...Array(20).fill(99), 98];   // -2%
+    const spy   = [100, ...Array(20).fill(104), 108]; // +8%
+    const r = computeRelativeStrength(stock, spy);
+    expect(r.rs1m).toBeLessThan(0);
+  });
+
+  it('computes 3M RS when ≥ 63 bars are present', () => {
+    const stock = Array.from({ length: 64 }, (_, i) => 100 + i);     // +63% over 63 bars
+    const spy   = Array.from({ length: 64 }, (_, i) => 100 + i * 0.5); // +31.5%
+    const r = computeRelativeStrength(stock, spy);
+    expect(r.rs3m).not.toBeNull();
+    expect(r.rs3m).toBeGreaterThan(0);
   });
 });
