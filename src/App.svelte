@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, hydrateFromCache } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
@@ -174,6 +174,19 @@
           setSectorAnswer(ticker.symbol, null);
         }
 
+        // Company profile (cached 7d) → USD market cap + listing currency.
+        // The metrics endpoint reports market cap in the company's reporting
+        // currency (e.g. KRW for ADRs like SKM); profile2 gives USD.
+        try {
+          const profRes = await fetchProfile(ticker.symbol);
+          if (profRes?.data?.marketCapitalization != null) {
+            results[ticker.symbol].profile = {
+              marketCapitalization: profRes.data.marketCapitalization,
+              currency: profRes.data.currency ?? null,
+            };
+          }
+        } catch { /* non-blocking */ }
+
         // Daily candles → local RSI/MACD indicators
         try {
           if (hasTDApiKey()) {
@@ -293,6 +306,7 @@
             tdQuote:     d.tdQuote     ?? null,
             weekly:      d.weekly      ?? null,
             setups:      d.setups      ?? null,
+            profile:     d.profile     ?? null,
             sectorTrend: d.sectorTrend ?? null,
           };
         }
@@ -363,6 +377,7 @@
             if (s.tdQuote     != null) results[sym].tdQuote     = s.tdQuote;
             if (s.weekly      != null) results[sym].weekly      = s.weekly;
             if (s.setups      != null) results[sym].setups      = s.setups;
+            if (s.profile     != null) results[sym].profile     = s.profile;
             if (s.sectorTrend != null) results[sym].sectorTrend = s.sectorTrend;
           }
           if (sup.marketContextData) {
@@ -397,7 +412,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.9</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.10</span>
       </div>
 
       <div class="flex items-center gap-3">
