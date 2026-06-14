@@ -113,6 +113,42 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 
 ---
 
+## Testing
+
+```bash
+npm test          # single run (CI)
+npm run test:watch  # watch mode (dev)
+```
+
+79 unit tests covering `src/lib/indicators.js` and `src/lib/scoring.js`:
+
+| Suite | What's tested |
+|-------|---------------|
+| `emaArray` | Seed value, multiplier math, length |
+| `computeRSI` | Wilder smoothing, all-gains (100), all-losses (0), edge/null cases |
+| `computeMACD` | Structure, histogram = MACD − signal, flat series, crossover detection |
+| `computeATR` | Uniform TR, spike isolation, gap-based true range |
+| `computeRSIZScore` | Null guard, zero-variance series |
+| `computeIndicatorsFromCandles` | All fields returned, BB ordering, missing OHLC graceful null |
+| `computeWeeklyTrend` | Up/down trend detection, structure |
+| `scoreNewsHeadlines` | Bullish/bearish/neutral words, first-5 limit, clamping |
+| `computeScore` | All 8 technical signals, 3 fundamental, regime weights, SPY penalty, F&G modifier, conviction label, badge thresholds |
+| `getDaysToEarnings` | Future/past/today date handling |
+| `score history` | localStorage store/retrieve, dedup, velocity, z-score |
+| `generateThesis` | Structure, EMA50 bull/bear copy, earnings warning |
+
+### Math implementation notes
+
+- **RSI(14)** — Wilder's smoothing (RMA): `avgGain = (prev * 13 + gain) / 14` per bar, consistent with TradingView.
+- **EMA** — seeded with SMA of the first `period` values, then standard EMA multiplier `k = 2/(n+1)`.
+- **MACD(12,26,9)** — EMA crossover on the MACD histogram (histogram flips sign = crossover event).
+- **ATR(14)** — simple average of the last 14 true ranges (not Wilder's RMA). Expect small divergence vs TradingView's ATR(14) which uses Wilder smoothing; values are directionally consistent and suitable for stop-loss guidance.
+- **Bollinger Bands(20,2)** — population std dev (divides by `period`, not `period−1`), matching TradingView default.
+- **ADX(14)** — Wilder-smoothed +DM/−DM/TR, matching standard ADX definition.
+- **Stochastic(14,3,3)** — raw %K smoothed to D by 3-bar SMA; crossover fires on %K/%D sign change.
+
+---
+
 ## Setup
 
 1. Get a free API key from [finnhub.io/register](https://finnhub.io/register)
