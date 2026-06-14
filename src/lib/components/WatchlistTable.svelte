@@ -169,6 +169,17 @@
          :                        'bg-surface-600 text-text-secondary';
   }
 
+  // RS-vs-SPY chip — only when 1M outperformance is meaningful (|RS| >= 3%).
+  function rsChip(rs) {
+    if (!rs || rs.rs1m == null || Math.abs(rs.rs1m) < 3) return null;
+    const out = rs.rs1m > 0;
+    return {
+      label: `RS ${out ? '+' : ''}${rs.rs1m.toFixed(0)}%`,
+      cls: out ? 'bg-bull-strong/15 text-bull-strong' : 'bg-bear-strong/15 text-bear-strong',
+      title: `Relative strength vs SPY: ${rs.rs1m > 0 ? '+' : ''}${rs.rs1m.toFixed(1)}% (1M)${rs.rs3m != null ? `, ${rs.rs3m > 0 ? '+' : ''}${rs.rs3m.toFixed(1)}% (3M)` : ''}`,
+    };
+  }
+
   function formatPct(val) {
     if (val == null) return '—';
     const sign = val >= 0 ? '+' : '';
@@ -312,6 +323,10 @@
                 <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
                   {su.kind} {su.readiness}{su.etaWeeks ? ` ~${su.etaWeeks}w` : ''}
                 </span>
+              {/if}
+              {#if rsChip(data?.rs)}
+                {@const chip = rsChip(data?.rs)}
+                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
               {/if}
             </div>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
@@ -462,6 +477,10 @@
                     <span class="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
                       {su.kind} {su.readiness}
                     </span>
+                  {/if}
+                  {#if rsChip(data?.rs)}
+                    {@const chip = rsChip(data?.rs)}
+                    <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
                   {/if}
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>

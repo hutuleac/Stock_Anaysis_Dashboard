@@ -257,6 +257,58 @@ export const TIPS = {
     why: 'The best multi-month trends start from a tight base with expanding volume. This flags that ignition window before price has run.',
   },
 
+  relativeStrength: {
+    title: 'Relative Strength vs SPY',
+    subtitle: 'Outperformance over 1M / 3M',
+    category: 'Trend',
+    description: "The stock's price return minus the S&P 500's over the trailing ~21 (1M) and ~63 (3M) trading days. Positive = beating the index.",
+    levels: [
+      { range: '> +5%',     label: 'Strong leader', color: C.green, desc: 'Outperforming the index — a classic institutional-accumulation tell for trend entries.' },
+      { range: '0 to +5%',  label: 'In line / ahead', color: C.dim, desc: 'Roughly matching or modestly beating the market.' },
+      { range: '< 0%',      label: 'Laggard',       color: C.red,   desc: 'Underperforming the index — swimming upstream; demand higher conviction.' },
+    ],
+    why: 'Leaders keep leading. Buying relative-strength names in an uptrend beats bottom-fishing laggards. Pair 1M (recent) with 3M (sustained) to filter one-week pops.',
+  },
+
+  revenueGrowth: {
+    title: 'Revenue Growth (YoY)',
+    subtitle: 'Top-line growth, trailing 12 months',
+    category: 'Fundamental',
+    description: 'Year-over-year change in trailing-twelve-month revenue. The cleanest read on whether the business is actually expanding.',
+    levels: [
+      { range: '> +10%', label: 'Growing',    color: C.green, desc: 'Healthy top-line expansion — supports a premium multiple.' },
+      { range: '0 to +10%', label: 'Slow',     color: C.dim,   desc: 'Modest growth — fine for value, weak for a growth thesis.' },
+      { range: '< 0%',   label: 'Contracting', color: C.red,   desc: 'Shrinking revenue — a headwind no multiple fixes.' },
+    ],
+    why: 'For growth names where earnings are thin or negative, revenue growth is the better signal than P/E. Pair with P/S to value pre-profit companies.',
+  },
+
+  priceToSales: {
+    title: 'Price / Sales (P/S)',
+    subtitle: 'Market cap ÷ revenue',
+    category: 'Fundamental',
+    description: 'How many dollars you pay per dollar of sales. Works when P/E is negative or meaningless (early-growth, heavy-reinvestment, or loss-making companies).',
+    levels: [
+      { range: '< 4x',  label: 'Reasonable',  color: C.green, desc: 'Modest sales multiple — limited valuation risk.' },
+      { range: '4–15x', label: 'Elevated',    color: C.dim,   desc: 'Priced for growth — needs the growth to show up.' },
+      { range: '> 15x', label: 'Rich',        color: C.red,   desc: 'Steep sales multiple — vulnerable to any growth wobble.' },
+    ],
+    why: 'P/E breaks for companies with little or negative earnings (and for ADRs with odd reporting). P/S is the fallback valuation lens for growth stocks.',
+  },
+
+  peg: {
+    title: 'PEG Ratio',
+    subtitle: 'P/E ÷ EPS growth rate',
+    category: 'Fundamental',
+    description: 'Valuation adjusted for growth. A 40x P/E growing 40% (PEG 1.0) can be cheaper than a 15x P/E growing 5% (PEG 3.0). Undefined when growth is zero/negative.',
+    levels: [
+      { range: '< 1.0',   label: 'Undervalued',  color: C.green, desc: 'Cheap relative to its growth rate — the GARP sweet spot.' },
+      { range: '1.0–2.0', label: 'Fair',         color: C.dim,   desc: 'Reasonably priced for the growth on offer.' },
+      { range: '> 2.0',   label: 'Expensive',    color: C.red,   desc: 'Paying up well beyond the growth rate.' },
+    ],
+    why: 'A high P/E is not automatically expensive if growth justifies it. PEG normalizes valuation against growth so fast growers and slow growers are comparable.',
+  },
+
   tfsScore: {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',
