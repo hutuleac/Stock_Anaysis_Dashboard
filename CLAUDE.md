@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.9
+# Project State — Stock Analysis Dashboard v0.10
 
 ## What this is
 
@@ -114,7 +114,7 @@ src/lib/
     papertrades.svelte.js   — paper trade state
     alerts.svelte.js        — price alert state
 tests/
-  indicators.test.js  — 37 unit tests for indicators.js
+  indicators.test.js  — 39 unit tests for indicators.js
   scoring.test.js     — 42 unit tests for scoring.js
   signals.test.js     — 32 unit tests for signals.js
 ```
@@ -135,7 +135,7 @@ tests/
 - **MACD(12,26,9):** EMA crossover; crossover event = histogram sign flip.
 - **ATR(14):** Simple average of last 14 true ranges — NOT Wilder's RMA. Small divergence vs TradingView ATR; fine for stop-loss guidance.
 - **Bollinger Bands(20,2):** Population std dev (÷period). Matches TradingView.
-- **ADX(14):** Full Wilder-smoothed +DM/−DM/TR pipeline.
+- **ADX(14):** Full Wilder-smoothed +DM/−DM/TR pipeline. Final ADX is the Wilder RMA (average) of DX, bounded [0,100] — NOT the running sum (that bug inflated it ~period×; fixed v0.10).
 - **Stochastic(14,3,3):** Raw %K, 3-bar SMA for %D, crossover on sign change.
 
 ## Setup signals (signals.js)
@@ -153,6 +153,8 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
 - `getDaysToEarnings` parses date strings as UTC midnight. In US timezones "today" may return 1 instead of 0 due to `Math.ceil` on a small negative diff — known, not a bug.
 - TwelveData is rate-limited to 8 calls/min on the free tier. The `twelvedata.svelte.js` queue handles this; do not add raw fetch calls outside it.
+- **Market cap currency:** the Finnhub metrics endpoint (`metric.marketCapitalization`) reports in the company's reporting currency (e.g. KRW for ADRs like SKM → "$21T"). Use `profile2` (`data.profile.marketCapitalization`, USD, cached 7d) for display. FundamentalsBar prefers `data.profile` and falls back to metrics.
+- **EPS growth** is a ratio (percent YoY), so it's currency-neutral — a large negative for a foreign ADR is likely real, not a units artifact.
 - All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>`. Trade log: `tradeLog`. Paper trades: `paperTrades`.
 
 ## Running locally
