@@ -231,6 +231,32 @@ export const TIPS = {
     why: 'The weekly timeframe filters out daily noise. A bearish daily setup in a weekly uptrend should be sized down. A bullish daily setup with weekly downtrend is swimming upstream — high-risk.',
   },
 
+  setupPullback: {
+    title: 'Pullback Setup',
+    subtitle: 'Accumulation / Reversal Timing (weekly)',
+    category: 'Entry Timing',
+    description: 'A leading score (0–10) for buying weakness before the turn: bullish RSI divergence at the lows, downtrend exhaustion, volume dry-up, and price in the lower half of its range. Built on weekly candles for months-to-year holds.',
+    levels: [
+      { range: '7–10',  label: 'Strong Setup',  color: C.green, desc: 'Multiple accumulation signals aligned — reversal forming. Watch for entry.' },
+      { range: '4.5–7', label: 'Forming',       color: C.amber, desc: 'Setup developing — some signals present, not yet confirmed.' },
+      { range: '0–4.5', label: 'Early / None',  color: C.dim,   desc: 'Little or no accumulation signal yet.' },
+    ],
+    why: 'Buying a quality name at a local top is the classic timing error. This catches bottoming structure before the lagging score reacts.',
+  },
+
+  setupMomentum: {
+    title: 'Momentum Setup',
+    subtitle: 'Breakout / Base Confirmation (weekly)',
+    category: 'Entry Timing',
+    description: 'A leading score (0–10) for buying strength as a trend starts: weekly Bollinger squeeze resolving, structure breaking out, volume expansion, and price reclaiming the weekly EMA. Built for months-to-year holds.',
+    levels: [
+      { range: '7–10',  label: 'Strong Setup',  color: C.green, desc: 'Squeeze + breakout + volume aligned — trend ignition likely.' },
+      { range: '4.5–7', label: 'Forming',       color: C.amber, desc: 'Base tightening — breakout not yet confirmed.' },
+      { range: '0–4.5', label: 'Early / None',  color: C.dim,   desc: 'No breakout setup forming.' },
+    ],
+    why: 'The best multi-month trends start from a tight base with expanding volume. This flags that ignition window before price has run.',
+  },
+
   tfsScore: {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',

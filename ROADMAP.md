@@ -5,6 +5,12 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 
 ---
 
+## Shipped
+
+- ✅ **v0.10 — Weekly Setup Signals** (`signals.js`): a leading-signal layer adapted from the range-finder crypto project. Two separately-scored weekly setups — **Pullback/Accumulation** (RSI divergence + downtrend exhaustion + volume dry-up + range position) and **Momentum/Breakout** (BB squeeze + structure breakout + volume expansion + EMA reclaim) — each with readiness (WATCH/SOON/ACT) and ETA. This is the first concrete implementation of the two-view (Momentum / Pullback) concept below. Covers roadmap item **#6 Volume dry-up** and overlaps **#5 BB+RSI confluence**. Zero new API calls.
+
+---
+
 ## Priority queue
 
 ### 1. EMA Stack signal
@@ -37,10 +43,11 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 - Show as a single "Oversold Confluence" badge in Pullback view
 - No new data required
 
-### 6. Volume dry-up detection
+### 6. Volume dry-up detection ✅ v0.10
 - 5-day avg volume < 50% of 20-day avg = selling exhaustion
 - Price holding + volume collapsing = classic mean-reversion setup
 - Compute from existing candle `v` array
+- **Shipped** as `detectVolumeProfile` in `signals.js` (weekly DRY_UP / EXPANSION states), feeding both setup scores
 
 ### 7. Rate of Change (ROC 20d / 60d)
 - Shows momentum acceleration/deceleration

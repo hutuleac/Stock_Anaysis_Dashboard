@@ -154,6 +154,21 @@
     return '$' + val.toFixed(2);
   }
 
+  // Pick the stronger of the two weekly setups; hide low-signal noise.
+  function topSetup(setups) {
+    if (!setups) return null;
+    const p = setups.pullback, m = setups.momentum;
+    const best = m.score > p.score ? { ...m, kind: 'BREAKOUT' } : { ...p, kind: 'PULLBACK' };
+    if (best.readiness === 'WAIT' || best.score < 4.5) return null;
+    return best;
+  }
+
+  function setupBadgeClass(readiness) {
+    return readiness === 'ACT'  ? 'bg-bull-strong/20 text-bull-strong'
+         : readiness === 'SOON' ? 'bg-uncertain/20 text-uncertain'
+         :                        'bg-surface-600 text-text-secondary';
+  }
+
   function formatPct(val) {
     if (val == null) return '—';
     const sign = val >= 0 ? '+' : '';
@@ -291,6 +306,12 @@
               {/if}
               {#if data?.quote?.stale}
                 <span class="text-warning text-xs" title="Stale data">⚠</span>
+              {/if}
+              {#if topSetup(data?.setups)}
+                {@const su = topSetup(data?.setups)}
+                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
+                  {su.kind} {su.readiness}{su.etaWeeks ? ` ~${su.etaWeeks}w` : ''}
+                </span>
               {/if}
             </div>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
@@ -435,6 +456,12 @@
                   {/if}
                   {#if hasNotes(ticker.symbol)}
                     <span class="text-[13px] text-uncertain" title="Has notes">📝</span>
+                  {/if}
+                  {#if topSetup(data?.setups)}
+                    {@const su = topSetup(data?.setups)}
+                    <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {setupBadgeClass(su.readiness)} hidden md:inline" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
+                      {su.kind} {su.readiness}
+                    </span>
                   {/if}
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>

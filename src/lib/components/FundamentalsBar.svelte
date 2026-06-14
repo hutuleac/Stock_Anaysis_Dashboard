@@ -59,8 +59,16 @@
 
   const tdQuote  = $derived(data?.tdQuote ?? null);
   const weekly   = $derived(data?.weekly ?? null);
+  const setups   = $derived(data?.setups ?? null);
   const score    = $derived(computeScore(data));
   const scoreZ   = $derived(computeScoreZScore(symbol));
+
+  function readinessColor(r) {
+    return r === 'ACT' ? 'text-bull-strong' : r === 'SOON' ? 'text-uncertain' : r === 'WATCH' ? 'text-text-primary' : 'text-text-muted';
+  }
+  function readinessCss(r) {
+    return r === 'ACT' ? '#22c55e' : r === 'SOON' ? '#f59e0b' : r === 'WATCH' ? '#e5e7eb' : '#9ca3af';
+  }
 
   function fmtVol(v) {
     if (!v) return '—';
@@ -343,6 +351,28 @@
         <span class="text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
         <span class="text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
+      </div>
+    {/if}
+
+    <!-- Weekly setup signals (leading) — Pullback / Momentum -->
+    {#if setups}
+      {@const su = setups.pullback}
+      <div class="flex flex-col min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupPullback, current: { value: su.score.toFixed(1) + '/10', label: su.readiness, color: readinessCss(su.readiness) } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Pullback</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {readinessColor(su.readiness)}">{su.score.toFixed(1)}</span>
+          <span class="text-[12px] {readinessColor(su.readiness)}">{su.readiness}</span>
+        </div>
+        <span class="text-[12px] text-text-muted">{su.label}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}</span>
+      </div>
+      {@const sm = setups.momentum}
+      <div class="flex flex-col min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupMomentum, current: { value: sm.score.toFixed(1) + '/10', label: sm.readiness, color: readinessCss(sm.readiness) } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Momentum</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {readinessColor(sm.readiness)}">{sm.score.toFixed(1)}</span>
+          <span class="text-[12px] {readinessColor(sm.readiness)}">{sm.readiness}</span>
+        </div>
+        <span class="text-[12px] text-text-muted">{sm.label}{sm.etaWeeks ? ` · ~${sm.etaWeeks}w` : ''}</span>
       </div>
     {/if}
 
