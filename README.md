@@ -45,6 +45,7 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - **Fear & Greed modifier** — CNN F&G index adjusts scores at extremes (extreme fear: −3, extreme greed: −2)
 - **RSI z-score** — how many std-devs current RSI sits above/below its 90-day mean (shown inline in Fundamentals Bar)
 - **Score z-score** — same concept for the composite score itself; shown in table and Fundamentals Bar once ≥5 snapshots exist
+- **Weekly Setup Signals (leading)** — two separately-scored entry timers built on weekly candles: **Pullback/Accumulation** (bullish RSI divergence + downtrend exhaustion + volume dry-up) and **Momentum/Breakout** (BB squeeze resolving + structure breakout + volume expansion). Each shows a 0–10 score, readiness (WATCH/SOON/ACT), and an ETA in weeks. Surfaced as a table badge + Fundamentals Bar cells with tooltips. Zero extra API calls.
 
 ### Expanded Row (per ticker, click to open)
 
@@ -120,7 +121,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-79 unit tests covering `src/lib/indicators.js` and `src/lib/scoring.js`:
+111 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, and `src/lib/signals.js`:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -136,6 +137,7 @@ npm run test:watch  # watch mode (dev)
 | `getDaysToEarnings` | Future/past/today date handling |
 | `score history` | localStorage store/retrieve, dedup, velocity, z-score |
 | `generateThesis` | Structure, EMA50 bull/bear copy, earnings warning |
+| `signals.js` | Swing pivots, RSI divergence, BB squeeze, volume profile, structure, both setup aggregators, orchestrator null guards |
 
 ### Math implementation notes
 
@@ -187,6 +189,10 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.10 (2026-06-14)
+- **Weekly Setup Signals** — leading-indicator layer adapted from grid-bot signal research: Pullback (accumulation) and Momentum (breakout) setups scored 0–10 on weekly candles, with readiness (WATCH/SOON/ACT) + ETA in weeks. Surfaced as a table badge and Fundamentals Bar cells with "so what" tooltips. Built from the weekly candles already fetched — no new API calls.
+- **Test suite expanded** — 32 new unit tests for `signals.js` (111 total).
 
 ### v0.9 (2026-04-01)
 - **Paper Trades** — record a hypothetical BUY/SELL, snapshot score + thesis at entry, track live P&L and CONFIRMED/AGAINST verdict over weeks/months; close with exit score snapshot; Paper Trades Overview panel on main dashboard
