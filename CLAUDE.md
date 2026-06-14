@@ -69,3 +69,89 @@ To install: `git clone https://github.com/garrytan/gstack.git ~/.claude/skills/g
 
 Available gstack skills:
 `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/retro`, `/investigate`, `/document-release`, `/codex`, `/cso`, `/autoplan`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`
+
+---
+
+# Project State — Stock Analysis Dashboard v0.9
+
+## What this is
+
+Offline-first stock analysis dashboard for retail swing traders. Svelte 5 + Vite. No backend. All data via Finnhub free API (+ optional TwelveData). Deployed to GitHub Pages. Live: https://hutuleac.github.io/Stock_Anaysis_Dashboard/
+
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | Svelte 5 (runes: `$state`, `$derived`, `$props`, `$effect`) |
+| Build | Vite 8 + Tailwind v4 |
+| Charts | TradingView lightweight-charts v5 |
+| Data | Finnhub.io free tier + optional TwelveData |
+| Storage | localStorage only — nothing sent to any server |
+| Deploy | GitHub Actions → GitHub Pages |
+| Tests | Vitest (`npm test`) |
+
+## Key files
+
+```
+src/lib/
+  indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch)
+  scoring.js          — 9-signal scoring engine, thesis generator, badge logic
+  api/
+    finnhub.svelte.js — Finnhub API calls + localStorage cache
+    twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
+  components/
+    WatchlistTable.svelte   — main table + expanded row
+    EntryPanel.svelte       — position sizing, stop-loss, scenario table
+    PriceChart.svelte       — candlestick + MACD/RSI/BB sub-panes
+    FundamentalsBar.svelte  — all indicators displayed inline
+    ThesisSummary.svelte    — plain-English score explanation
+    PaperTradePanel.svelte  — paper trade entry + tracking
+    PortfolioStats.svelte   — P&L, edge analysis, sector exposure
+  stores/
+    watchlist.svelte.js     — ticker list, fetch orchestration
+    portfolio.svelte.js     — trade log, FIFO P&L
+    papertrades.svelte.js   — paper trade state
+    alerts.svelte.js        — price alert state
+tests/
+  indicators.test.js  — 37 unit tests for indicators.js
+  scoring.test.js     — 42 unit tests for scoring.js
+```
+
+## Scoring engine (scoring.js)
+
+- **Weights:** Technical 35% / Fundamental 45% / Sentiment 20% (default)
+- **Regime shift:** VIX > 25 → fund 55%; VIX > 35 → fund 60%
+- **SPY penalty:** downtrend → LONG scores pulled 20% toward 50
+- **F&G modifier:** extreme fear < 25 → −3; extreme greed > 75 → −2
+- **Badges:** STRONG_LONG ≥ 72 · LEAN_LONG ≥ 58 · NEUTRAL ≥ 42 · LEAN_SHORT ≥ 28 · STRONG_SHORT < 28
+- **Conviction:** % of signals aligned with score direction; HIGH ≥ 75% / MODERATE ≥ 55% / LOW ≥ 35% / MIXED
+
+## Indicator math (indicators.js)
+
+- **RSI(14):** Wilder's smoothing (RMA). Matches TradingView.
+- **EMA:** SMA seed for first `period` values, then k=2/(n+1) multiplier.
+- **MACD(12,26,9):** EMA crossover; crossover event = histogram sign flip.
+- **ATR(14):** Simple average of last 14 true ranges — NOT Wilder's RMA. Small divergence vs TradingView ATR; fine for stop-loss guidance.
+- **Bollinger Bands(20,2):** Population std dev (÷period). Matches TradingView.
+- **ADX(14):** Full Wilder-smoothed +DM/−DM/TR pipeline.
+- **Stochastic(14,3,3):** Raw %K, 3-bar SMA for %D, crossover on sign change.
+
+## Known conventions / gotchas
+
+- `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
+- `getDaysToEarnings` parses date strings as UTC midnight. In US timezones "today" may return 1 instead of 0 due to `Math.ceil` on a small negative diff — known, not a bug.
+- TwelveData is rate-limited to 8 calls/min on the free tier. The `twelvedata.svelte.js` queue handles this; do not add raw fetch calls outside it.
+- All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>`. Trade log: `tradeLog`. Paper trades: `paperTrades`.
+
+## Running locally
+
+```bash
+npm install
+npm run dev       # http://localhost:5173
+npm test          # 79 unit tests, ~200ms
+npm run build     # production build → dist/
+```
+
+## What's next (ROADMAP.md)
+
+Priority backlog: EMA Stack signal, ATR-based stop/R:R display, Relative Strength vs SPY, OBV, BB+RSI combo signal, Volume dry-up detection, ROC 20d/60d, 52w high proximity alert. All computable from existing candle data — zero extra API calls.
