@@ -117,8 +117,13 @@ function computeADXLocal(highs, lows, closes, period = 14) {
     return s === 0 ? 0 : 100 * Math.abs(dp - dm) / s;
   });
   if (dx.length < period) return null;
-  const adxArr = wilderSmooth(dx, period);
-  return Math.round(adxArr[adxArr.length - 1] * 10) / 10;
+  // ADX is the Wilder RMA (average) of DX — NOT a running sum like wilderSmooth
+  // returns for TR/DM (those cancel as ratios). Summing here inflates ADX ~period×.
+  let adx = dx.slice(0, period).reduce((a, v) => a + v, 0) / period;
+  for (let i = period; i < dx.length; i++) {
+    adx = (adx * (period - 1) + dx[i]) / period;
+  }
+  return Math.round(adx * 10) / 10;
 }
 
 // ── Stochastic %K/%D ─────────────────────────────────────────────────────────
