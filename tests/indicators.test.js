@@ -272,6 +272,21 @@ describe('computeIndicatorsFromCandles', () => {
     expect(result.stochK).toBeNull();
     expect(result.bb).not.toBeNull(); // BB only needs closes
   });
+
+  it('ADX stays within [0, 100] for a strong trend (regression: was summed not averaged)', () => {
+    const raw = candles(rising(60, 2)); // strong, clean uptrend
+    const result = computeIndicatorsFromCandles(raw);
+    expect(result.adx).not.toBeNull();
+    expect(result.adx).toBeGreaterThanOrEqual(0);
+    expect(result.adx).toBeLessThanOrEqual(100);
+  });
+
+  it('ADX stays within [0, 100] for a choppy series', () => {
+    const closes = Array.from({ length: 60 }, (_, i) => 100 + Math.sin(i / 2) * 6);
+    const result = computeIndicatorsFromCandles(candles(closes));
+    expect(result.adx).toBeGreaterThanOrEqual(0);
+    expect(result.adx).toBeLessThanOrEqual(100);
+  });
 });
 
 // ─── computeWeeklyTrend ──────────────────────────────────────────────────────
