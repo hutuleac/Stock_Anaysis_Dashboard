@@ -8,6 +8,7 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 ## Shipped
 
 - ✅ **v0.10 — Weekly Setup Signals** (`signals.js`): a leading-signal layer adapted from the range-finder crypto project. Two separately-scored weekly setups — **Pullback/Accumulation** (RSI divergence + downtrend exhaustion + volume dry-up + range position) and **Momentum/Breakout** (BB squeeze + structure breakout + volume expansion + EMA reclaim) — each with readiness (WATCH/SOON/ACT) and ETA. This is the first concrete implementation of the two-view (Momentum / Pullback) concept below. Covers roadmap item **#6 Volume dry-up** and overlaps **#5 BB+RSI confluence**. Zero new API calls.
+- ✅ **v0.11 — Relative Strength + growth valuation** (items **#3, #10, #11**): RS vs SPY (1M/3M) via `computeRelativeStrength` (SPY closes fetched once/refresh); Revenue growth + P/S + PEG (`valuation.js` + Finnhub metrics). Display-only — Fundamentals Bar cells with tooltips + an RS chip on watchlist rows. No scoring changes.
 
 ---
 
@@ -25,11 +26,12 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 - Surface in Pullback view and EntryPanel
 - Feeds into position sizing once account size is stored in Settings
 
-### 3. Relative Strength vs SPY (1M / 3M)
+### 3. Relative Strength vs SPY (1M / 3M) ✅ v0.11
 - Stock's return vs SPY over 1 and 3 months
 - SPY quote already fetched in market context — need to track its 1M/3M return
 - Core signal for trend following: outperforming the index = institutional buying
 - Compute from existing candle data, no new API calls
+- **Shipped** as `computeRelativeStrength` (`indicators.js`); SPY daily closes fetched once/refresh, RS chip on rows + Fundamentals Bar cell
 
 ### 4. OBV (On-Balance Volume)
 - Free computation from existing OHLCV candle data
@@ -65,17 +67,19 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 - Especially relevant for mid/small cap picks
 - Add to `finnhub.svelte.js`, display alongside insider transactions
 
-### 10. Revenue growth YoY + P/S ratio
+### 10. Revenue growth YoY + P/S ratio ✅ v0.11
 - Revenue growth already available in Finnhub metrics — just not displayed
 - P/S = market cap / revenue (both available)
 - Critical for growth stocks where P/E is misleading or negative
 - Add to FundamentalsBar
+- **Shipped** — `revenueGrowthTTMYoy` + `psTTM` as Fundamentals Bar cells with tooltips
 
-### 11. PEG ratio
+### 11. PEG ratio ✅ v0.11
 - PEG = P/E ÷ EPS growth rate
 - Both inputs already fetched from Finnhub metrics
 - PEG < 1 = undervalued relative to growth; > 2 = expensive
 - Compute client-side, display in FundamentalsBar alongside P/E
+- **Shipped** as `computePEG` (`valuation.js`); null-guarded for zero/negative growth and non-positive P/E
 
 ### 12. Beta
 - Available in Finnhub metrics (`beta`)

@@ -1,7 +1,7 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
-  import { computeIndicatorsFromCandles, computeWeeklyTrend } from './lib/indicators.js';
+  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
@@ -147,6 +147,18 @@
       const toTs = Math.floor(Date.now() / 1000);
       const fromTs = toTs - 365 * 86400; // 365 calendar days ≈ 260 trading days — required for EMA200
 
+      // SPY daily closes (fetched once, cached) — benchmark for Relative Strength
+      let spyCloses = null;
+      try {
+        if (hasTDApiKey()) {
+          const r = await fetchTimeSeries('SPY', '1day', 250);
+          if (r?.data?.length) spyCloses = r.data.map(v => parseFloat(v.close));
+        } else {
+          const r = await fetchCandles('SPY', 'D', fromTs, toTs);
+          if (r?.data?.c?.length) spyCloses = r.data.c;
+        }
+      } catch { /* RS unavailable this refresh */ }
+
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
         if (!data) continue;
@@ -230,6 +242,11 @@
               if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
               const setups = computeSetupSignals(weeklyRaw);
               if (setups) results[ticker.symbol].setups = setups;
+
+              if (spyCloses) {
+                const rs = computeRelativeStrength(synthetic.c, spyCloses);
+                if (rs.rs1m !== null || rs.rs3m !== null) results[ticker.symbol].rs = rs;
+              }
             }
           } else {
             const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
@@ -250,6 +267,11 @@
             if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
             const setups = computeSetupSignals(weeklyRes?.data);
             if (setups) results[ticker.symbol].setups = setups;
+
+            if (spyCloses && candleRes?.data?.c?.length) {
+              const rs = computeRelativeStrength(candleRes.data.c, spyCloses);
+              if (rs.rs1m !== null || rs.rs3m !== null) results[ticker.symbol].rs = rs;
+            }
           }
         } catch { /* non-blocking */ }
       }
@@ -307,6 +329,7 @@
             weekly:      d.weekly      ?? null,
             setups:      d.setups      ?? null,
             profile:     d.profile     ?? null,
+            rs:          d.rs          ?? null,
             sectorTrend: d.sectorTrend ?? null,
           };
         }
@@ -378,6 +401,7 @@
             if (s.weekly      != null) results[sym].weekly      = s.weekly;
             if (s.setups      != null) results[sym].setups      = s.setups;
             if (s.profile     != null) results[sym].profile     = s.profile;
+            if (s.rs          != null) results[sym].rs          = s.rs;
             if (s.sectorTrend != null) results[sym].sectorTrend = s.sectorTrend;
           }
           if (sup.marketContextData) {
@@ -412,7 +436,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.10</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.11</span>
       </div>
 
       <div class="flex items-center gap-3">

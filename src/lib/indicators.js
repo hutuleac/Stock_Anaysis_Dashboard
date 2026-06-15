@@ -208,6 +208,29 @@ export function computeRSIZScore(closes, period = 14) {
   return Math.round(((current - mean) / stddev) * 10) / 10;
 }
 
+// ── Price return over a trailing window (in trading bars) ────────────────────
+// Returns percent change from `bars` ago to the latest close, or null.
+export function priceReturn(closes, bars) {
+  if (!closes || closes.length < bars + 1) return null;
+  const last = closes[closes.length - 1];
+  const past = closes[closes.length - 1 - bars];
+  if (past == null || past === 0) return null;
+  return ((last - past) / past) * 100;
+}
+
+// ── Relative strength vs a benchmark (e.g. SPY) over 1M (~21d) and 3M (~63d) ──
+// RS = stock return − benchmark return, in percentage points.
+// Positive = outperforming the index (institutional accumulation tell).
+export function computeRelativeStrength(stockCloses, benchCloses) {
+  const BARS_1M = 21, BARS_3M = 63;
+  const rsFor = (bars) => {
+    const s = priceReturn(stockCloses, bars);
+    const b = priceReturn(benchCloses, bars);
+    return s !== null && b !== null ? Math.round((s - b) * 10) / 10 : null;
+  };
+  return { rs1m: rsFor(BARS_1M), rs3m: rsFor(BARS_3M) };
+}
+
 // ── Main: compute all indicators from raw Finnhub/TwelveData candle response ──
 export function computeIndicatorsFromCandles(raw) {
   if (!raw?.c || raw.s !== 'ok' || raw.c.length < 30) return null;
