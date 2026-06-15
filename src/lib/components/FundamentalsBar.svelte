@@ -1,6 +1,7 @@
 <script>
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeScore, computeScoreZScore } from '../scoring.js';
+  import { computePEG } from '../valuation.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
 
@@ -63,6 +64,11 @@
   // Prefer profile2 market cap (USD) over the metrics value, which is in the
   // company's reporting currency (e.g. KRW for ADRs like SKM). Both in millions.
   const mktCap   = $derived(data?.profile?.marketCapitalization ?? m['marketCapitalization'] ?? null);
+  const rs       = $derived(data?.rs ?? null);
+  const peg      = $derived(computePEG(
+    m['peNormalizedAnnual'] ?? m['peBasicExclExtraTTM'] ?? null,
+    m['epsGrowthTTMYoy'] ?? m['epsGrowth3Y'] ?? null,
+  ));
   const score    = $derived(computeScore(data));
   const scoreZ   = $derived(computeScoreZScore(symbol));
 
@@ -107,6 +113,29 @@
       })(),
     },
     {
+      label: 'Rev Growth',
+      value: fmt(m['revenueGrowthTTMYoy'], '', '%'),
+      color: (() => {
+        const g = m['revenueGrowthTTMYoy'];
+        if (g == null) return '';
+        return g > 10 ? 'text-bull-strong' : g < 0 ? 'text-bear-strong' : '';
+      })(),
+    },
+    {
+      label: 'P/S',
+      value: fmt(m['psTTM'] ?? m['psAnnual'], '', 'x'),
+      color: (() => {
+        const ps = m['psTTM'] ?? m['psAnnual'];
+        if (ps == null) return '';
+        return ps < 4 ? 'text-bull-strong' : ps > 15 ? 'text-bear-strong' : '';
+      })(),
+    },
+    {
+      label: 'PEG',
+      value: peg != null ? fmt(peg, '', 'x', 2) : '—',
+      color: peg == null ? '' : peg < 1 ? 'text-bull-strong' : peg > 2 ? 'text-bear-strong' : '',
+    },
+    {
       label: 'EMA50',
       value: fmt(m['50DayMovingAverage'] ?? data?.indicators?.ema50, '$'),
       note: (() => {
@@ -142,7 +171,7 @@
 <div class="bg-surface-800/60 border border-border/50 rounded-lg px-4 py-3">
   <div class="flex flex-wrap gap-x-6 gap-y-2">
     {#each metrics as metric}
-      {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Analyst Target' ? TIPS.analystTarget : null}
+      {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Analyst Target' ? TIPS.analystTarget : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : null}
       <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={metricTip ?? undefined}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">{metric.label}</span>
         <div class="flex items-baseline gap-1.5 mt-0.5">
@@ -376,6 +405,21 @@
           <span class="text-[12px] {readinessColor(sm.readiness)}">{sm.readiness}</span>
         </div>
         <span class="text-[12px] text-text-muted">{sm.label}{sm.etaWeeks ? ` · ~${sm.etaWeeks}w` : ''}</span>
+      </div>
+    {/if}
+
+    <!-- Relative Strength vs SPY (1M / 3M) -->
+    {#if rs && (rs.rs1m !== null || rs.rs3m !== null)}
+      {@const rsColor = (v) => v == null ? 'text-text-muted' : v > 0 ? 'text-bull-strong' : 'text-bear-strong'}
+      {@const rsFmt = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'}
+      {@const rsCss = (rs.rs1m ?? rs.rs3m ?? 0) >= 0 ? '#22c55e' : '#ef4444'}
+      <div class="flex flex-col min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.relativeStrength, current: { value: rsFmt(rs.rs1m), label: (rs.rs1m ?? 0) > 0 ? 'Outperforming' : 'Underperforming', color: rsCss } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">RS vs SPY</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {rsColor(rs.rs1m)}">{rsFmt(rs.rs1m)}</span>
+          <span class="text-[12px] text-text-muted">1M</span>
+        </div>
+        <span class="text-[12px] {rsColor(rs.rs3m)}">{rsFmt(rs.rs3m)} 3M</span>
       </div>
     {/if}
 

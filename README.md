@@ -46,6 +46,8 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - **RSI z-score** — how many std-devs current RSI sits above/below its 90-day mean (shown inline in Fundamentals Bar)
 - **Score z-score** — same concept for the composite score itself; shown in table and Fundamentals Bar once ≥5 snapshots exist
 - **Weekly Setup Signals (leading)** — two separately-scored entry timers built on weekly candles: **Pullback/Accumulation** (bullish RSI divergence + downtrend exhaustion + volume dry-up) and **Momentum/Breakout** (BB squeeze resolving + structure breakout + volume expansion). Each shows a 0–10 score, readiness (WATCH/SOON/ACT), and an ETA in weeks. Surfaced as a table badge + Fundamentals Bar cells with tooltips. Zero extra API calls.
+- **Relative Strength vs SPY (1M/3M)** — stock return minus the index return; outperform/underperform chip on rows + Fundamentals Bar. Leaders keep leading — a core trend-following filter.
+- **Growth valuation — Revenue growth · P/S · PEG** — for growth names and ADRs where P/E is negative or misleading. PEG normalizes valuation against growth; P/S works when there are no earnings. Display-only, with plain-English tooltips.
 
 ### Expanded Row (per ticker, click to open)
 
@@ -121,7 +123,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-111 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, and `src/lib/signals.js`:
+123 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, and `src/lib/valuation.js`:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -138,6 +140,8 @@ npm run test:watch  # watch mode (dev)
 | `score history` | localStorage store/retrieve, dedup, velocity, z-score |
 | `generateThesis` | Structure, EMA50 bull/bear copy, earnings warning |
 | `signals.js` | Swing pivots, RSI divergence, BB squeeze, volume profile, structure, both setup aggregators, orchestrator null guards |
+| `indicators.js` (RS) | `priceReturn` window math, `computeRelativeStrength` vs SPY (1M/3M), ADX [0,100] bounds |
+| `valuation.js` | `computePEG` — ratio math + null guards for zero/negative growth and non-positive P/E |
 
 ### Math implementation notes
 
@@ -189,6 +193,11 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.11 (2026-06-14)
+- **Relative Strength vs SPY (1M/3M)** — each stock's return minus the S&P 500's over ~21 and ~63 trading days; outperform/underperform chip on watchlist rows + Fundamentals Bar cell. SPY daily closes fetched once per refresh (cached).
+- **Revenue growth, P/S, PEG** — growth-and-valuation metrics for cases where P/E misleads (growth names, ADRs). Fundamentals Bar cells + "so what" tooltips. PEG computed client-side (`valuation.js`), guarded against zero/negative growth.
+- Display-only — no change to the scoring engine. 13 new unit tests (123 total).
 
 ### v0.10 (2026-06-14)
 - **Weekly Setup Signals** — leading-indicator layer adapted from grid-bot signal research: Pullback (accumulation) and Momentum (breakout) setups scored 0–10 on weekly candles, with readiness (WATCH/SOON/ACT) + ETA in weeks. Surfaced as a table badge and Fundamentals Bar cells with "so what" tooltips. Built from the weekly candles already fetched — no new API calls.

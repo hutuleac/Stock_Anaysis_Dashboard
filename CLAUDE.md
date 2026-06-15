@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.10
+# Project State — Stock Analysis Dashboard v0.11
 
 ## What this is
 
@@ -97,6 +97,8 @@ src/lib/
   indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch)
   scoring.js          — 9-signal scoring engine, thesis generator, badge logic
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
+  valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
+  indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
@@ -114,9 +116,10 @@ src/lib/
     papertrades.svelte.js   — paper trade state
     alerts.svelte.js        — price alert state
 tests/
-  indicators.test.js  — 39 unit tests for indicators.js
+  indicators.test.js  — 46 unit tests for indicators.js
   scoring.test.js     — 42 unit tests for scoring.js
   signals.test.js     — 32 unit tests for signals.js
+  valuation.test.js   — 3 unit tests for valuation.js
 ```
 
 ## Scoring engine (scoring.js)
@@ -155,6 +158,8 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 - TwelveData is rate-limited to 8 calls/min on the free tier. The `twelvedata.svelte.js` queue handles this; do not add raw fetch calls outside it.
 - **Market cap currency:** the Finnhub metrics endpoint (`metric.marketCapitalization`) reports in the company's reporting currency (e.g. KRW for ADRs like SKM → "$21T"). Use `profile2` (`data.profile.marketCapitalization`, USD, cached 7d) for display. FundamentalsBar prefers `data.profile` and falls back to metrics.
 - **EPS growth** is a ratio (percent YoY), so it's currency-neutral — a large negative for a foreign ADR is likely real, not a units artifact.
+- **Relative Strength (v0.11)** needs SPY history: App.svelte fetches SPY daily closes once per refresh (TD or Finnhub path, cached) and passes them to `computeRelativeStrength` per ticker → `data.rs = { rs1m, rs3m }`. RS = stock return − SPY return over ~21/63 trading bars. Candle sources are both oldest-first ascending (TD uses `order=ASC`).
+- **Valuation metric keys (Finnhub):** `revenueGrowthTTMYoy`, `psTTM`/`psAnnual`. PEG is computed client-side from existing pe + epsGrowth (`valuation.js`), null when growth ≤ 0 or P/E ≤ 0. All four (RS, Rev growth, P/S, PEG) are **display-only** — they do NOT feed `computeScore` or the setups (deliberate, to keep the calibrated engine stable).
 - All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>`. Trade log: `tradeLog`. Paper trades: `paperTrades`.
 
 ## Running locally
