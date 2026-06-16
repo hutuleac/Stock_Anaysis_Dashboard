@@ -423,6 +423,23 @@
       </div>
     {/if}
 
+    <!-- Rate of Change (20d / 60d) — momentum acceleration -->
+    {#if data?.indicators?.roc20 != null || data?.indicators?.roc60 != null}
+      {@const roc20 = data.indicators.roc20}
+      {@const roc60 = data.indicators.roc60}
+      {@const rocColor = (v) => v == null ? 'text-text-muted' : v > 0 ? 'text-bull-strong' : 'text-bear-strong'}
+      {@const rocFmt = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'}
+      {@const accelerating = roc20 != null && roc60 != null && roc20 > roc60}
+      <div class="flex flex-col min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.roc, current: { value: rocFmt(roc20), label: accelerating ? 'Accelerating' : 'Decelerating', color: accelerating ? '#22c55e' : '#9ca3af' } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">ROC</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {rocColor(roc20)}">{rocFmt(roc20)}</span>
+          <span class="text-[12px] text-text-muted">20d</span>
+        </div>
+        <span class="text-[12px] {rocColor(roc60)}">{rocFmt(roc60)} 60d</span>
+      </div>
+    {/if}
+
     <!-- Volume ratio — from TwelveData live quote -->
     {#if tdQuote?.volume && tdQuote?.avgVolume}
       {@const ratio = tdQuote.volumeRatio}
@@ -472,6 +489,15 @@
           <span class="text-[13px] font-mono text-text-muted">—</span>
         </div>
         <span class="text-[12px] text-text-muted">—</span>
+      </div>
+    {/if}
+
+    <!-- Oversold confluence — RSI < 35 AND price at lower BB -->
+    {#if data?.indicators?.oversoldConfluence}
+      <div class="flex flex-col min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.oversoldConfluence, current: { value: 'Active', label: 'High-conviction oversold', color: '#22c55e' } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Confluence</span>
+        <span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[12px] font-semibold bg-bull-strong/15 text-bull-strong w-fit">OVERSOLD</span>
+        <span class="text-[12px] text-bull-strong">RSI + lower BB</span>
       </div>
     {/if}
 

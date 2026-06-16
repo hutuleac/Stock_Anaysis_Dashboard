@@ -270,6 +270,31 @@ export const TIPS = {
     why: 'Leaders keep leading. Buying relative-strength names in an uptrend beats bottom-fishing laggards. Pair 1M (recent) with 3M (sustained) to filter one-week pops.',
   },
 
+  roc: {
+    title: 'Rate of Change (ROC)',
+    subtitle: 'Price momentum over 20d / 60d',
+    category: 'Trend',
+    description: 'Percent price change over the trailing ~20 (1M) and ~60 (3M) trading days. Compares near-term to medium-term momentum.',
+    levels: [
+      { range: '20d > 60d', label: 'Accelerating', color: C.green, desc: 'Near-term momentum outpacing the medium term — early trend emergence.' },
+      { range: '20d ≈ 60d',  label: 'Steady',       color: C.dim,   desc: 'Momentum holding its pace.' },
+      { range: '20d < 60d', label: 'Decelerating', color: C.red,    desc: 'Near-term momentum fading — a trend may be tiring.' },
+    ],
+    why: '20d ROC rising while 60d is flat flags a trend turning up before price confirms it. Display-only — does not feed the score.',
+  },
+
+  oversoldConfluence: {
+    title: 'Oversold Confluence',
+    subtitle: 'RSI < 35 + price at the lower BB',
+    category: 'Pullback',
+    description: 'Fires when RSI(14) is below 35 and price is at or just below (within 2%) the lower Bollinger band — two independent oversold reads agreeing.',
+    levels: [
+      { range: 'Active', label: 'High-conviction oversold', color: C.green, desc: 'Momentum and volatility bands both flag exhaustion — a mean-reversion entry zone.' },
+      { range: 'Off',    label: 'No confluence',            color: C.dim,   desc: 'At most one oversold read present — wait for both to align.' },
+    ],
+    why: 'One oversold signal can stay oversold; two agreeing tightens the edge. Display-only — does not feed the score.',
+  },
+
   revenueGrowth: {
     title: 'Revenue Growth (YoY)',
     subtitle: 'Top-line growth, trailing 12 months',

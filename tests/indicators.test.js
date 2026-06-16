@@ -9,6 +9,9 @@ import {
   computeWeeklyTrend,
   priceReturn,
   computeRelativeStrength,
+  computeEmaStack,
+  computeOversoldConfluence,
+  proximityTo52wHigh,
 } from '../src/lib/indicators.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -378,5 +381,77 @@ describe('computeRelativeStrength', () => {
     const r = computeRelativeStrength(stock, spy);
     expect(r.rs3m).not.toBeNull();
     expect(r.rs3m).toBeGreaterThan(0);
+  });
+});
+
+// ─── computeEmaStack ──────────────────────────────────────────────────────────
+
+describe('computeEmaStack', () => {
+  it('returns null when any input is missing', () => {
+    expect(computeEmaStack(110, 100, 90, null)).toBeNull();
+    expect(computeEmaStack(null, 100, 90, 80)).toBeNull();
+  });
+
+  it('BULL_STACK when price > EMA20 > EMA50 > EMA200', () => {
+    expect(computeEmaStack(110, 105, 100, 95)).toBe('BULL_STACK');
+  });
+
+  it('BROKEN when fully inverted (price < EMA20 < EMA50 < EMA200)', () => {
+    expect(computeEmaStack(90, 95, 100, 105)).toBe('BROKEN');
+  });
+
+  it('PARTIAL when alignment is incomplete', () => {
+    // price > EMA20, but EMA20 < EMA50 → 1 of 3 conditions
+    expect(computeEmaStack(110, 105, 108, 100)).toBe('PARTIAL');
+  });
+});
+
+// ─── computeOversoldConfluence ────────────────────────────────────────────────
+
+describe('computeOversoldConfluence', () => {
+  it('false on missing inputs', () => {
+    expect(computeOversoldConfluence(null, 30, { lower: 100 })).toBe(false);
+    expect(computeOversoldConfluence(100, null, { lower: 100 })).toBe(false);
+    expect(computeOversoldConfluence(100, 30, null)).toBe(false);
+  });
+
+  it('true when RSI < 35 and price at/below lower band (+2%)', () => {
+    expect(computeOversoldConfluence(101, 30, { lower: 100 })).toBe(true); // within 2%
+    expect(computeOversoldConfluence(98, 34, { lower: 100 })).toBe(true);
+  });
+
+  it('false when RSI not oversold even if price low', () => {
+    expect(computeOversoldConfluence(98, 40, { lower: 100 })).toBe(false);
+  });
+
+  it('false when price well above the lower band', () => {
+    expect(computeOversoldConfluence(110, 30, { lower: 100 })).toBe(false);
+  });
+});
+
+// ─── proximityTo52wHigh ───────────────────────────────────────────────────────
+
+describe('proximityTo52wHigh', () => {
+  it('returns null on missing/invalid inputs', () => {
+    expect(proximityTo52wHigh(null, 100)).toBeNull();
+    expect(proximityTo52wHigh(100, null)).toBeNull();
+    expect(proximityTo52wHigh(100, 0)).toBeNull();
+  });
+
+  it('near = true within the threshold', () => {
+    const r = proximityTo52wHigh(98, 100); // 2% from high
+    expect(r.pctFromHigh).toBeCloseTo(2, 1);
+    expect(r.near).toBe(true);
+  });
+
+  it('near = false beyond the threshold', () => {
+    const r = proximityTo52wHigh(90, 100); // 10% from high
+    expect(r.near).toBe(false);
+  });
+
+  it('near = true and pctFromHigh negative when price exceeds the lagging high', () => {
+    const r = proximityTo52wHigh(105, 100);
+    expect(r.pctFromHigh).toBeLessThan(0);
+    expect(r.near).toBe(true);
   });
 });
