@@ -1,8 +1,52 @@
-# Stock Analysis Dashboard v0.9
+<div align="center">
 
-A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
+# 📈 Stock Analysis Dashboard
 
-**Live:** https://hutuleac.github.io/Stock_Anaysis_Dashboard/
+**A fast, offline-first stock analysis dashboard for retail swing traders.**
+Bloomberg-grade data workflow in the browser — no backend, your keys and data never leave your machine.
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-2ea043?style=for-the-badge&logo=githubpages&logoColor=white)](https://hutuleac.github.io/Stock_Anaysis_Dashboard/)
+&nbsp;
+[![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
+
+![Version](https://img.shields.io/badge/version-0.12-blue)
+![Tests](https://img.shields.io/badge/tests-136_passing-brightgreen?logo=vitest&logoColor=white)
+![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
+![Data](https://img.shields.io/badge/data-Finnhub_free_tier-1E64FF)
+![Storage](https://img.shields.io/badge/storage-localStorage_only-555)
+
+</div>
+
+---
+
+## Screenshots
+
+> Scan the whole watchlist in the morning, then drill into one name for the full thesis.
+
+**Market context + Morning Brief** — VIX, SPY trend, Fear & Greed, sector leaders/laggards, and the day's top setups / earnings / movers above the fold.
+![Market context and morning brief](docs/screenshots/01-market-context-morning-brief.png)
+
+**Watchlist** — every ticker scored 0–100 with a directional badge, T/F/S sub-score bars, conviction %, RS-vs-SPY chip, score sparkline + velocity arrow, and the weekly setup at a glance.
+![Watchlist table](docs/screenshots/02-watchlist.png)
+
+**Fundamentals bar + score history** — valuation (P/E, EPS & rev growth, P/S, PEG), the full indicator suite (RSI, MACD, ADX, Stochastic, BB, EMAs), RS, momentum, weekly trend, conviction, and a 90-day score-history sparkline — each with a plain-English "so what" tooltip.
+![Fundamentals bar](docs/screenshots/03-fundamentals-bar.png)
+
+**Price chart + news** — TradingView candlesticks with EMA50/200, Bollinger Bands, RSI/Volume/MACD sub-panes, and drawing tools, beside a sentiment-tagged 7-day news feed.
+![Price chart and news](docs/screenshots/04-chart-news.png)
+
+---
+
+## Why it exists
+
+Most retail tools either drown you in raw numbers or hide the math behind a black-box "buy/sell" call. This dashboard does the opposite: it computes the indicators **locally from candle data**, scores each name across 13 signals, and then **explains every score in plain English** — so you learn the *why*, not just the *what*. It runs entirely client-side on a free Finnhub key and deploys as a static site, so there's no server, no subscription, and nothing of yours sent anywhere.
+
+- 🧮 **Transparent scoring** — Technical / Fundamental / Sentiment, regime-aware weights, conviction %, and a thesis you can read.
+- ⚡ **Zero-cost data** — built around the Finnhub free tier; indicators computed from candles, not paid endpoints.
+- 🔒 **Offline-first & private** — localStorage only; opens instantly from cache, refreshes on demand.
+- 🧪 **Tested math** — 136 unit tests over the indicator, scoring, signal, and valuation engines.
 
 ---
 
@@ -48,6 +92,10 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - **Weekly Setup Signals (leading)** — two separately-scored entry timers built on weekly candles: **Pullback/Accumulation** (bullish RSI divergence + downtrend exhaustion + volume dry-up) and **Momentum/Breakout** (BB squeeze resolving + structure breakout + volume expansion). Each shows a 0–10 score, readiness (WATCH/SOON/ACT), and an ETA in weeks. Surfaced as a table badge + Fundamentals Bar cells with tooltips. Zero extra API calls.
 - **Relative Strength vs SPY (1M/3M)** — stock return minus the index return; outperform/underperform chip on rows + Fundamentals Bar. Leaders keep leading — a core trend-following filter.
 - **Growth valuation — Revenue growth · P/S · PEG** — for growth names and ADRs where P/E is negative or misleading. PEG normalizes valuation against growth; P/S works when there are no earnings. Display-only, with plain-English tooltips.
+- **EMA Stack** — `BULL STACK` / `BROKEN` chip when price > EMA20 > EMA50 > EMA200 (full bull alignment). The single fastest trend-quality read on a row.
+- **Oversold Confluence** — `OVERSOLD` badge when RSI < 35 *and* price sits at/below the lower Bollinger band — a higher-conviction mean-reversion entry than either signal alone.
+- **ROC 20d / 60d** — rate-of-change momentum cell; 20d rising while 60d is flat = early trend emergence.
+- **52-week-high proximity** — `AT HIGH` / `x% ↓ 52wH` chip flagging breakout-watch candidates near their highs.
 
 ### Expanded Row (per ticker, click to open)
 
@@ -123,7 +171,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-123 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, and `src/lib/valuation.js`:
+136 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, and `src/lib/valuation.js`:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -193,6 +241,11 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.12 (2026-06-17)
+- **Free signal batch** — four zero-API-call signals computed in `computeIndicatorsFromCandles` (52w at display): **EMA Stack** (`BULL STACK`/`BROKEN` chip), **Oversold Confluence** (RSI < 35 + lower-BB badge), **ROC 20d/60d** momentum cell, and **52-week-high proximity** chip. All display-only with tooltips. *Deferred:* the 52w-high volume-confirmation overlay (proximity only for now).
+- **ATR-based stop + R:R** — EntryPanel now shows a suggested long stop (entry − 2× *weekly* ATR; weekly over daily so the stop isn't inside the noise on a 2mo–1yr hold) and R:R to the analyst target (keys off the manual stop when set, else the suggested stop; guarded for no-upside/inverted-stop). Daily `atr` exposed from `computeIndicatorsFromCandles`, letting EntryPanel drop its own daily candle fetch — one fewer Finnhub call per ticker.
+- 13 new unit tests (136 total).
 
 ### v0.11 (2026-06-14)
 - **Relative Strength vs SPY (1M/3M)** — each stock's return minus the S&P 500's over ~21 and ~63 trading days; outperform/underperform chip on watchlist rows + Fundamentals Bar cell. SPY daily closes fetched once per refresh (cached).
