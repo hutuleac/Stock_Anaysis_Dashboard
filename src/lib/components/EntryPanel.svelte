@@ -4,7 +4,6 @@
   import { getPosition, getPortfolioValue } from '../stores/portfolio.svelte.js';
   import ThesisSummary from './ThesisSummary.svelte';
   import { getDaysToEarnings } from '../scoring.js';
-  import { fetchCandles } from '../api/finnhub.svelte.js';
 
   let { symbol } = $props();
 
@@ -13,35 +12,9 @@
   const data = $derived(getTickerData(symbol));
   const position = $derived(getPosition(symbol));
 
-  // ATR(14) — loaded from cached candle data
-  let atr = $state(null);
-
-  function computeATR(raw, period = 14) {
-    if (!raw?.h || raw.h.length < period + 1) return null;
-    const n = raw.h.length;
-    const trs = [];
-    for (let i = 1; i < n; i++) {
-      const tr = Math.max(
-        raw.h[i] - raw.l[i],
-        Math.abs(raw.h[i] - raw.c[i - 1]),
-        Math.abs(raw.l[i] - raw.c[i - 1])
-      );
-      trs.push(tr);
-    }
-    const recent = trs.slice(-period);
-    return recent.reduce((s, v) => s + v, 0) / recent.length;
-  }
-
-  async function loadATR(sym) {
-    const toTs = Math.floor(Date.now() / 1000);
-    const fromTs = toTs - 60 * 86400; // 60 days of daily candles
-    const raw = await fetchCandles(sym, 'D', fromTs, toTs);
-    atr = computeATR(raw);
-  }
-
-  $effect(() => {
-    if (complete && symbol) loadATR(symbol);
-  });
+  // Daily ATR(14) — reuse the value computed from the candles App.svelte already
+  // fetches (data.indicators.atr); no extra API call. Drives the stop-too-tight band.
+  const atr = $derived(data?.indicators?.atr ?? null);
 
   const currentPrice = $derived(data?.quote?.data?.c ?? null);
   const dp = $derived(data?.quote?.data?.dp ?? null);
@@ -53,6 +26,27 @@
   );
   const riskPct = $derived(
     currentPrice && riskPerShare ? ((riskPerShare / currentPrice) * 100) : null
+  );
+
+  // ATR-based stop + R:R to analyst target.
+  // Weekly ATR (data.weekly.atr) — horizon-appropriate for 2mo–1yr holds; a daily-ATR
+  // stop would sit inside the noise over that timeframe. The daily-ATR band below is a
+  // separate is-my-manual-stop-too-tight check, not a stop suggestion.
+  const weeklyAtr = $derived(data?.weekly?.atr ?? null);
+  // Match FundamentalsBar's fallback so R:R renders whenever any target exists.
+  const analystTarget = $derived(data?.priceTarget?.data?.targetMean ?? data?.priceTarget?.data?.targetHigh ?? null);
+  // Suggested stop for a long: entry − 2×ATR.
+  const suggestedStop = $derived(
+    currentPrice && weeklyAtr ? currentPrice - 2 * weeklyAtr : null
+  );
+  // R:R keys off the manual stop when set, else the suggested stop. Guarded against
+  // no-upside (target ≤ price) and inverted stop (stop ≥ price).
+  const effectiveStop = $derived(stopLoss ?? suggestedStop);
+  const rrToTarget = $derived(
+    currentPrice && analystTarget && effectiveStop &&
+    analystTarget > currentPrice && effectiveStop < currentPrice
+      ? (analystTarget - currentPrice) / (currentPrice - effectiveStop)
+      : null
   );
 
   // Position sizing: risk 2% of portfolio per trade
@@ -210,6 +204,30 @@
               Stop is beyond the daily noise range.
             {/if}
           </p>
+        </div>
+      {/if}
+
+      <!-- ATR-based suggested stop + R:R to analyst target -->
+      {#if suggestedStop !== null || rrToTarget !== null}
+        <div class="grid grid-cols-2 gap-3">
+          {#if suggestedStop !== null}
+            <div class="bg-surface-700 rounded-lg p-3">
+              <p class="text-xs text-text-muted mb-1">Suggested Stop (2× wk ATR)</p>
+              <p class="font-mono font-semibold text-danger">{formatUSD(suggestedStop)}</p>
+              <p class="text-[10px] text-text-muted mt-0.5">
+                {(((currentPrice - suggestedStop) / currentPrice) * 100).toFixed(1)}% below entry
+              </p>
+            </div>
+          {/if}
+          {#if rrToTarget !== null}
+            <div class="bg-surface-700 rounded-lg p-3">
+              <p class="text-xs text-text-muted mb-1">R:R to Target{stopLoss ? '' : ' (suggested stop)'}</p>
+              <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
+                1:{rrToTarget.toFixed(1)}
+              </p>
+              <p class="text-[10px] text-text-muted mt-0.5">target {formatUSD(analystTarget)}</p>
+            </div>
+          {/if}
         </div>
       {/if}
 

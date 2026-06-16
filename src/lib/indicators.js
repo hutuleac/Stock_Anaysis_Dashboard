@@ -286,6 +286,7 @@ export function computeIndicatorsFromCandles(raw) {
   const adxVal = hasOHLC ? computeADXLocal(highs, lows, closes) : null;
   const stochResult = hasOHLC ? computeStoch(highs, lows, closes) : null;
   const bbResult = computeBBLocal(closes);
+  const atrVal = hasOHLC ? computeATR(highs, lows, closes) : null;
 
   // Display-only momentum/structure reads (do NOT feed computeScore/setups).
   const lastClose = closes[closes.length - 1];
@@ -308,6 +309,7 @@ export function computeIndicatorsFromCandles(raw) {
     stochD: stochResult?.d ?? null,
     stochCross: stochResult?.cross ?? null,
     bb: bbResult,
+    atr: atrVal,
     ema20,
     ema50,
     ema200,
