@@ -2,6 +2,7 @@
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
+  import { proximityTo52wHigh } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
@@ -180,6 +181,37 @@
     };
   }
 
+  // EMA-stack chip — full bull alignment (price > EMA20 > EMA50 > EMA200).
+  // Only surfaced when stacked or broken; PARTIAL is the noisy default, so hidden.
+  function emaStackChip(indicators) {
+    const s = indicators?.emaStack;
+    if (s !== 'BULL_STACK' && s !== 'BROKEN') return null;
+    const bull = s === 'BULL_STACK';
+    return {
+      label: bull ? 'BULL STACK' : 'BROKEN',
+      cls: bull ? 'bg-bull-strong/15 text-bull-strong' : 'bg-bear-strong/15 text-bear-strong',
+      title: bull
+        ? 'EMA stack: price > EMA20 > EMA50 > EMA200 — full bull alignment'
+        : 'EMA stack broken: price < EMA20 < EMA50 < EMA200 — bearish alignment',
+    };
+  }
+
+  // 52w-high proximity chip — within 3% of the 52-week high = breakout watch.
+  function high52wChip(data) {
+    const price = data?.quote?.data?.c;
+    const high = data?.metrics?.data?.metric?.['52WeekHigh'];
+    const prox = proximityTo52wHigh(price, high);
+    if (!prox || !prox.near) return null;
+    const atHigh = prox.pctFromHigh <= 0;
+    return {
+      label: atHigh ? 'AT HIGH' : `${prox.pctFromHigh.toFixed(1)}% ↓ 52wH`,
+      cls: 'bg-bull-strong/15 text-bull-strong',
+      title: atHigh
+        ? 'At or above its 52-week high — breakout territory'
+        : `${prox.pctFromHigh.toFixed(1)}% below the 52-week high — breakout watch`,
+    };
+  }
+
   function formatPct(val) {
     if (val == null) return '—';
     const sign = val >= 0 ? '+' : '';
@@ -326,6 +358,14 @@
               {/if}
               {#if rsChip(data?.rs)}
                 {@const chip = rsChip(data?.rs)}
+                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+              {/if}
+              {#if emaStackChip(data?.indicators)}
+                {@const chip = emaStackChip(data?.indicators)}
+                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+              {/if}
+              {#if high52wChip(data)}
+                {@const chip = high52wChip(data)}
                 <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
               {/if}
             </div>
@@ -480,6 +520,14 @@
                   {/if}
                   {#if rsChip(data?.rs)}
                     {@const chip = rsChip(data?.rs)}
+                    <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+                  {/if}
+                  {#if emaStackChip(data?.indicators)}
+                    {@const chip = emaStackChip(data?.indicators)}
+                    <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+                  {/if}
+                  {#if high52wChip(data)}
+                    {@const chip = high52wChip(data)}
                     <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
                   {/if}
                 </div>

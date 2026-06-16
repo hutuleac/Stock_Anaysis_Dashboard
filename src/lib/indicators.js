@@ -231,6 +231,35 @@ export function computeRelativeStrength(stockCloses, benchCloses) {
   return { rs1m: rsFor(BARS_1M), rs3m: rsFor(BARS_3M) };
 }
 
+// ── EMA stack alignment ──────────────────────────────────────────────────────
+// Full bull alignment = price > EMA20 > EMA50 > EMA200. Counts how many of the
+// three ordered relationships hold → BULL_STACK (3) / PARTIAL (1–2) / BROKEN (0).
+// Returns null if any input is missing (e.g. < 200 bars → no EMA200).
+export function computeEmaStack(price, ema20, ema50, ema200) {
+  if (price == null || ema20 == null || ema50 == null || ema200 == null) return null;
+  const n = [price > ema20, ema20 > ema50, ema50 > ema200].filter(Boolean).length;
+  return n === 3 ? 'BULL_STACK' : n === 0 ? 'BROKEN' : 'PARTIAL';
+}
+
+// ── BB + RSI oversold confluence ─────────────────────────────────────────────
+// RSI < 35 AND price at/below the lower Bollinger band (+2% tolerance).
+// High-conviction mean-reversion entry tell. Returns false on missing inputs.
+export function computeOversoldConfluence(price, rsi, bb) {
+  if (price == null || rsi == null || !bb || bb.lower == null) return false;
+  return rsi < 35 && price <= bb.lower * 1.02;
+}
+
+// ── Proximity to 52-week high ────────────────────────────────────────────────
+// Uses the supplied 52w high (Finnhub metric, to stay consistent with the 52w
+// bar). `near` = within `threshold`% of the high (or above it). pctFromHigh is
+// negative when price has exceeded the lagging metric high.
+// NOTE: roadmap #8 also wants volume confirmation — deferred; proximity only.
+export function proximityTo52wHigh(price, high52w, threshold = 3) {
+  if (price == null || high52w == null || high52w <= 0) return null;
+  const pct = ((high52w - price) / high52w) * 100;
+  return { pctFromHigh: Math.round(pct * 10) / 10, near: pct <= threshold };
+}
+
 // ── Main: compute all indicators from raw Finnhub/TwelveData candle response ──
 export function computeIndicatorsFromCandles(raw) {
   if (!raw?.c || raw.s !== 'ok' || raw.c.length < 30) return null;
@@ -258,6 +287,11 @@ export function computeIndicatorsFromCandles(raw) {
   const stochResult = hasOHLC ? computeStoch(highs, lows, closes) : null;
   const bbResult = computeBBLocal(closes);
 
+  // Display-only momentum/structure reads (do NOT feed computeScore/setups).
+  const lastClose = closes[closes.length - 1];
+  const roc20 = priceReturn(closes, 20);
+  const roc60 = priceReturn(closes, 60);
+
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
     rsiDirection:
@@ -277,6 +311,10 @@ export function computeIndicatorsFromCandles(raw) {
     ema20,
     ema50,
     ema200,
+    emaStack: computeEmaStack(lastClose, ema20, ema50, ema200),
+    roc20: roc20 !== null ? Math.round(roc20 * 10) / 10 : null,
+    roc60: roc60 !== null ? Math.round(roc60 * 10) / 10 : null,
+    oversoldConfluence: computeOversoldConfluence(lastClose, rsiCurr, bbResult),
     source: 'local',
   };
 }

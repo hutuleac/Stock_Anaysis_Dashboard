@@ -9,16 +9,18 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 
 - ✅ **v0.10 — Weekly Setup Signals** (`signals.js`): a leading-signal layer adapted from the range-finder crypto project. Two separately-scored weekly setups — **Pullback/Accumulation** (RSI divergence + downtrend exhaustion + volume dry-up + range position) and **Momentum/Breakout** (BB squeeze + structure breakout + volume expansion + EMA reclaim) — each with readiness (WATCH/SOON/ACT) and ETA. This is the first concrete implementation of the two-view (Momentum / Pullback) concept below. Covers roadmap item **#6 Volume dry-up** and overlaps **#5 BB+RSI confluence**. Zero new API calls.
 - ✅ **v0.11 — Relative Strength + growth valuation** (items **#3, #10, #11**): RS vs SPY (1M/3M) via `computeRelativeStrength` (SPY closes fetched once/refresh); Revenue growth + P/S + PEG (`valuation.js` + Finnhub metrics). Display-only — Fundamentals Bar cells with tooltips + an RS chip on watchlist rows. No scoring changes.
+- ✅ **v0.12 — Free signal batch** (items **#1, #5, #7, #8**): EMA Stack (`computeEmaStack` → BULL STACK / PARTIAL / BROKEN chip), Oversold Confluence (`computeOversoldConfluence` → RSI<35 + lower-BB badge), ROC 20d/60d (`priceReturn` → momentum cell), and 52w-high proximity (`proximityTo52wHigh` → "AT HIGH" / "x% ↓ 52wH" chip, using the Finnhub `52WeekHigh` metric for consistency with the 52w bar). All computed in `computeIndicatorsFromCandles` (except 52w, at display) — zero new API calls, display-only (no `computeScore`/setups changes), with tooltips. **Deferred:** #8's volume-confirmation overlay (proximity-only for now).
 
 ---
 
 ## Priority queue
 
-### 1. EMA Stack signal
+### 1. EMA Stack signal ✅ v0.12
 - Condition: price > EMA20 > EMA50 > EMA200 = full bull alignment
 - All four values already computed in `indicators.js` — just needs a combined chip display
 - Output: `BULL STACK` / `PARTIAL` / `BROKEN` badge on each ticker row
 - Zero new API calls. ~1 hour to implement.
+- **Shipped** as `computeEmaStack` (`indicators.js`); BULL STACK / BROKEN chip on watchlist rows (PARTIAL hidden as noise)
 
 ### 2. ATR-based stop + Risk/Reward
 - ATR already computed in `computeWeeklyTrend` (indicators.js) but never surfaced to UI
@@ -39,11 +41,12 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 - OBV falling while price holds = distribution warning
 - Add to `computeIndicatorsFromCandles` in `indicators.js`
 
-### 5. BB + RSI combo signal
+### 5. BB + RSI combo signal ✅ v0.12
 - RSI < 35 AND price near BB lower band = high-conviction oversold entry
 - Both values already computed — needs a combined signal field in `indicators.js`
 - Show as a single "Oversold Confluence" badge in Pullback view
 - No new data required
+- **Shipped** as `computeOversoldConfluence` (`indicators.js`); OVERSOLD confluence badge in FundamentalsBar (RSI<35 + price ≤ lower band +2%)
 
 ### 6. Volume dry-up detection ✅ v0.10
 - 5-day avg volume < 50% of 20-day avg = selling exhaustion
@@ -51,15 +54,17 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 - Compute from existing candle `v` array
 - **Shipped** as `detectVolumeProfile` in `signals.js` (weekly DRY_UP / EXPANSION states), feeding both setup scores
 
-### 7. Rate of Change (ROC 20d / 60d)
+### 7. Rate of Change (ROC 20d / 60d) ✅ v0.12
 - Shows momentum acceleration/deceleration
 - 20d ROC rising while 60d is flat = early trend emergence
 - Compute from candle closes in `indicators.js`, zero API cost
+- **Shipped** — `roc20`/`roc60` (via `priceReturn`) in `computeIndicatorsFromCandles`; ROC cell in FundamentalsBar with accel/decel tooltip
 
-### 8. 52-week high proximity alert
+### 8. 52-week high proximity alert ✅ v0.12 (proximity only)
 - < 3% from 52-week high = breakout watch signal
 - Already display 52w bar — add a flag/chip when within striking distance
 - Combine with volume confirmation (above-average volume = stronger signal)
+- **Shipped** as `proximityTo52wHigh` (`indicators.js`); chip on watchlist rows ("AT HIGH" / "x% ↓ 52wH") using the Finnhub `52WeekHigh` metric. **Volume-confirmation overlay still TODO.**
 
 ### 9. Short interest
 - Finnhub endpoint: `/stock/short-interest`
