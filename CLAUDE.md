@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.11
+# Project State — Stock Analysis Dashboard v0.12
 
 ## What this is
 
@@ -116,10 +116,10 @@ src/lib/
     papertrades.svelte.js   — paper trade state
     alerts.svelte.js        — price alert state
 tests/
-  indicators.test.js  — 46 unit tests for indicators.js
+  indicators.test.js  — 59 unit tests for indicators.js
   scoring.test.js     — 42 unit tests for scoring.js
   signals.test.js     — 32 unit tests for signals.js
-  valuation.test.js   — 3 unit tests for valuation.js
+  valuation.test.js   — 3 unit tests for valuation.js  (136 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -140,6 +140,7 @@ tests/
 - **Bollinger Bands(20,2):** Population std dev (÷period). Matches TradingView.
 - **ADX(14):** Full Wilder-smoothed +DM/−DM/TR pipeline. Final ADX is the Wilder RMA (average) of DX, bounded [0,100] — NOT the running sum (that bug inflated it ~period×; fixed v0.10).
 - **Stochastic(14,3,3):** Raw %K, 3-bar SMA for %D, crossover on sign change.
+- **Display-only signals (v0.12), all in `computeIndicatorsFromCandles` unless noted:** `computeEmaStack` (BULL STACK/BROKEN), `computeOversoldConfluence` (RSI<35 + price ≤ lower BB), `priceReturn`→`roc20`/`roc60`, daily `atr` (now exposed — EntryPanel reads `data.indicators.atr` for its stop-too-tight band). `proximityTo52wHigh` runs at display time off the Finnhub `52WeekHigh` metric. EntryPanel's suggested stop uses **weekly** ATR (`data.weekly.atr`), entry − 2×ATR; R:R = (target − entry)/(entry − stop).
 
 ## Setup signals (signals.js)
 
@@ -167,10 +168,10 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 79 unit tests, ~200ms
+npm test          # 136 unit tests, ~200ms
 npm run build     # production build → dist/
 ```
 
-## What's next (ROADMAP.md)
+## What's next (BACKLOG.md)
 
-Priority backlog: EMA Stack signal, ATR-based stop/R:R display, Relative Strength vs SPY, OBV, BB+RSI combo signal, Volume dry-up detection, ROC 20d/60d, 52w high proximity alert. All computable from existing candle data — zero extra API calls.
+Open queue, priority order: OBV, 52w-high volume confirmation, swing-low support levels, beta-adjusted sizing — all zero-API-call. Short interest is the one queued item that costs +1 endpoint/ticker (needs approval). Plus the two-view (Momentum / Pullback) detail-panel tab toggle that organizes the shipped signals into two named playbooks. See `BACKLOG.md` for the full list and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).

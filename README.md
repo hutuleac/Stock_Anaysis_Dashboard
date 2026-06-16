@@ -1,4 +1,4 @@
-# Stock Analysis Dashboard v0.9
+# Stock Analysis Dashboard v0.12
 
 A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
 
@@ -48,6 +48,10 @@ A fast, offline-first stock analysis dashboard for retail swing traders. Bloombe
 - **Weekly Setup Signals (leading)** — two separately-scored entry timers built on weekly candles: **Pullback/Accumulation** (bullish RSI divergence + downtrend exhaustion + volume dry-up) and **Momentum/Breakout** (BB squeeze resolving + structure breakout + volume expansion). Each shows a 0–10 score, readiness (WATCH/SOON/ACT), and an ETA in weeks. Surfaced as a table badge + Fundamentals Bar cells with tooltips. Zero extra API calls.
 - **Relative Strength vs SPY (1M/3M)** — stock return minus the index return; outperform/underperform chip on rows + Fundamentals Bar. Leaders keep leading — a core trend-following filter.
 - **Growth valuation — Revenue growth · P/S · PEG** — for growth names and ADRs where P/E is negative or misleading. PEG normalizes valuation against growth; P/S works when there are no earnings. Display-only, with plain-English tooltips.
+- **EMA Stack** — `BULL STACK` / `BROKEN` chip when price > EMA20 > EMA50 > EMA200 (full bull alignment). The single fastest trend-quality read on a row.
+- **Oversold Confluence** — `OVERSOLD` badge when RSI < 35 *and* price sits at/below the lower Bollinger band — a higher-conviction mean-reversion entry than either signal alone.
+- **ROC 20d / 60d** — rate-of-change momentum cell; 20d rising while 60d is flat = early trend emergence.
+- **52-week-high proximity** — `AT HIGH` / `x% ↓ 52wH` chip flagging breakout-watch candidates near their highs.
 
 ### Expanded Row (per ticker, click to open)
 
@@ -123,7 +127,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-123 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, and `src/lib/valuation.js`:
+136 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, and `src/lib/valuation.js`:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -193,6 +197,11 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.12 (2026-06-17)
+- **Free signal batch** — four zero-API-call signals computed in `computeIndicatorsFromCandles` (52w at display): **EMA Stack** (`BULL STACK`/`BROKEN` chip), **Oversold Confluence** (RSI < 35 + lower-BB badge), **ROC 20d/60d** momentum cell, and **52-week-high proximity** chip. All display-only with tooltips. *Deferred:* the 52w-high volume-confirmation overlay (proximity only for now).
+- **ATR-based stop + R:R** — EntryPanel now shows a suggested long stop (entry − 2× *weekly* ATR; weekly over daily so the stop isn't inside the noise on a 2mo–1yr hold) and R:R to the analyst target (keys off the manual stop when set, else the suggested stop; guarded for no-upside/inverted-stop). Daily `atr` exposed from `computeIndicatorsFromCandles`, letting EntryPanel drop its own daily candle fetch — one fewer Finnhub call per ticker.
+- 13 new unit tests (136 total).
 
 ### v0.11 (2026-06-14)
 - **Relative Strength vs SPY (1M/3M)** — each stock's return minus the S&P 500's over ~21 and ~63 trading days; outperform/underperform chip on watchlist rows + Fundamentals Bar cell. SPY daily closes fetched once per refresh (cached).
