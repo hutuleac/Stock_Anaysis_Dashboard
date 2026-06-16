@@ -275,7 +275,13 @@ describe('computeIndicatorsFromCandles', () => {
     const result = computeIndicatorsFromCandles(raw);
     expect(result.adx).toBeNull();
     expect(result.stochK).toBeNull();
+    expect(result.atr).toBeNull(); // ATR needs OHLC
     expect(result.bb).not.toBeNull(); // BB only needs closes
+  });
+
+  it('computes a positive ATR when OHLC is present', () => {
+    const result = computeIndicatorsFromCandles(candles(rising(60)));
+    expect(result.atr).toBeGreaterThan(0);
   });
 
   it('ADX stays within [0, 100] for a strong trend (regression: was summed not averaged)', () => {

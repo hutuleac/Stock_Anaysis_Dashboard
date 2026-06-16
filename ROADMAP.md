@@ -22,11 +22,13 @@ Two planned views: **Momentum / Trend Following** and **Pullback / Mean Reversio
 - Zero new API calls. ~1 hour to implement.
 - **Shipped** as `computeEmaStack` (`indicators.js`); BULL STACK / BROKEN chip on watchlist rows (PARTIAL hidden as noise)
 
-### 2. ATR-based stop + Risk/Reward
+### 2. ATR-based stop + Risk/Reward ✅ v0.12
 - ATR already computed in `computeWeeklyTrend` (indicators.js) but never surfaced to UI
 - Formula: suggested stop = entry − 2×ATR; R:R = (analyst target − entry) / (entry − stop)
 - Surface in Pullback view and EntryPanel
 - Feeds into position sizing once account size is stored in Settings
+- **Shipped** — EntryPanel now shows a suggested stop (entry − 2× **weekly** ATR from `data.weekly.atr`; weekly chosen over daily so the stop isn't inside the noise on a 2mo–1yr hold) + R:R to analyst target ((target − entry) / (entry − stop), keying off the manual stop when set, else the suggested stop; guarded for no-upside/inverted-stop). The pre-existing daily-ATR band is a separate stop-too-tight check, left as-is.
+- **Cleanup done in this change:** `computeIndicatorsFromCandles` now exposes daily `atr`, and EntryPanel reads `data.indicators.atr` for the stop-too-tight band instead of making its own daily `fetchCandles` + duplicating `computeATR`. Drops one Finnhub call per ticker — matters on a static GitHub Pages deploy (no backend) against the free-tier rate limit.
 
 ### 3. Relative Strength vs SPY (1M / 3M) ✅ v0.11
 - Stock's return vs SPY over 1 and 3 months
