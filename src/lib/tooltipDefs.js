@@ -448,6 +448,18 @@ export const TIPS = {
     why: 'Your daily shortlist. Focus on the top 1–2 setups rather than spreading attention across all tickers. A score of 72+ with HIGH conviction is rare — treat it as a priority.',
   },
 
+  setupRadar: {
+    title: 'Setup Radar',
+    subtitle: 'Early Entries in Great Stocks',
+    category: 'Morning Brief',
+    description: 'Watchlist names with an early weekly entry forming that also pass a quality gate. A name appears only when BOTH are true; the rest are hidden.',
+    levels: [
+      { range: 'Early entry', label: 'Setup',   color: C.green, desc: 'Pullback or Momentum setup at WATCH / SOON / ACT readiness — the turn is forming before it is obvious.' },
+      { range: 'Great stock', label: 'Quality', color: C.green, desc: 'Revenue growing YoY, outperforming SPY over 3M, and PEG < 3 (or not computable).' },
+    ],
+    why: 'Pairs timing with quality: catch the early entry, but only in companies that are growing and already leading the market. Ranked ACT → SOON → WATCH, strongest setup first.',
+  },
+
   earningsSoon: {
     title: 'Earnings Soon',
     subtitle: 'Reports Within 7 Days',
