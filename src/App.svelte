@@ -17,6 +17,7 @@
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   // OnboardingModal removed — demo mode replaces it
   import MorningBrief from './lib/components/MorningBrief.svelte';
+  import SetupRadar from './lib/components/SetupRadar.svelte';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
 
   // Svelte action: auto-dismiss triggered alert banner after 15s
@@ -550,6 +551,7 @@
   <!-- Main content -->
   <main class="max-w-[1800px] mx-auto px-4 py-6">
     <MorningBrief />
+    <SetupRadar />
     <WatchlistTable onTickerAdded={handleRefresh} />
 
     <PortfolioStats />
