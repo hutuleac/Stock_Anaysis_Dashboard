@@ -1,8 +1,52 @@
-# Stock Analysis Dashboard v0.12
+<div align="center">
 
-A fast, offline-first stock analysis dashboard for retail swing traders. Bloomberg-quality data workflow, built with Svelte 5 + Finnhub free API.
+# 📈 Stock Analysis Dashboard
 
-**Live:** https://hutuleac.github.io/Stock_Anaysis_Dashboard/
+**A fast, offline-first stock analysis dashboard for retail swing traders.**
+Bloomberg-grade data workflow in the browser — no backend, your keys and data never leave your machine.
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-2ea043?style=for-the-badge&logo=githubpages&logoColor=white)](https://hutuleac.github.io/Stock_Anaysis_Dashboard/)
+&nbsp;
+[![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
+
+![Version](https://img.shields.io/badge/version-0.12-blue)
+![Tests](https://img.shields.io/badge/tests-136_passing-brightgreen?logo=vitest&logoColor=white)
+![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
+![Data](https://img.shields.io/badge/data-Finnhub_free_tier-1E64FF)
+![Storage](https://img.shields.io/badge/storage-localStorage_only-555)
+
+</div>
+
+---
+
+## Screenshots
+
+> Scan the whole watchlist in the morning, then drill into one name for the full thesis.
+
+**Market context + Morning Brief** — VIX, SPY trend, Fear & Greed, sector leaders/laggards, and the day's top setups / earnings / movers above the fold.
+![Market context and morning brief](docs/screenshots/01-market-context-morning-brief.png)
+
+**Watchlist** — every ticker scored 0–100 with a directional badge, T/F/S sub-score bars, conviction %, RS-vs-SPY chip, score sparkline + velocity arrow, and the weekly setup at a glance.
+![Watchlist table](docs/screenshots/02-watchlist.png)
+
+**Fundamentals bar + score history** — valuation (P/E, EPS & rev growth, P/S, PEG), the full indicator suite (RSI, MACD, ADX, Stochastic, BB, EMAs), RS, momentum, weekly trend, conviction, and a 90-day score-history sparkline — each with a plain-English "so what" tooltip.
+![Fundamentals bar](docs/screenshots/03-fundamentals-bar.png)
+
+**Price chart + news** — TradingView candlesticks with EMA50/200, Bollinger Bands, RSI/Volume/MACD sub-panes, and drawing tools, beside a sentiment-tagged 7-day news feed.
+![Price chart and news](docs/screenshots/04-chart-news.png)
+
+---
+
+## Why it exists
+
+Most retail tools either drown you in raw numbers or hide the math behind a black-box "buy/sell" call. This dashboard does the opposite: it computes the indicators **locally from candle data**, scores each name across 13 signals, and then **explains every score in plain English** — so you learn the *why*, not just the *what*. It runs entirely client-side on a free Finnhub key and deploys as a static site, so there's no server, no subscription, and nothing of yours sent anywhere.
+
+- 🧮 **Transparent scoring** — Technical / Fundamental / Sentiment, regime-aware weights, conviction %, and a thesis you can read.
+- ⚡ **Zero-cost data** — built around the Finnhub free tier; indicators computed from candles, not paid endpoints.
+- 🔒 **Offline-first & private** — localStorage only; opens instantly from cache, refreshes on demand.
+- 🧪 **Tested math** — 136 unit tests over the indicator, scoring, signal, and valuation engines.
 
 ---
 
