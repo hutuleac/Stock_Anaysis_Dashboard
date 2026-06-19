@@ -4,6 +4,7 @@
   import { fetchCandles, fetchHistoricalEarnings } from '../api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTimeSeries } from '../api/twelvedata.svelte.js';
   import { getChecklist } from '../stores/checklist.svelte.js';
+  import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeMACDSeries, computeRSISeries, computeBBSeries } from '../indicators.js';
 
   let { symbol, priceTarget = null } = $props();
@@ -44,6 +45,12 @@
   // Annotations (PT lines + earnings markers)
   let showAnnotations = $state(true);
   let ptLineRefs      = { low: null, mean: null, high: null };
+
+  // Fib + FVG anchors (daily only)
+  let showFib     = $state(false);
+  let showFVG     = $state(false);
+  let fibLineRefs = [];          // createPriceLine refs to clear
+  let fvgRects    = $state([]);  // {y, height} pixel rects for FVG SVG
 
   // Drawing tools
   let drawingMode   = $state(null);   // 'hline' | 'trendline' | 'rect' | null
@@ -137,6 +144,39 @@
         width:  Math.round((b.volume / maxVol) * MAX_W),
         isHVN:  b.volume > maxVol * 0.65,
       };
+    }).filter(Boolean);
+  }
+
+  // ─── Fib + FVG anchors (daily only) ──────────────────────────────────────────
+
+  function clearFibLines() {
+    if (series) for (const ref of fibLineRefs) series.removePriceLine(ref);
+    fibLineRefs = [];
+  }
+
+  function updateFibLines() {
+    clearFibLines();
+    if (!series || isIntraday || !showFib) return;
+    const fib = getTickerData(symbol)?.anchors?.fib;
+    if (!fib?.levels) return;
+    for (const [ratio, price] of Object.entries(fib.levels)) {
+      fibLineRefs.push(series.createPriceLine({
+        price, color: '#a78bfa', lineWidth: 1, lineStyle: 2,
+        axisLabelVisible: true, title: `${ratio} $${price.toFixed(2)}`,
+      }));
+    }
+  }
+
+  function updateFvgRects() {
+    if (!series || isIntraday || !showFVG) { fvgRects = []; return; }
+    const fvg = getTickerData(symbol)?.anchors?.fvg;
+    if (!fvg) { fvgRects = []; return; }
+    const gaps = [...(fvg.gapsAbove ?? []), ...(fvg.gapsBelow ?? [])];
+    fvgRects = gaps.map(g => {
+      const yT = series.priceToCoordinate(g.top);
+      const yB = series.priceToCoordinate(g.bottom);
+      if (yT == null || yB == null) return null;
+      return { y: Math.min(yT, yB), height: Math.abs(yB - yT) };
     }).filter(Boolean);
   }
 
@@ -504,6 +544,7 @@
       // Recompute VP and rect coords on pan/zoom
       chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
         if (showVolumeProfile) updateVolumeProfile();
+        if (showFVG) updateFvgRects();
         updateRectCoords();
       });
 
@@ -552,6 +593,18 @@
     showVolumeBars; showMACD; showRSI; showBB; chartReady; candleCount;
     if (chartReady) rebuildSubPanes();
   });
+
+  // Fib lines (reactive to toggle / symbol / data)
+  $effect(() => {
+    showFib; symbol; chartReady; candleCount;
+    if (chartReady) updateFibLines();
+  });
+
+  // FVG rects (reactive to toggle / symbol / data)
+  $effect(() => {
+    showFVG; symbol; chartReady; candleCount;
+    if (chartReady) updateFvgRects();
+  });
 </script>
 
 <div class="bg-surface-900 rounded-lg border border-border overflow-hidden">
@@ -593,6 +646,18 @@
           title="Bollinger Bands (20,2)"
           onclick={() => showBB = !showBB}
         >BB</button>
+        {#if !isIntraday}
+          <button
+            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showFib ? 'text-violet-400' : 'text-text-muted opacity-40'}"
+            title="Fibonacci retracements (daily)"
+            onclick={() => showFib = !showFib}
+          >FIB</button>
+          <button
+            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showFVG ? 'text-amber-400' : 'text-text-muted opacity-40'}"
+            title="Fair value gaps (daily)"
+            onclick={() => showFVG = !showFVG}
+          >FVG</button>
+        {/if}
         {#if !isIntraday}
           <button
             class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showRSI ? 'text-violet-300' : 'text-text-muted opacity-40'}"
@@ -668,6 +733,16 @@
             y={bar.y} width={bar.width} height={bar.height}
             fill={bar.isHVN ? '#f59e0b55' : '#ffffff18'} rx="1"
           />
+        {/each}
+      </svg>
+    {/if}
+
+    <!-- FVG translucent bands (daily only) -->
+    {#if showFVG && fvgRects.length}
+      <svg class="absolute inset-0 w-full pointer-events-none" style="height:300px;" aria-hidden="true">
+        {#each fvgRects as r}
+          <rect x="0" y={r.y} width="100%" height={Math.max(r.height, 2)}
+            fill="#f59e0b14" stroke="#f59e0b40" stroke-width="1" rx="1" />
         {/each}
       </svg>
     {/if}
