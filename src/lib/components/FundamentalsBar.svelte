@@ -11,6 +11,7 @@
   const m = $derived(data?.metrics?.data?.metric ?? {});
   const pt = $derived(data?.priceTarget?.data ?? null);
   const price = $derived(data?.quote?.data?.c ?? null);
+  const anchors = $derived(data?.anchors ?? null);
 
   const insiderNet = $derived(() => {
     const txns = data?.insider?.data?.data;
@@ -420,6 +421,32 @@
           <span class="text-[12px] text-text-muted">1M</span>
         </div>
         <span class="text-[12px] {rsColor(rs.rs3m)}">{rsFmt(rs.rs3m)} 3M</span>
+      </div>
+    {/if}
+
+    <!-- AVWAP — price vs anchored VWAP (swing-low cost basis) -->
+    {#if anchors?.avwap}
+      {@const av = anchors.avwap}
+      {@const avColor = av.reclaimed ? 'text-bull-strong' : 'text-bear-strong'}
+      <div class="flex flex-col min-w-[95px] cursor-default" title="Price vs anchored VWAP (swing-low cost basis)">
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">AVWAP</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold {avColor}">{(av.pctFromPrice >= 0 ? '+' : '') + av.pctFromPrice.toFixed(1)}%</span>
+        </div>
+        <span class="text-[12px] {avColor}">{av.reclaimed ? 'reclaimed' : 'below'}</span>
+      </div>
+    {/if}
+
+    <!-- POC — point of control + value-area position -->
+    {#if anchors?.poc}
+      {@const pc = anchors.poc}
+      {@const vaLabel = pc.position === 'above' ? 'upper VA' : pc.position === 'below' ? 'lower VA' : 'in VA'}
+      <div class="flex flex-col min-w-[95px] cursor-default" title="Point of Control + value area position">
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">POC</span>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span class="text-sm font-mono font-semibold text-text-secondary">${pc.pocPrice.toFixed(2)}</span>
+        </div>
+        <span class="text-[12px] text-text-muted">{vaLabel}</span>
       </div>
     {/if}
 
