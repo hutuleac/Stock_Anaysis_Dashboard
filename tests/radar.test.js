@@ -6,7 +6,7 @@ function ticker(symbol, o = {}) {
   const {
     readiness = 'SOON', setupType = 'pullback', setupScore = 6, etaWeeks = 2,
     rs3m = 5, revGrowth = 20, pe = 20, epsGrowth = 30,
-    hasMetrics = true, hasRs = true, hasSetups = true,
+    hasMetrics = true, hasRs = true, hasSetups = true, anchors = undefined,
   } = o;
   const data = {};
   if (hasSetups) {
@@ -25,6 +25,7 @@ function ticker(symbol, o = {}) {
       epsGrowthTTMYoy: epsGrowth,
     } } };
   }
+  if (anchors) data.anchors = anchors;
   return { symbol, data };
 }
 
@@ -87,5 +88,31 @@ describe('computeRadar', () => {
     expect(bySym.HIGH.rsRank).toBe(1);
     expect(bySym.LOW.rsRank).toBe(2);
     expect(bySym.HIGH.rsTotal).toBe(2);
+  });
+});
+
+describe('radar anchor readiness nudge', () => {
+  it('bumps WATCH to SOON when AVWAP reclaimed and POC not below', () => {
+    const t = ticker('AAA', { readiness: 'WATCH', anchors: { avwap: { reclaimed: true }, poc: { position: 'above' } } });
+    expect(computeRadar([t])[0].readiness).toBe('SOON');
+  });
+
+  it('bumps SOON to ACT', () => {
+    const t = ticker('AAA', { readiness: 'SOON', anchors: { avwap: { reclaimed: true }, poc: { position: 'inside' } } });
+    expect(computeRadar([t])[0].readiness).toBe('ACT');
+  });
+
+  it('does not nudge when POC is below', () => {
+    const t = ticker('AAA', { readiness: 'WATCH', anchors: { avwap: { reclaimed: true }, poc: { position: 'below' } } });
+    expect(computeRadar([t])[0].readiness).toBe('WATCH');
+  });
+
+  it('does not nudge when AVWAP not reclaimed', () => {
+    const t = ticker('AAA', { readiness: 'WATCH', anchors: { avwap: { reclaimed: false }, poc: { position: 'above' } } });
+    expect(computeRadar([t])[0].readiness).toBe('WATCH');
+  });
+
+  it('is a no-op when anchors are absent', () => {
+    expect(computeRadar([ticker('AAA', { readiness: 'WATCH' })])[0].readiness).toBe('WATCH');
   });
 });
