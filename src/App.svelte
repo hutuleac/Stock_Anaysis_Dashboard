@@ -3,6 +3,7 @@
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
+  import { computeChartAnchors } from './lib/chartAnchors.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
   import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
@@ -244,6 +245,9 @@
               const setups = computeSetupSignals(weeklyRaw);
               if (setups) results[ticker.symbol].setups = setups;
 
+              const anchors = computeChartAnchors(synthetic);
+              if (anchors) results[ticker.symbol].anchors = anchors;
+
               if (spyCloses) {
                 const rs = computeRelativeStrength(synthetic.c, spyCloses);
                 if (rs.rs1m !== null || rs.rs3m !== null) results[ticker.symbol].rs = rs;
@@ -268,6 +272,9 @@
             if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
             const setups = computeSetupSignals(weeklyRes?.data);
             if (setups) results[ticker.symbol].setups = setups;
+
+            const anchors = computeChartAnchors(candleRes?.data);
+            if (anchors) results[ticker.symbol].anchors = anchors;
 
             if (spyCloses && candleRes?.data?.c?.length) {
               const rs = computeRelativeStrength(candleRes.data.c, spyCloses);
@@ -379,6 +386,7 @@
       if (data._candlesDaily)  { const ind = computeIndicatorsFromCandles(data._candlesDaily);  if (ind) data.indicators = ind; }
       if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
       if (data._candlesWeekly) { const st  = computeSetupSignals(data._candlesWeekly);          if (st)  data.setups    = st;  }
+      if (data._candlesDaily)  { const an  = computeChartAnchors(data._candlesDaily);           if (an)  data.anchors   = an;  }
       delete data._candlesDaily;
       delete data._candlesWeekly;
     }
