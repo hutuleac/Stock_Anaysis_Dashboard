@@ -32,6 +32,16 @@ function activeSetup(setups) {
   return candidates[0];
 }
 
+const NUDGE_UP = { WATCH: 'SOON', SOON: 'ACT', ACT: 'ACT' };
+
+// AVWAP reclaimed + POC not below → bump readiness one tier. Never demotes.
+function nudgeReadiness(readiness, anchors) {
+  if (!anchors) return readiness;
+  const avwapOk = anchors.avwap?.reclaimed === true;
+  const pocOk = !!anchors.poc && anchors.poc.position !== 'below';
+  return avwapOk && pocOk ? (NUDGE_UP[readiness] ?? readiness) : readiness;
+}
+
 export function computeRadar(list) {
   if (!Array.isArray(list) || !list.length) return [];
 
@@ -51,6 +61,8 @@ export function computeRadar(list) {
     const setup = activeSetup(data.setups);
     if (!setup) continue;
 
+    const readiness = nudgeReadiness(setup.readiness, data.anchors);
+
     const metric = data?.metrics?.data?.metric ?? {};
     const revGrowth = metric.revenueGrowthTTMYoy;
     const rs3m = data?.rs?.rs3m;
@@ -66,7 +78,7 @@ export function computeRadar(list) {
     hits.push({
       symbol: item.symbol,
       setupType: setup.type,
-      readiness: setup.readiness,
+      readiness,
       setupScore: setup.score,
       etaWeeks: setup.etaWeeks,
       rs3m,
