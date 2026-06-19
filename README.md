@@ -9,8 +9,8 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.12-blue)
-![Tests](https://img.shields.io/badge/tests-136_passing-brightgreen?logo=vitest&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.13-blue)
+![Tests](https://img.shields.io/badge/tests-163_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -41,12 +41,12 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 
 ## Why it exists
 
-Most retail tools either drown you in raw numbers or hide the math behind a black-box "buy/sell" call. This dashboard does the opposite: it computes the indicators **locally from candle data**, scores each name across 13 signals, and then **explains every score in plain English** — so you learn the *why*, not just the *what*. It runs entirely client-side on a free Finnhub key and deploys as a static site, so there's no server, no subscription, and nothing of yours sent anywhere.
+Most retail tools either drown you in raw numbers or hide the math behind a black-box "buy/sell" call. This dashboard does the opposite: it computes the indicators **locally from candle data**, scores each name across a dozen signals, and then **explains every score in plain English** — so you learn the *why*, not just the *what*. It runs entirely client-side on a free Finnhub key and deploys as a static site, so there's no server, no subscription, and nothing of yours sent anywhere.
 
 - 🧮 **Transparent scoring** — Technical / Fundamental / Sentiment, regime-aware weights, conviction %, and a thesis you can read.
 - ⚡ **Zero-cost data** — built around the Finnhub free tier; indicators computed from candles, not paid endpoints.
 - 🔒 **Offline-first & private** — localStorage only; opens instantly from cache, refreshes on demand.
-- 🧪 **Tested math** — 136 unit tests over the indicator, scoring, signal, and valuation engines.
+- 🧪 **Tested math** — 163 unit tests over the indicator, scoring, signal, valuation, and chart-anchor engines.
 
 ---
 
@@ -67,12 +67,12 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 - CSV export — all tickers with score, sub-scores, price, sector, earnings countdown
 - BLOCKED badge — automatically shown when a hard warning is active
 
-### Scoring Engine (up to 13 signals)
+### Scoring Engine (up to 12 signals)
 
 | Category | Signals |
 |----------|---------|
 | **Technical 35%** | EMA50 position, MA200 regime, 52-week range, daily momentum, RSI(14), MACD crossover, ADX trend strength, Stochastic %K momentum |
-| **Fundamental 45%** | P/E ratio, EPS growth YoY, analyst price target premium |
+| **Fundamental 45%** | P/E ratio, EPS growth YoY |
 | **Sentiment 20%** | News headline keywords (last 5), sector ETF trend, insider net buying (90d) |
 
 - T5 RSI(14) + T6 MACD computed locally from candle data — no extra API key needed
@@ -171,7 +171,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-136 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, and `src/lib/valuation.js`:
+163 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, and `src/lib/chartAnchors.js`:
 
 | Suite | What's tested |
 |-------|---------------|
