@@ -28,13 +28,14 @@
     currentPrice && riskPerShare ? ((riskPerShare / currentPrice) * 100) : null
   );
 
-  // ATR-based stop + R:R to analyst target.
+  // ATR-based stop + R:R to the swing-high target.
   // Weekly ATR (data.weekly.atr) — horizon-appropriate for 2mo–1yr holds; a daily-ATR
   // stop would sit inside the noise over that timeframe. The daily-ATR band below is a
   // separate is-my-manual-stop-too-tight check, not a stop suggestion.
   const weeklyAtr = $derived(data?.weekly?.atr ?? null);
-  // Match FundamentalsBar's fallback so R:R renders whenever any target exists.
-  const analystTarget = $derived(data?.priceTarget?.data?.targetMean ?? data?.priceTarget?.data?.targetHigh ?? null);
+  // Upside target = the most significant swing high (chartAnchors, free/computed).
+  // Used only when it sits above price; at new highs there's no overhead target.
+  const upsideTarget = $derived(data?.anchors?.fib?.swingHigh ?? null);
   // Suggested stop for a long: entry − 2×ATR.
   const suggestedStop = $derived(
     currentPrice && weeklyAtr ? currentPrice - 2 * weeklyAtr : null
@@ -43,9 +44,9 @@
   // no-upside (target ≤ price) and inverted stop (stop ≥ price).
   const effectiveStop = $derived(stopLoss ?? suggestedStop);
   const rrToTarget = $derived(
-    currentPrice && analystTarget && effectiveStop &&
-    analystTarget > currentPrice && effectiveStop < currentPrice
-      ? (analystTarget - currentPrice) / (currentPrice - effectiveStop)
+    currentPrice && upsideTarget && effectiveStop &&
+    upsideTarget > currentPrice && effectiveStop < currentPrice
+      ? (upsideTarget - currentPrice) / (currentPrice - effectiveStop)
       : null
   );
 
@@ -207,7 +208,7 @@
         </div>
       {/if}
 
-      <!-- ATR-based suggested stop + R:R to analyst target -->
+      <!-- ATR-based suggested stop + R:R to the swing-high target -->
       {#if suggestedStop !== null || rrToTarget !== null}
         <div class="grid grid-cols-2 gap-3">
           {#if suggestedStop !== null}
@@ -225,7 +226,7 @@
               <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
                 1:{rrToTarget.toFixed(1)}
               </p>
-              <p class="text-[10px] text-text-muted mt-0.5">target {formatUSD(analystTarget)}</p>
+              <p class="text-[10px] text-text-muted mt-0.5">target {formatUSD(upsideTarget)} (swing high)</p>
             </div>
           {/if}
         </div>

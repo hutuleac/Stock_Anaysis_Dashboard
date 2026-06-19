@@ -95,7 +95,7 @@ Offline-first stock analysis dashboard for retail swing traders. Svelte 5 + Vite
 ```
 src/lib/
   indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch)
-  scoring.js          — 9-signal scoring engine, thesis generator, badge logic
+  scoring.js          — multi-signal scoring engine, thesis generator, badge logic
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)

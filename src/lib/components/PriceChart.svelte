@@ -7,7 +7,7 @@
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeMACDSeries, computeRSISeries, computeBBSeries } from '../indicators.js';
 
-  let { symbol, priceTarget = null } = $props();
+  let { symbol } = $props();
 
   let container      = $state(null);
   let chart          = null;
@@ -42,9 +42,8 @@
   let showRSI        = $state(true);
   let showBB         = $state(true);
 
-  // Annotations (PT lines + earnings markers)
+  // Annotations (earnings markers)
   let showAnnotations = $state(true);
-  let ptLineRefs      = { low: null, mean: null, high: null };
 
   // Fib + FVG anchors (daily only)
   let showFib     = $state(false);
@@ -180,21 +179,6 @@
     }).filter(Boolean);
   }
 
-  // ─── Analyst Price Target Lines ─────────────────────────────────────────────
-
-  function clearPTLines() {
-    for (const k of ['low', 'mean', 'high']) {
-      if (ptLineRefs[k]) { series?.removePriceLine(ptLineRefs[k]); ptLineRefs[k] = null; }
-    }
-  }
-
-  function setAnalystTargetLines(pt) {
-    if (!series || !pt) return;
-    clearPTLines();
-    if (pt.targetLow  != null) ptLineRefs.low  = series.createPriceLine({ price: pt.targetLow,  color: '#ef444470', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: `PT↓ $${pt.targetLow.toFixed(0)}`  });
-    if (pt.targetMean != null) ptLineRefs.mean = series.createPriceLine({ price: pt.targetMean, color: '#f59e0b',   lineWidth: 1, lineStyle: 2, axisLabelVisible: true,  title: `PT $${pt.targetMean.toFixed(0)}`  });
-    if (pt.targetHigh != null) ptLineRefs.high = series.createPriceLine({ price: pt.targetHigh, color: '#22c55e70', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: `PT↑ $${pt.targetHigh.toFixed(0)}` });
-  }
 
   // ─── Earnings Markers ───────────────────────────────────────────────────────
 
@@ -571,13 +555,6 @@
     if (sl) stopLine = series.createPriceLine({ price: sl, color: '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `SL $${sl.toFixed(2)}` });
   });
 
-  // Analyst price target lines (reactive to prop + annotations toggle)
-  $effect(() => {
-    priceTarget; showAnnotations; chartReady;
-    if (!chartReady || !series) return;
-    if (showAnnotations && priceTarget) setAnalystTargetLines(priceTarget);
-    else clearPTLines();
-  });
 
   // Volume profile (reactive to toggle)
   $effect(() => {
@@ -633,7 +610,7 @@
       <div class="flex items-center gap-0.5 border-r border-border pr-2">
         <button
           class="px-1.5 py-0.5 text-xs rounded transition-colors {showAnnotations ? 'text-uncertain' : 'text-text-muted opacity-40'}"
-          title="Analyst targets + earnings markers"
+          title="Earnings markers"
           onclick={() => showAnnotations = !showAnnotations}
         >📌</button>
         <button

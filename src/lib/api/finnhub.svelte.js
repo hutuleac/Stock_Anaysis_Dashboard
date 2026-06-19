@@ -137,12 +137,6 @@ export async function fetchEarnings(symbol) {
   );
 }
 
-export async function fetchPriceTarget(symbol) {
-  return fetchWithCache('fundamentals', `pt_${symbol}`, () =>
-    fetchFinnhub(`/stock/price-target?symbol=${encodeURIComponent(symbol)}`)
-  );
-}
-
 export async function fetchNews(symbol) {
   const now = new Date();
   const to = now.toISOString().split('T')[0];
@@ -197,7 +191,6 @@ export function hydrateFromCache(symbols) {
       quote:          { data: readStale(cacheKey('quote', symbol)),                stale: true },
       earnings:       { data: readStale(cacheKey('earnings', symbol)),             stale: true },
       metrics:        { data: readStale(cacheKey('fundamentals', symbol)),         stale: true },
-      priceTarget:    { data: readStale(cacheKey('fundamentals', `pt_${symbol}`)), stale: true },
       news:           { data: readStale(cacheKey('news', symbol)),                 stale: true },
       insider:        { data: readStale(cacheKey('insider', symbol)),              stale: true },
       _candlesDaily:  readStale(cacheKey('candles', `${symbol}_D`)),
@@ -217,16 +210,15 @@ export async function refreshAll(symbols, onProgress) {
     refreshProgress = { current: i + 1, total: symbols.length };
     onProgress?.(refreshProgress);
 
-    const [quote, earnings, metrics, priceTarget, news, insider] = await Promise.all([
+    const [quote, earnings, metrics, news, insider] = await Promise.all([
       fetchQuote(symbol),
       fetchEarnings(symbol),
       fetchMetrics(symbol),
-      fetchPriceTarget(symbol),
       fetchNews(symbol),
       fetchInsiderTransactions(symbol),
     ]);
 
-    results[symbol] = { quote, earnings, metrics, priceTarget, news, insider };
+    results[symbol] = { quote, earnings, metrics, news, insider };
 
     if (i < symbols.length - 1) await delay(CALL_DELAY_MS);
   }

@@ -244,6 +244,7 @@ npm run test:watch  # watch mode (dev)
 
 ### v0.13 (2026-06-19)
 - **Chart anchors** — four price-anchored signals from one zero-API-call module (`chartAnchors.js`, computed on daily candles). **AVWAP** (anchored to the most significant swing low — institutional cost basis) and **POC + value area** surface as Fundamentals-Bar pills; **Fibonacci retracements** and **Fair Value Gaps** are optional daily-only chart overlays (FIB/FVG toggles). AVWAP-reclaimed + POC-not-below nudge a name's Setup-Radar readiness one tier (WATCH→SOON→ACT); the calibrated `computeScore` and `signals.js` are untouched.
+- **Removed Analyst Target** — Finnhub's `/stock/price-target` is premium-only, so the cell was always empty on the free tier. Dropped from the UI, the scoring engine (fundamental factor count 3→2; the flat-neutral placeholder it injected was biasing every fundamental sub-score), the thesis generator, and the chart's PT overlay lines — one fewer API call per ticker. EntryPanel's R:R now targets the most significant **swing high** (from the new chart anchors) instead of the analyst target, keeping R:R alive without the premium endpoint.
 - 19 new unit tests (163 total).
 
 ### v0.12 (2026-06-17)
