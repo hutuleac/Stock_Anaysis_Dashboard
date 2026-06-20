@@ -44,10 +44,12 @@
   let showAnnotations = $state(true);
 
   // Fib + FVG anchors (daily only)
-  let showFib     = $state(false);
-  let showFVG     = $state(false);
-  let fibLineRefs = [];          // createPriceLine refs to clear
-  let fvgRects    = $state([]);  // {y, height} pixel rects for FVG SVG
+  let showFib        = $state(false);
+  let showFVG        = $state(false);
+  let showSupport    = $state(false);
+  let fibLineRefs    = [];          // createPriceLine refs to clear
+  let supportLineRefs = [];         // createPriceLine refs for swing-low levels
+  let fvgRects       = $state([]);  // {y, height} pixel rects for FVG SVG
 
   // Drawing tools
   let drawingMode   = $state(null);   // 'hline' | 'trendline' | 'rect' | null
@@ -170,6 +172,29 @@
       if (yT == null || yB == null) return null;
       return { y: Math.min(yT, yB), height: Math.abs(yB - yT) };
     }).filter(Boolean);
+  }
+
+  function clearSupportLines() {
+    if (series) for (const ref of supportLineRefs) series.removePriceLine(ref);
+    supportLineRefs = [];
+  }
+
+  function updateSupportLines() {
+    clearSupportLines();
+    if (!series || isIntraday || !showSupport) return;
+    const levels = getTickerData(symbol)?.indicators?.swingLows;
+    if (!levels?.length) return;
+    const labels = ['S1', 'S2', 'S3'];
+    for (let i = 0; i < levels.length; i++) {
+      supportLineRefs.push(series.createPriceLine({
+        price: levels[i].price,
+        color: '#22c55e99',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: `${labels[i]} $${levels[i].price}`,
+      }));
+    }
   }
 
   // ─── Earnings Markers ───────────────────────────────────────────────────────
@@ -565,6 +590,12 @@
     showFVG; symbol; chartReady; candleCount;
     if (chartReady) updateFvgRects();
   });
+
+  // Swing-low support lines (reactive to toggle / symbol / data)
+  $effect(() => {
+    showSupport; symbol; chartReady; candleCount;
+    if (chartReady) updateSupportLines();
+  });
 </script>
 
 <div class="bg-surface-900 rounded-lg border border-border overflow-hidden">
@@ -617,6 +648,11 @@
             title="Fair value gaps (daily)"
             onclick={() => showFVG = !showFVG}
           >FVG</button>
+          <button
+            class="px-1.5 py-0.5 text-xs rounded font-mono transition-colors {showSupport ? 'text-emerald-400' : 'text-text-muted opacity-40'}"
+            title="Swing-low support levels S1/S2/S3 (daily)"
+            onclick={() => showSupport = !showSupport}
+          >SUP</button>
         {/if}
         {#if !isIntraday}
           <button

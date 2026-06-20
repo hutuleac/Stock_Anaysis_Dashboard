@@ -270,6 +270,18 @@ export const TIPS = {
     why: 'Leaders keep leading. Buying relative-strength names in an uptrend beats bottom-fishing laggards. Pair 1M (recent) with 3M (sustained) to filter one-week pops.',
   },
 
+  swingLows: {
+    title: 'Swing-Low Support',
+    subtitle: 'Last 3 significant pivot lows (daily)',
+    category: 'Pullback',
+    description: 'Auto-detected daily pivot lows — bars where price is the lowest point across the surrounding 5 sessions on each side. These are the mean-reversion entry anchors: price returning toward a prior swing low is the classic pullback-to-support setup.',
+    levels: [
+      { range: 'S1 nearest', label: 'Closest support',  color: C.green, desc: 'Most recent pivot low — the first line of defence on a pullback.' },
+      { range: 'S2 / S3',    label: 'Deeper supports',  color: C.dim,   desc: 'Older swing lows; relevant if price breaks through S1.' },
+    ],
+    why: 'Swing lows mark where buyers previously stepped in. A pullback to S1 with RSI oversold and OBV holding = high-conviction mean-reversion setup. Display-only — does not feed the score.',
+  },
+
   roc: {
     title: 'Rate of Change (ROC)',
     subtitle: 'Price momentum over 20d / 60d',

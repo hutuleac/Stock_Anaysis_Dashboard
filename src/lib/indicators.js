@@ -285,6 +285,26 @@ export function proximityTo52wHigh(price, high52w, threshold = 3) {
   return { pctFromHigh: Math.round(pct * 10) / 10, near: pct <= threshold };
 }
 
+// ── Swing-low support levels ──────────────────────────────────────────────────
+// Finds up to `maxLevels` significant pivot lows in the daily lows array.
+// A pivot low at index i requires lows[i] to be the minimum across the
+// [i-window .. i+window] neighbourhood. Returns most-recent first.
+export function computeSwingLows(lows, window = 5, maxLevels = 3) {
+  if (!lows || lows.length < window * 2 + 1) return [];
+  const results = [];
+  // Scan right-to-left so we collect the most recent pivots first.
+  // Stop `window` bars from each end so the neighbourhood is always full.
+  for (let i = lows.length - 1 - window; i >= window && results.length < maxLevels; i--) {
+    const candidate = lows[i];
+    let isPivot = true;
+    for (let j = i - window; j <= i + window; j++) {
+      if (j !== i && lows[j] <= candidate) { isPivot = false; break; }
+    }
+    if (isPivot) results.push({ price: Math.round(candidate * 100) / 100, barsAgo: lows.length - 1 - i });
+  }
+  return results;
+}
+
 // ── 52w-high volume confirmation ──────────────────────────────────────────────
 // Checks whether recent volume (last `recentBars` sessions) is above the
 // trailing `avgBars`-session average. ratio ≥ 1.2 = confirmed. Used to
@@ -335,6 +355,7 @@ export function computeIndicatorsFromCandles(raw) {
   const volumes = raw.v ?? [];
   const obvResult = volumes.length >= closes.length ? computeOBV(closes, volumes) : null;
   const volConfirmation = volumes.length >= 20 ? computeVolumeConfirmation(volumes) : null;
+  const swingLows = hasOHLC ? computeSwingLows(lows) : [];
 
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
@@ -362,6 +383,7 @@ export function computeIndicatorsFromCandles(raw) {
     oversoldConfluence: computeOversoldConfluence(lastClose, rsiCurr, bbResult),
     obv: obvResult,
     volConfirmation,
+    swingLows,
     source: 'local',
   };
 }

@@ -14,6 +14,7 @@ import {
   proximityTo52wHigh,
   computeOBV,
   computeVolumeConfirmation,
+  computeSwingLows,
 } from '../src/lib/indicators.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -564,5 +565,59 @@ describe('computeVolumeConfirmation', () => {
     const r = computeVolumeConfirmation(vols);
     expect(r.ratio).toBeCloseTo(1.0, 1);
     expect(r.confirmed).toBe(false);
+  });
+});
+
+// ─── computeSwingLows ─────────────────────────────────────────────────────────
+describe('computeSwingLows', () => {
+  it('returns empty array on missing or too-short input', () => {
+    expect(computeSwingLows(null)).toEqual([]);
+    expect(computeSwingLows([])).toEqual([]);
+    expect(computeSwingLows(Array(10).fill(100))).toEqual([]); // < 2*window+1
+  });
+
+  it('detects a clear pivot low', () => {
+    // 15 bars: flat at 100, dips to 80 in the middle, flat again
+    const lows = [...Array(7).fill(100), 80, ...Array(7).fill(100)];
+    const result = computeSwingLows(lows);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].price).toBe(80);
+  });
+
+  it('returns at most maxLevels results', () => {
+    // Create 3 clear pivot lows spaced well apart
+    const lows = [
+      ...Array(6).fill(100), 70, ...Array(6).fill(100),  // pivot at index 6
+      ...Array(6).fill(100), 75, ...Array(6).fill(100),  // pivot at index 19
+      ...Array(6).fill(100), 80, ...Array(5).fill(100),  // pivot at index 32
+    ];
+    const result = computeSwingLows(lows);
+    expect(result.length).toBeLessThanOrEqual(3);
+  });
+
+  it('returns results sorted most-recent first', () => {
+    const lows = [
+      ...Array(6).fill(100), 70, ...Array(6).fill(100),  // older pivot
+      ...Array(6).fill(100), 80, ...Array(5).fill(100),  // more recent pivot
+    ];
+    const result = computeSwingLows(lows);
+    if (result.length >= 2) {
+      expect(result[0].barsAgo).toBeLessThan(result[1].barsAgo);
+    }
+  });
+
+  it('does not flag a bar that is tied with a neighbour', () => {
+    // Two equal lows side by side — neither is strictly the minimum
+    const lows = [...Array(5).fill(100), 80, 80, ...Array(5).fill(100)];
+    const result = computeSwingLows(lows);
+    expect(result.every(r => r.price !== 80)).toBe(true);
+  });
+
+  it('barsAgo is correct', () => {
+    // Pivot is 6 bars from the right end (window=5, so index = length-1-5=last-window)
+    const lows = [...Array(5).fill(100), 80, ...Array(5).fill(100)];
+    // lows.length = 11, pivot at index 5, barsAgo = 11-1-5 = 5
+    const result = computeSwingLows(lows);
+    expect(result[0].barsAgo).toBe(5);
   });
 });
