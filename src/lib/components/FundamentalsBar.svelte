@@ -419,6 +419,20 @@
       </div>
     {/if}
 
+    <!-- OBV — accumulation/distribution from candle volume -->
+    {#if data?.indicators?.obv != null}
+      {@const obv = data.indicators.obv}
+      {@const trend = obv.trend}
+      {@const obvColor = trend === 'rising' ? 'text-bull-strong' : trend === 'falling' ? 'text-bear-strong' : 'text-text-muted'}
+      {@const obvCssColor = trend === 'rising' ? '#22c55e' : trend === 'falling' ? '#ef4444' : '#9ca3af'}
+      {@const obvLabel = trend === 'rising' ? 'Accumulation' : trend === 'falling' ? 'Distribution' : 'Neutral'}
+      <div class="flex flex-col min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.obv, current: { value: obvLabel, label: obvLabel, color: obvCssColor } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">OBV</span>
+        <span class="text-sm font-semibold mt-0.5 {obvColor}">{obvLabel}</span>
+        <span class="text-[12px] {obvColor}">{trend === 'rising' ? '▲' : trend === 'falling' ? '▼' : '→'} trend</span>
+      </div>
+    {/if}
+
     <!-- Volume ratio — from TwelveData live quote -->
     {#if tdQuote?.volume && tdQuote?.avgVolume}
       {@const ratio = tdQuote.volumeRatio}

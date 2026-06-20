@@ -241,6 +241,32 @@ export function computeEmaStack(price, ema20, ema50, ema200) {
   return n === 3 ? 'BULL_STACK' : n === 0 ? 'BROKEN' : 'PARTIAL';
 }
 
+// ── OBV (On-Balance Volume) ───────────────────────────────────────────────────
+// Cumulative volume: +vol on up-close days, -vol on down-close days.
+// Returns { obv, trend } where trend is 'rising'|'falling'|'flat' based on
+// whether the OBV 20-bar EMA is above or below its value 10 bars ago.
+export function computeOBV(closes, volumes) {
+  if (!closes || !volumes || closes.length < 2 || volumes.length < closes.length) return null;
+
+  const obv = [0];
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i] > closes[i - 1])      obv.push(obv[i - 1] + volumes[i]);
+    else if (closes[i] < closes[i - 1]) obv.push(obv[i - 1] - volumes[i]);
+    else                                 obv.push(obv[i - 1]);
+  }
+
+  // Smooth OBV with a 20-bar EMA, then compare current vs 10 bars ago
+  const smoothed = emaArray(obv, 20);
+  if (smoothed.length < 11) return { obv: obv[obv.length - 1], trend: null };
+
+  const curr = smoothed[smoothed.length - 1];
+  const prev = smoothed[smoothed.length - 11];
+  const pctChange = (curr - prev) / (Math.abs(prev) || 1) * 100;
+  const trend = pctChange > 1 ? 'rising' : pctChange < -1 ? 'falling' : 'flat';
+
+  return { obv: Math.round(obv[obv.length - 1]), trend };
+}
+
 // ── BB + RSI oversold confluence ─────────────────────────────────────────────
 // RSI < 35 AND price at/below the lower Bollinger band (+2% tolerance).
 // High-conviction mean-reversion entry tell. Returns false on missing inputs.
@@ -292,6 +318,8 @@ export function computeIndicatorsFromCandles(raw) {
   const lastClose = closes[closes.length - 1];
   const roc20 = priceReturn(closes, 20);
   const roc60 = priceReturn(closes, 60);
+  const volumes = raw.v ?? [];
+  const obvResult = volumes.length >= closes.length ? computeOBV(closes, volumes) : null;
 
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
@@ -317,6 +345,7 @@ export function computeIndicatorsFromCandles(raw) {
     roc20: roc20 !== null ? Math.round(roc20 * 10) / 10 : null,
     roc60: roc60 !== null ? Math.round(roc60 * 10) / 10 : null,
     oversoldConfluence: computeOversoldConfluence(lastClose, rsiCurr, bbResult),
+    obv: obvResult,
     source: 'local',
   };
 }

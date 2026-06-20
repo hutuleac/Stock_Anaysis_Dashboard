@@ -12,6 +12,7 @@ import {
   computeEmaStack,
   computeOversoldConfluence,
   proximityTo52wHigh,
+  computeOBV,
 } from '../src/lib/indicators.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -459,5 +460,63 @@ describe('proximityTo52wHigh', () => {
     const r = proximityTo52wHigh(105, 100);
     expect(r.pctFromHigh).toBeLessThan(0);
     expect(r.near).toBe(true);
+  });
+});
+
+// ─── computeOBV ───────────────────────────────────────────────────────────────
+describe('computeOBV', () => {
+  it('returns null on missing or insufficient inputs', () => {
+    expect(computeOBV(null, [100])).toBeNull();
+    expect(computeOBV([100], null)).toBeNull();
+    expect(computeOBV([100], [100])).toBeNull(); // needs ≥ 2 closes
+    expect(computeOBV([100, 101], [100])).toBeNull(); // volumes shorter than closes
+  });
+
+  it('adds volume on up-close days', () => {
+    const closes  = [100, 101, 102];
+    const volumes = [1000, 2000, 3000];
+    const r = computeOBV(closes, volumes);
+    // OBV: 0 → +2000 → +5000
+    expect(r.obv).toBe(5000);
+  });
+
+  it('subtracts volume on down-close days', () => {
+    const closes  = [102, 101, 100];
+    const volumes = [1000, 2000, 3000];
+    const r = computeOBV(closes, volumes);
+    // OBV: 0 → -2000 → -5000
+    expect(r.obv).toBe(-5000);
+  });
+
+  it('holds OBV unchanged on flat close', () => {
+    const closes  = [100, 100, 100];
+    const volumes = [1000, 2000, 3000];
+    const r = computeOBV(closes, volumes);
+    expect(r.obv).toBe(0);
+  });
+
+  it('returns rising trend when OBV consistently increases', () => {
+    // Build 40 bars of steadily rising closes + high volume so OBV trends up
+    const n = 40;
+    const closes  = Array.from({ length: n }, (_, i) => 100 + i);
+    const volumes = Array(n).fill(100_000);
+    const r = computeOBV(closes, volumes);
+    expect(r.trend).toBe('rising');
+  });
+
+  it('returns falling trend when OBV consistently decreases', () => {
+    const n = 40;
+    const closes  = Array.from({ length: n }, (_, i) => 100 - i);
+    const volumes = Array(n).fill(100_000);
+    const r = computeOBV(closes, volumes);
+    expect(r.trend).toBe('falling');
+  });
+
+  it('returns null trend when smoothed series is too short', () => {
+    // Only 3 bars — 20-bar EMA can't produce 11 values
+    const closes  = [100, 101, 100];
+    const volumes = [1000, 1000, 1000];
+    const r = computeOBV(closes, volumes);
+    expect(r.trend).toBeNull();
   });
 });
