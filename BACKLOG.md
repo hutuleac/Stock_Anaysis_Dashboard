@@ -19,30 +19,15 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 
 ## Open queue (priority order)
 
-### 1. OBV (On-Balance Volume)
-- Accumulation/distribution read from existing OHLCV. OBV rising while price consolidates = accumulation; OBV falling while price holds = distribution warning.
-- Add to `computeIndicatorsFromCandles` (`indicators.js`); display-only cell + tooltip.
-- Cost: **0 calls** (existing candle `v` array).
-
-### 2. 52-week-high volume confirmation
-- Extends the shipped proximity chip (`proximityTo52wHigh`): a breakout near the 52w high is stronger on above-average volume.
-- Overlay a volume-confirmation flag on the existing chip using the candle `v` array.
-- Cost: **0 calls**.
-
-### 3. Swing-low support levels
-- Auto-detect the last ~3 significant lows from daily candles — the mean-reversion entry anchor (price returning to prior support).
-- Compute in `indicators.js`; surface in the Pullback view + as chart lines.
-- Cost: **0 calls**.
-
-### 4. Beta-adjusted position sizing
-- Finnhub metrics already expose `beta`. High beta + wide ATR → suggest a smaller position.
-- Requires a one-time account-size input in Settings; then feed the 2%-rule sizing in EntryPanel.
-- Cost: **0 calls** (beta already in metrics).
+### ~~1. OBV (On-Balance Volume)~~ ✓ DONE (v0.15)
+### ~~2. 52-week-high volume confirmation~~ ✓ DONE (v0.15)
+### ~~3. Swing-low support levels~~ ✓ DONE (v0.15)
+### ~~4. Beta-adjusted position sizing~~ ✓ DONE (v0.15)
 
 ### 5. Short interest *(needs a new endpoint — approve first)*
 - Finnhub `/stock/short-interest`. High short % + improving fundamentals = potential squeeze; most relevant for mid/small caps.
-- Add to `finnhub.svelte.js`, display alongside insider transactions.
-- Cost: **+1 call/ticker** — the only queued item that isn't free. Decide if it's worth the rate-limit budget.
+- Add to `finnhub.svelte.js`, display in Fundamentals Bar.
+- Cost: **+1 call/ticker** — free tier endpoint, but adds to rate-limit budget. Approve before building.
 
 ### 6. Ticker-search edge cases *(carried over from old TODOS)*
 - Search works, but failure/ambiguity states are undefined: no results, multiple matches (e.g. "META" → Meta + Metavisio), `/search` down, debounce timing, US-exchange filtering.
