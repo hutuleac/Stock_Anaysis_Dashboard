@@ -7,7 +7,6 @@ const CACHE_TTL = {
   news: 86400,
   candles: 86400,
   candles_intraday: 900, // 15 min — intraday data refreshes frequently
-  insider: 604800,
   feargreed:    3600,       // CNN Fear & Greed — 1 hour
   earnings_hist: 86400,    // historical earnings surprises — 24h
 };
@@ -168,15 +167,6 @@ export async function searchTicker(query) {
   });
 }
 
-export async function fetchInsiderTransactions(symbol) {
-  const now = new Date();
-  const to = now.toISOString().split('T')[0];
-  const from = new Date(now - 90 * 86400000).toISOString().split('T')[0];
-  return fetchWithCache('insider', symbol, () =>
-    fetchFinnhub(`/stock/insider-transactions?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`)
-  );
-}
-
 // Hydrate all cached data for symbols without TTL checks (startup, no API calls)
 export function hydrateFromCache(symbols) {
   const results = {};
@@ -194,7 +184,6 @@ export function hydrateFromCache(symbols) {
       metrics:        { data: readStale(cacheKey('fundamentals', symbol)),         stale: true },
 
       news:           { data: readStale(cacheKey('news', symbol)),                 stale: true },
-      insider:        { data: readStale(cacheKey('insider', symbol)),              stale: true },
       _candlesDaily:  readStale(cacheKey('candles', `${symbol}_D`)),
       _candlesWeekly: readStale(cacheKey('candles', `${symbol}_W`)),
     };
@@ -212,15 +201,14 @@ export async function refreshAll(symbols, onProgress) {
     refreshProgress = { current: i + 1, total: symbols.length };
     onProgress?.(refreshProgress);
 
-    const [quote, earnings, metrics, news, insider] = await Promise.all([
+    const [quote, earnings, metrics, news] = await Promise.all([
       fetchQuote(symbol),
       fetchEarnings(symbol),
       fetchMetrics(symbol),
       fetchNews(symbol),
-      fetchInsiderTransactions(symbol),
     ]);
 
-    results[symbol] = { quote, earnings, metrics, news, insider };
+    results[symbol] = { quote, earnings, metrics, news };
 
     if (i < symbols.length - 1) await delay(CALL_DELAY_MS);
   }

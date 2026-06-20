@@ -30,7 +30,6 @@ function makeTicker({
   high52 = null,
   low52 = null,
   sectorTrend = null,
-  insider = null,
   news = null,
 } = {}) {
   return {
@@ -49,7 +48,6 @@ function makeTicker({
     },
     news: news ?? null,
     sectorTrend,
-    insider: insider ?? null,
     indicators: {
       rsi,
       macd: macd ? { histogram: macd.histogram, macd: macd.macd, signal: macd.signal } : null,

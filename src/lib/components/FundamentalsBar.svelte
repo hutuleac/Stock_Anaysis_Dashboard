@@ -12,25 +12,6 @@
   const price = $derived(data?.quote?.data?.c ?? null);
   const anchors = $derived(data?.anchors ?? null);
 
-  const insiderNet = $derived(() => {
-    const txns = data?.insider?.data?.data;
-    if (!Array.isArray(txns) || txns.length === 0) return null;
-    let net = 0;
-    for (const t of txns) {
-      const type = (t.transactionType || '').toUpperCase();
-      if (type === 'P-PURCHASE' || type === 'BUY') net += t.share ?? 0;
-      else if (type === 'S-SALE' || type === 'SELL') net -= t.share ?? 0;
-    }
-    return net;
-  });
-
-  function fmtInsider(net) {
-    if (net === null) return '—';
-    const abs = Math.abs(net);
-    const str = abs >= 1000 ? `${(abs / 1000).toFixed(0)}K` : `${abs}`;
-    return (net >= 0 ? '+' : '-') + str;
-  }
-
   function fmt(val, prefix = '', suffix = '', decimals = 1) {
     if (val == null || isNaN(val)) return '—';
     return `${prefix}${Number(val).toFixed(decimals)}${suffix}`;
@@ -169,21 +150,6 @@
         </div>
       </div>
     {/each}
-
-    <!-- Insider net (90d) -->
-    {#if insiderNet() !== null}
-      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={TIPS.insider}>
-        <span class="text-[13px] text-text-muted uppercase tracking-wider">Insider 90d</span>
-        <span class="text-sm font-mono font-semibold mt-0.5 {insiderNet() > 0 ? 'text-bull-strong' : insiderNet() < 0 ? 'text-bear-strong' : 'text-text-muted'}">
-          {fmtInsider(insiderNet())} shares
-        </span>
-      </div>
-    {:else}
-      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={TIPS.insider}>
-        <span class="text-[13px] text-text-muted uppercase tracking-wider">Insider 90d</span>
-        <span class="text-sm font-mono font-semibold text-text-muted mt-0.5">—</span>
-      </div>
-    {/if}
 
     <!-- RSI(14) — from TwelveData if available -->
     {#if data?.indicators?.rsi != null}

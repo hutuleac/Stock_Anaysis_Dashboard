@@ -338,7 +338,7 @@ export const TIPS = {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',
     category: 'Composite',
-    description: 'The three pillars of the composite score. T scores price action and momentum signals. F scores valuation and earnings quality. S scores insider activity, news sentiment, and positioning. Weights shown are regime-adjusted when VIX is elevated.',
+    description: 'The three pillars of the composite score. T scores price action and momentum signals. F scores valuation and earnings quality. S scores news sentiment and sector positioning. Weights shown are regime-adjusted when VIX is elevated.',
     levels: [
       { range: '> 60',  label: 'Bullish',  color: C.green, desc: 'This pillar is sending a bullish signal — contributes positively to overall score.' },
       { range: '40–60', label: 'Neutral',  color: C.dim,   desc: 'Neutral pillar — neither confirming nor contradicting the thesis.' },
@@ -391,42 +391,26 @@ export const TIPS = {
     why: 'Small caps move faster with more upside but also more fake-outs. Large caps have cleaner technicals due to institutional positioning and higher analyst scrutiny.',
   },
 
-  insider: {
-    title: 'Insider Activity (90d)',
-    subtitle: 'Net Share Buys vs Sells',
-    category: 'Sentiment',
-    description: 'Net shares bought minus sold by corporate insiders over 90 days. Insider buying is highly informative — executives risk their own capital. Selling is less meaningful (diversification, taxes).',
-    levels: [
-      { range: 'Net buy (large)',  label: 'Bullish',  color: C.green,  desc: 'Insiders aggressively buying — the people who know the company best are backing it with their money.' },
-      { range: 'Net buy (small)',  label: 'Mild buy', color: C.amber,  desc: 'Some insider buying — modest positive signal.' },
-      { range: 'Neutral',          label: 'Flat',     color: C.dim,    desc: 'No meaningful activity. Neutral signal.' },
-      { range: 'Net sell (small)', label: 'Routine',  color: C.dim,    desc: 'Modest selling — often diversification or tax-driven. Not necessarily bearish.' },
-      { range: 'Net sell (large)', label: 'Bearish',  color: C.red,    desc: 'Heavy insider selling across multiple executives — take it seriously.' },
-    ],
-    why: 'Insider buying is one of the strongest forward-looking signals in finance. Academic research consistently shows stocks with high insider buying outperform over 6–12 months.',
-  },
-
   setupBadge: {
     title: 'Setup Badge',
-    subtitle: 'Pre-Buy Checklist Verdict',
+    subtitle: 'Score-Based Verdict',
     category: 'Composite',
-    description: 'A one-word verdict combining the composite score and pre-buy checklist. Tells you at a glance whether a ticker is actionable right now.',
+    description: 'A one-word verdict based on the composite score. Tells you at a glance whether a ticker is actionable right now.',
     levels: [
-      { range: 'BULL',    label: 'Bullish',     color: C.green,  desc: 'Score ≥ 70 + checklist clear. Strong setup with broad signal alignment — ready to trade.' },
+      { range: 'BULL',    label: 'Bullish',     color: C.green,  desc: 'Score ≥ 70. Strong setup with broad signal alignment — high-conviction candidate.' },
       { range: 'WATCH',   label: 'Watch',       color: C.amber,  desc: 'Score 55–70. Favorable but not fully confirmed — monitor for a catalyst or entry trigger.' },
-      { range: 'SPEC',    label: 'Speculative', color: C.orange, desc: 'Score 55+ but checklist has soft warnings. Higher risk — use smaller size if trading.' },
+      { range: 'SPEC',    label: 'Speculative', color: C.orange, desc: 'Score 55+ with mixed signals. Higher risk — use smaller size if trading.' },
       { range: 'WEAK',    label: 'Weak',        color: C.orange, desc: 'Score 30–55. More bearish than bullish signals. Avoid new longs.' },
       { range: 'BEAR',    label: 'Bearish',     color: C.red,    desc: 'Score < 30. Broad signal weakness — high risk for longs, consider shorts.' },
-      { range: 'BLOCKED', label: 'Blocked',     color: C.red,    desc: 'Hard checklist warning active (earnings imminent, key level broken). Do not trade.' },
     ],
-    why: 'A fast-scan signal for watchlist triage. Use it to shortlist candidates, not as a standalone trade trigger. Always open the detail panel to review the checklist and pillar breakdown before acting.',
+    why: 'A fast-scan signal for watchlist triage. Use it to shortlist candidates, not as a standalone trade trigger. Always review the pillar breakdown before acting.',
   },
 
   topSetups: {
     title: 'Top Setups',
     subtitle: 'Highest-Scoring Actionable Tickers',
     category: 'Morning Brief',
-    description: 'The top 3 tickers from your watchlist with composite score ≥ 55, sorted by score. Blocked tickers are excluded regardless of score.',
+    description: 'The top 3 tickers from your watchlist with composite score ≥ 55, sorted by score.',
     levels: [
       { range: 'Score ≥ 72', label: 'Prime',  color: C.green, desc: 'High-conviction setup — broad signal alignment. Best candidates for full-size position.' },
       { range: '55–72',      label: 'Watch',  color: C.amber, desc: 'Favorable but not at full strength. Monitor for an entry trigger or wait for confirmation.' },
@@ -473,19 +457,6 @@ export const TIPS = {
     why: 'Moves above 3% often accompany news, earnings surprises, or sector rotation. A gap up on high volume can start a sustained move; a gap down may fully invalidate the setup.',
   },
 
-  blockedTickers: {
-    title: 'Blocked Tickers',
-    subtitle: 'Pre-Buy Checklist Hard Warnings',
-    category: 'Morning Brief',
-    description: 'Tickers where the pre-buy checklist has triggered a hard warning — conditions representing unacceptable risk for a new trade entry. Ignore the score; the block takes priority.',
-    levels: [
-      { range: 'Earnings < 3d', label: 'Earnings risk',  color: C.red, desc: 'Report is imminent. Binary event — exit, hedge, or stay flat. No fresh positions.' },
-      { range: 'Stop hit',      label: 'Level broken',   color: C.red, desc: 'Price broke a key technical level. Original thesis is invalidated.' },
-      { range: 'Other warning', label: 'Flagged',        color: C.red, desc: 'A hard-stop checklist criterion was answered negatively.' },
-    ],
-    why: 'The checklist enforces discipline. A BLOCKED ticker may still have a high composite score — but the score cannot override a fundamental risk condition. Only dismiss a block if you consciously accept the stated risk.',
-  },
-
   sectorLeaders: {
     title: 'Sector Leaders',
     subtitle: 'Best-Performing Sector ETFs Today',
@@ -528,7 +499,7 @@ export const TIPS = {
     title: 'Composite Score',
     subtitle: 'Weighted Technical + Fundamental + Sentiment',
     category: 'Composite',
-    description: 'Combines technical (momentum, trend), fundamental (valuation, earnings), and sentiment (insider, analyst) signals into a single 0–100 score. Weights shift in high-VIX regimes to reduce technical exposure.',
+    description: 'Combines technical (momentum, trend), fundamental (valuation, earnings), and sentiment (news, sector) signals into a single 0–100 score. Weights shift in high-VIX regimes to reduce technical exposure.',
     levels: [
       { range: '70–100', label: 'Bullish',  color: C.green,  desc: 'Strong directional thesis with broad signal support. Size up with conviction.' },
       { range: '58–70',  label: 'Positive', color: C.amber,  desc: 'More bullish signals than bearish — favorable setup, not unanimous.' },

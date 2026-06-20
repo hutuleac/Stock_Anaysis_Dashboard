@@ -6,16 +6,11 @@
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
-  import ReplayPanel from './ReplayPanel.svelte';
-  import { getChecklist } from '../stores/checklist.svelte.js';
   import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
-  import PreBuyChecklist from './PreBuyChecklist.svelte';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
-  import TradeLog from './TradeLog.svelte';
   import NewsPanel from './NewsPanel.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
-  import PaperTradePanel from './PaperTradePanel.svelte';
 
   let { onTickerAdded = () => {} } = $props();
 
@@ -324,9 +319,7 @@
       {#each getSortedTickers() as ticker}
         {@const data = getTickerData(ticker.symbol)}
         {@const score = computeScore(data)}
-        {@const checklist = getChecklist(ticker.symbol)}
-        {@const isBlocked = checklist.hardWarning && !checklist.hardWarningDismissed}
-        {@const badge = getBadgeStyle(isBlocked ? 'BLOCKED' : score.badge)}
+        {@const badge = getBadgeStyle(score.badge)}
         {@const quote = data?.quote?.data}
         {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
         {@const isSelected = getSelectedSymbol() === ticker.symbol}
@@ -424,8 +417,7 @@
           <div class="bg-surface-800 border border-border/50 rounded-lg px-4 py-4 -mt-1">
             <PriceChart symbol={ticker.symbol} />
             <div class="mt-4"><FundamentalsBar symbol={ticker.symbol} /></div>
-            <div class="mt-4 grid grid-cols-1 gap-4">
-              <PreBuyChecklist symbol={ticker.symbol} />
+            <div class="mt-4">
               <EntryPanel symbol={ticker.symbol} />
             </div>
             <div class="mt-3 border-t border-border/30 pt-3">
@@ -482,9 +474,7 @@
           {#each getSortedTickers() as ticker, i}
             {@const data = getTickerData(ticker.symbol)}
             {@const score = computeScore(data)}
-            {@const checklist = getChecklist(ticker.symbol)}
-            {@const isBlocked = checklist.hardWarning && !checklist.hardWarningDismissed}
-            {@const badge = getBadgeStyle(isBlocked ? 'BLOCKED' : score.badge)}
+            {@const badge = getBadgeStyle(score.badge)}
             {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
             {@const isSelected = getSelectedSymbol() === ticker.symbol}
             {@const quote = data?.quote?.data}
@@ -754,19 +744,9 @@
                       </div>
                     {/if}
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      <PreBuyChecklist symbol={ticker.symbol} />
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <EntryPanel symbol={ticker.symbol} />
-                      <TradeLog symbol={ticker.symbol} />
                     </div>
-
-                    <!-- Paper Trades — forward-test a trade idea, track it over time -->
-                    <div class="mt-4 border-t border-border/30 pt-4">
-                      <PaperTradePanel symbol={ticker.symbol} />
-                    </div>
-
-                    <!-- Replay / Backtest panel -->
-                    <ReplayPanel symbol={ticker.symbol} />
 
                     <!-- Per-ticker notes -->
                     <div class="mt-4 border-t border-border/30 pt-4">

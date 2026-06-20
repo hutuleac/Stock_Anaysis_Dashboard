@@ -1,52 +1,42 @@
 <script>
-  import { isChecklistComplete, getChecklist } from '../stores/checklist.svelte.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';
-  import { getPosition, getPortfolioValue } from '../stores/portfolio.svelte.js';
+  import { getPortfolioValue } from '../stores/portfolio.svelte.js';
   import ThesisSummary from './ThesisSummary.svelte';
   import { getDaysToEarnings } from '../scoring.js';
 
   let { symbol } = $props();
 
-  const complete = $derived(isChecklistComplete(symbol));
-  const checklist = $derived(getChecklist(symbol));
   const data = $derived(getTickerData(symbol));
-  const position = $derived(getPosition(symbol));
 
   // Daily ATR(14) — reuse the value computed from the candles App.svelte already
-  // fetches (data.indicators.atr); no extra API call. Drives the stop-too-tight band.
+  // fetches (data.indicators.atr); no extra API call.
   const atr = $derived(data?.indicators?.atr ?? null);
 
   const currentPrice = $derived(data?.quote?.data?.c ?? null);
   const dp = $derived(data?.quote?.data?.dp ?? null);
-  const stopLoss = $derived(parseFloat(checklist.stopLoss) || null);
 
-  // Risk calculations
+  // Weekly ATR — horizon-appropriate for 2mo–1yr holds.
+  const weeklyAtr = $derived(data?.weekly?.atr ?? null);
+  // Upside target = most significant swing high (chartAnchors, computed free).
+  const upsideTarget = $derived(data?.anchors?.fib?.swingHigh ?? null);
+  // Suggested stop: entry − 2× weekly ATR.
+  const suggestedStop = $derived(
+    currentPrice && weeklyAtr ? currentPrice - 2 * weeklyAtr : null
+  );
+
+  // Risk based on suggested stop
   const riskPerShare = $derived(
-    currentPrice && stopLoss ? Math.abs(currentPrice - stopLoss) : null
+    currentPrice && suggestedStop ? Math.abs(currentPrice - suggestedStop) : null
   );
   const riskPct = $derived(
     currentPrice && riskPerShare ? ((riskPerShare / currentPrice) * 100) : null
   );
 
-  // ATR-based stop + R:R to the swing-high target.
-  // Weekly ATR (data.weekly.atr) — horizon-appropriate for 2mo–1yr holds; a daily-ATR
-  // stop would sit inside the noise over that timeframe. The daily-ATR band below is a
-  // separate is-my-manual-stop-too-tight check, not a stop suggestion.
-  const weeklyAtr = $derived(data?.weekly?.atr ?? null);
-  // Upside target = the most significant swing high (chartAnchors, free/computed).
-  // Used only when it sits above price; at new highs there's no overhead target.
-  const upsideTarget = $derived(data?.anchors?.fib?.swingHigh ?? null);
-  // Suggested stop for a long: entry − 2×ATR.
-  const suggestedStop = $derived(
-    currentPrice && weeklyAtr ? currentPrice - 2 * weeklyAtr : null
-  );
-  // R:R keys off the manual stop when set, else the suggested stop. Guarded against
-  // no-upside (target ≤ price) and inverted stop (stop ≥ price).
-  const effectiveStop = $derived(stopLoss ?? suggestedStop);
+  // R:R to swing-high target
   const rrToTarget = $derived(
-    currentPrice && upsideTarget && effectiveStop &&
-    upsideTarget > currentPrice && effectiveStop < currentPrice
-      ? (upsideTarget - currentPrice) / (currentPrice - effectiveStop)
+    currentPrice && upsideTarget && suggestedStop &&
+    upsideTarget > currentPrice && suggestedStop < currentPrice
+      ? (upsideTarget - currentPrice) / (currentPrice - suggestedStop)
       : null
   );
 
@@ -65,9 +55,9 @@
   );
 
   function getScenarios() {
-    if (!currentPrice || !stopLoss) return null;
-    const risk = Math.abs(currentPrice - stopLoss);
-    const isLong = stopLoss < currentPrice;
+    if (!currentPrice || !suggestedStop) return null;
+    const risk = Math.abs(currentPrice - suggestedStop);
+    const isLong = suggestedStop < currentPrice;
 
     return {
       base: {
@@ -84,7 +74,7 @@
       },
       stopOut: {
         label: 'Stop-out',
-        price: stopLoss,
+        price: suggestedStop,
         rr: '1:1',
         probability: 'Defined',
       },
@@ -101,28 +91,8 @@
 </script>
 
 <div class="relative">
-  {#if !complete}
-    <!-- Locked state -->
-    <div class="bg-surface-700/30 border border-border/50 rounded-lg p-6 text-center relative overflow-hidden">
-      <div class="absolute inset-0 backdrop-blur-sm bg-surface-900/60 z-10 flex flex-col items-center justify-center">
-        <div class="text-3xl mb-2 opacity-60">🔒</div>
-        <p class="text-text-muted text-sm font-medium">Complete the checklist to unlock</p>
-        <p class="text-text-muted text-xs mt-1">Risk before reward.</p>
-      </div>
-      <!-- Blurred preview -->
-      <div class="opacity-20 pointer-events-none select-none">
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div class="bg-surface-600 rounded p-3 h-16"></div>
-          <div class="bg-surface-600 rounded p-3 h-16"></div>
-        </div>
-        <div class="bg-surface-600 rounded p-3 h-24"></div>
-      </div>
-    </div>
-  {:else}
-    <!-- Unlocked state with fade-in -->
-    <div class="space-y-4 animate-[fadeIn_0.4s_ease-out]">
+    <div class="space-y-4">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-bull-strong">🔓</span>
         <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Entry Panel</h3>
       </div>
 
@@ -168,8 +138,8 @@
           <p class="font-mono font-semibold text-text-primary">{formatUSD(currentPrice)}</p>
         </div>
         <div class="bg-surface-700 rounded-lg p-3">
-          <p class="text-xs text-text-muted mb-1">Stop Loss</p>
-          <p class="font-mono font-semibold text-danger">{formatUSD(stopLoss)}</p>
+          <p class="text-xs text-text-muted mb-1">Suggested Stop (2× wk ATR)</p>
+          <p class="font-mono font-semibold text-danger">{formatUSD(suggestedStop)}</p>
         </div>
         <div class="bg-surface-700 rounded-lg p-3">
           <p class="text-xs text-text-muted mb-1">Risk / Share</p>
@@ -186,49 +156,25 @@
       <!-- ATR Volatility Band -->
       {#if atr !== null && currentPrice}
         {@const atrPct = (atr / currentPrice) * 100}
-        {@const stopTooTight = riskPerShare !== null && riskPerShare < atr * 0.5}
-        {@const stopWithinATR = riskPerShare !== null && riskPerShare < atr}
-        <div class="rounded-lg p-3 border {stopTooTight ? 'bg-danger/10 border-danger/40' : stopWithinATR ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+        <div class="rounded-lg p-3 border bg-surface-700/50 border-border/40">
           <div class="flex items-center justify-between mb-1">
-            <p class="text-xs font-semibold {stopTooTight ? 'text-danger' : stopWithinATR ? 'text-warning' : 'text-text-muted'}">
-              {stopTooTight ? '⚠ Stop within noise range' : stopWithinATR ? '⚠ Stop within 1 ATR' : '📊 Intraday Volatility (ATR 14)'}
-            </p>
+            <p class="text-xs font-semibold text-text-muted">📊 Intraday Volatility (ATR 14)</p>
             <span class="font-mono text-xs text-text-secondary">{formatUSD(atr)} / {atrPct.toFixed(1)}%</span>
           </div>
           <p class="text-[11px] text-text-muted">
             On a normal day, {symbol} moves ≈ {formatUSD(atr)} ({atrPct.toFixed(1)}%).
-            {#if stopTooTight}
-              Your stop is less than half an ATR — likely to be triggered by noise.
-            {:else if stopWithinATR}
-              Your stop is within one ATR — consider widening it or sizing down.
-            {:else}
-              Stop is beyond the daily noise range.
-            {/if}
           </p>
         </div>
       {/if}
 
-      <!-- ATR-based suggested stop + R:R to analyst target -->
-      {#if suggestedStop !== null || rrToTarget !== null}
-        <div class="grid grid-cols-2 gap-3">
-          {#if suggestedStop !== null}
-            <div class="bg-surface-700 rounded-lg p-3">
-              <p class="text-xs text-text-muted mb-1">Suggested Stop (2× wk ATR)</p>
-              <p class="font-mono font-semibold text-danger">{formatUSD(suggestedStop)}</p>
-              <p class="text-[10px] text-text-muted mt-0.5">
-                {(((currentPrice - suggestedStop) / currentPrice) * 100).toFixed(1)}% below entry
-              </p>
-            </div>
-          {/if}
-          {#if rrToTarget !== null}
-            <div class="bg-surface-700 rounded-lg p-3">
-              <p class="text-xs text-text-muted mb-1">R:R to Target{stopLoss ? '' : ' (suggested stop)'}</p>
-              <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
-                1:{rrToTarget.toFixed(1)}
-              </p>
-              <p class="text-[10px] text-text-muted mt-0.5">target {formatUSD(upsideTarget)} (swing high)</p>
-            </div>
-          {/if}
+      <!-- R:R to swing-high target -->
+      {#if rrToTarget !== null}
+        <div class="bg-surface-700 rounded-lg p-3">
+          <p class="text-xs text-text-muted mb-1">R:R to Target (swing high)</p>
+          <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
+            1:{rrToTarget.toFixed(1)}
+          </p>
+          <p class="text-[10px] text-text-muted mt-0.5">target {formatUSD(upsideTarget)}</p>
         </div>
       {/if}
 
@@ -244,7 +190,7 @@
         {:else}
           <p class="text-xs text-text-secondary">
             {#if !portfolioVal}Set portfolio value in Settings to see recommended shares.
-            {:else if !riskPerShare}Set a stop loss above to calculate position size.
+            {:else if !riskPerShare}Weekly ATR unavailable — load candle data to calculate position size.
             {/if}
           </p>
         {/if}
@@ -292,18 +238,6 @@
         </div>
       {/if}
 
-      {#if position}
-        <div class="text-xs text-uncertain bg-uncertain/10 rounded px-3 py-2">
-          Existing position: {position.qty} shares @ {formatUSD(position.avgCost)}
-        </div>
-      {/if}
     </div>
-  {/if}
 </div>
 
-<style>
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-</style>

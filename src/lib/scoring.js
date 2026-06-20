@@ -52,7 +52,7 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   if (ind?.adx    != null) techTotal++;
   if (ind?.stochK != null) techTotal++;
   let fundScore = 0, fundFactors = 0, fundTotal = 2;
-  let sentScore = 0, sentFactors = 0, sentTotal = 3;
+  let sentScore = 0, sentFactors = 0, sentTotal = 2;
 
   // Collect individual signal values for conviction scoring (only when data present)
   const signals = [];
@@ -176,18 +176,6 @@ export function computeScore(tickerData, marketContext = _marketContext) {
 
   if (tickerData.sectorTrend !== undefined && tickerData.sectorTrend !== null) {
     const v = tickerData.sectorTrend ? 0.2 : 0.8;
-    sentScore += v; sentFactors++; signals.push(v);
-  } else sentScore += 0.5;
-
-  const insiderTxns = tickerData.insider?.data?.data;
-  if (Array.isArray(insiderTxns) && insiderTxns.length > 0) {
-    let netShares = 0;
-    for (const txn of insiderTxns) {
-      const t = (txn.transactionType || '').toUpperCase();
-      if (t === 'P-PURCHASE' || t === 'BUY') netShares += txn.share ?? 0;
-      else if (t === 'S-SALE' || t === 'SELL') netShares -= txn.share ?? 0;
-    }
-    const v = netShares > 50000 ? 1 : netShares > 0 ? 0.7 : netShares > -50000 ? 0.45 : 0.15;
     sentScore += v; sentFactors++; signals.push(v);
   } else sentScore += 0.5;
 
@@ -446,21 +434,7 @@ export function generateThesis(tickerData, scoreResult) {
   if (tickerData.sectorTrend === true)  bears.push(`Sector ETF is in a downtrend — headwind for individual names.`);
   if (tickerData.sectorTrend === false) bulls.push(`Sector ETF trending up — tailwind for this setup.`);
 
-  const insiderTxns = tickerData.insider?.data?.data;
-  if (Array.isArray(insiderTxns) && insiderTxns.length > 0) {
-    let netShares = 0;
-    for (const txn of insiderTxns) {
-      const t = (txn.transactionType || '').toUpperCase();
-      if (t === 'P-PURCHASE' || t === 'BUY') netShares += txn.share ?? 0;
-      else if (t === 'S-SALE' || t === 'SELL') netShares -= txn.share ?? 0;
-    }
-    if (netShares > 50000)
-      bulls.push(`Insiders net bought ${(netShares / 1000).toFixed(0)}k shares in the last 90 days — strong conviction signal.`);
-    else if (netShares > 0)
-      bulls.push(`Modest net insider buying (${(netShares / 1000).toFixed(0)}k shares, 90d).`);
-    else if (netShares < -50000)
-      bears.push(`Insiders net sold ${(Math.abs(netShares) / 1000).toFixed(0)}k shares in the last 90 days.`);
-  }
+
 
   // ── WARNINGS ──
   const daysToEarnings = getDaysToEarnings(tickerData.earnings);
