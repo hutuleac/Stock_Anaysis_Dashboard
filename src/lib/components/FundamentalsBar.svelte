@@ -9,7 +9,6 @@
 
   const data = $derived(getTickerData(symbol));
   const m = $derived(data?.metrics?.data?.metric ?? {});
-  const pt = $derived(data?.priceTarget?.data ?? null);
   const price = $derived(data?.quote?.data?.c ?? null);
   const anchors = $derived(data?.anchors ?? null);
 
@@ -50,13 +49,6 @@
     const h = m['52WeekHigh'], l = m['52WeekLow'];
     if (!h || !l || !price || h <= l) return null;
     return Math.round(((price - l) / (h - l)) * 100);
-  });
-
-  // Analyst target premium %
-  const targetPremium = $derived(() => {
-    const t = pt?.targetMean ?? pt?.targetHigh;
-    if (!t || !price) return null;
-    return ((t - price) / price * 100).toFixed(1);
   });
 
   const tdQuote  = $derived(data?.tdQuote ?? null);
@@ -160,19 +152,13 @@
         return (v && price) ? (price > v ? 'text-bull-strong' : 'text-bear-strong') : '';
       })(),
     },
-    {
-      label: 'Analyst Target',
-      value: pt?.targetMean ? `$${pt.targetMean.toFixed(2)}` : '—',
-      note: targetPremium() ? (targetPremium() > 0 ? '+' : '') + targetPremium() + '%' : null,
-      noteColor: targetPremium() ? (parseFloat(targetPremium()) > 0 ? 'text-bull-strong' : 'text-bear-strong') : '',
-    },
   ]);
 </script>
 
 <div class="bg-surface-800/60 border border-border/50 rounded-lg px-4 py-3">
   <div class="flex flex-wrap gap-x-6 gap-y-2">
     {#each metrics as metric}
-      {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Analyst Target' ? TIPS.analystTarget : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : null}
+      {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : null}
       <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={metricTip ?? undefined}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">{metric.label}</span>
         <div class="flex items-baseline gap-1.5 mt-0.5">

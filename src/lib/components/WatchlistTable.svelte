@@ -422,7 +422,7 @@
         <!-- Mobile expansion (same detail panel) -->
         {#if isSelected}
           <div class="bg-surface-800 border border-border/50 rounded-lg px-4 py-4 -mt-1">
-            <PriceChart symbol={ticker.symbol} priceTarget={data?.priceTarget?.data ?? null} />
+            <PriceChart symbol={ticker.symbol} />
             <div class="mt-4"><FundamentalsBar symbol={ticker.symbol} /></div>
             <div class="mt-4 grid grid-cols-1 gap-4">
               <PreBuyChecklist symbol={ticker.symbol} />
@@ -697,7 +697,7 @@
                 <td colspan="9" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
-                      <PriceChart symbol={ticker.symbol} priceTarget={data?.priceTarget?.data ?? null} />
+                      <PriceChart symbol={ticker.symbol} />
                       <NewsPanel symbol={ticker.symbol} />
                     </div>
                     <div class="mb-4">
