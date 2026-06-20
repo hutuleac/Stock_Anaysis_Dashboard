@@ -443,8 +443,6 @@ export function computeBBSeries(candles, period = 20, mult = 2) {
   return { upper, middle, lower };
 }
 
-// ── Replay: compute technical snapshot at a specific candle index ─────────────
-// Used by ReplayPanel to scrub through historical dates.
 export function computeSnapshotAt(raw, index) {
   if (!raw?.c || raw.s !== 'ok') return null;
 
