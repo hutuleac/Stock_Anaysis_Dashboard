@@ -13,6 +13,7 @@ import {
   computeOversoldConfluence,
   proximityTo52wHigh,
   computeOBV,
+  computeVolumeConfirmation,
 } from '../src/lib/indicators.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -518,5 +519,50 @@ describe('computeOBV', () => {
     const volumes = [1000, 1000, 1000];
     const r = computeOBV(closes, volumes);
     expect(r.trend).toBeNull();
+  });
+});
+
+// ─── computeVolumeConfirmation ────────────────────────────────────────────────
+describe('computeVolumeConfirmation', () => {
+  it('returns null on missing or insufficient inputs', () => {
+    expect(computeVolumeConfirmation(null)).toBeNull();
+    expect(computeVolumeConfirmation([])).toBeNull();
+    expect(computeVolumeConfirmation(Array(19).fill(1000))).toBeNull(); // needs ≥ 20
+  });
+
+  it('returns null when average volume is zero', () => {
+    expect(computeVolumeConfirmation(Array(20).fill(0))).toBeNull();
+  });
+
+  it('confirmed = true when recent 5-bar avg ≥ 1.2× the 20-bar avg', () => {
+    // 15 bars at 100k, then 5 bars at 200k → recent avg 200k, overall avg 175k → ratio ~1.14
+    // Use a cleaner ratio: 15 bars at 100k, 5 bars at 300k → recent avg 300k, overall avg 175k → ratio ~1.71
+    const vols = [...Array(15).fill(100_000), ...Array(5).fill(300_000)];
+    const r = computeVolumeConfirmation(vols);
+    expect(r.confirmed).toBe(true);
+    expect(r.ratio).toBeGreaterThan(1.2);
+  });
+
+  it('confirmed = false when recent volume is in line with the average', () => {
+    const vols = Array(20).fill(100_000);
+    const r = computeVolumeConfirmation(vols);
+    expect(r.confirmed).toBe(false);
+    expect(r.ratio).toBeCloseTo(1.0, 1);
+  });
+
+  it('confirmed = false when recent volume is below average', () => {
+    const vols = [...Array(15).fill(100_000), ...Array(5).fill(50_000)];
+    const r = computeVolumeConfirmation(vols);
+    expect(r.confirmed).toBe(false);
+    expect(r.ratio).toBeLessThan(1.0);
+  });
+
+  it('uses only the last avgBars window for the baseline', () => {
+    // 100 bars of noise followed by 20 bars all at 200k — baseline is 200k
+    // recent 5 at 200k → ratio should be 1.0 (not confirmed)
+    const vols = [...Array(100).fill(1_000_000), ...Array(20).fill(200_000)];
+    const r = computeVolumeConfirmation(vols);
+    expect(r.ratio).toBeCloseTo(1.0, 1);
+    expect(r.confirmed).toBe(false);
   });
 });

@@ -279,11 +279,25 @@ export function computeOversoldConfluence(price, rsi, bb) {
 // Uses the supplied 52w high (Finnhub metric, to stay consistent with the 52w
 // bar). `near` = within `threshold`% of the high (or above it). pctFromHigh is
 // negative when price has exceeded the lagging metric high.
-// NOTE: roadmap #8 also wants volume confirmation — deferred; proximity only.
 export function proximityTo52wHigh(price, high52w, threshold = 3) {
   if (price == null || high52w == null || high52w <= 0) return null;
   const pct = ((high52w - price) / high52w) * 100;
   return { pctFromHigh: Math.round(pct * 10) / 10, near: pct <= threshold };
+}
+
+// ── 52w-high volume confirmation ──────────────────────────────────────────────
+// Checks whether recent volume (last `recentBars` sessions) is above the
+// trailing `avgBars`-session average. ratio ≥ 1.2 = confirmed. Used to
+// distinguish a high-conviction breakout from a low-volume drift to the 52w high.
+export function computeVolumeConfirmation(volumes, recentBars = 5, avgBars = 20) {
+  if (!volumes || volumes.length < avgBars) return null;
+  const slice = volumes.slice(-avgBars);
+  const avgVol = slice.reduce((s, v) => s + v, 0) / avgBars;
+  if (avgVol === 0) return null;
+  const recentSlice = volumes.slice(-recentBars);
+  const recentAvg = recentSlice.reduce((s, v) => s + v, 0) / recentBars;
+  const ratio = recentAvg / avgVol;
+  return { ratio: Math.round(ratio * 100) / 100, confirmed: ratio >= 1.2 };
 }
 
 // ── Main: compute all indicators from raw Finnhub/TwelveData candle response ──
@@ -320,6 +334,7 @@ export function computeIndicatorsFromCandles(raw) {
   const roc60 = priceReturn(closes, 60);
   const volumes = raw.v ?? [];
   const obvResult = volumes.length >= closes.length ? computeOBV(closes, volumes) : null;
+  const volConfirmation = volumes.length >= 20 ? computeVolumeConfirmation(volumes) : null;
 
   return {
     rsi: rsiCurr !== null ? Math.round(rsiCurr * 10) / 10 : null,
@@ -346,6 +361,7 @@ export function computeIndicatorsFromCandles(raw) {
     roc60: roc60 !== null ? Math.round(roc60 * 10) / 10 : null,
     oversoldConfluence: computeOversoldConfluence(lastClose, rsiCurr, bbResult),
     obv: obvResult,
+    volConfirmation,
     source: 'local',
   };
 }

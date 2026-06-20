@@ -192,18 +192,30 @@
   }
 
   // 52w-high proximity chip — within 3% of the 52-week high = breakout watch.
+  // Volume confirmation flag added when recent volume (5d avg) ≥ 1.2× the 20d avg.
   function high52wChip(data) {
     const price = data?.quote?.data?.c;
     const high = data?.metrics?.data?.metric?.['52WeekHigh'];
     const prox = proximityTo52wHigh(price, high);
     if (!prox || !prox.near) return null;
     const atHigh = prox.pctFromHigh <= 0;
+    const volConf = data?.indicators?.volConfirmation;
+    const volSuffix = volConf?.confirmed ? ' · ↑ vol' : volConf ? ' · low vol' : '';
+    const baseLabel = atHigh ? 'AT HIGH' : `${prox.pctFromHigh.toFixed(1)}% ↓ 52wH`;
+    const baseTitle = atHigh
+      ? 'At or above its 52-week high — breakout territory'
+      : `${prox.pctFromHigh.toFixed(1)}% below the 52-week high — breakout watch`;
+    const volTitle = volConf?.confirmed
+      ? ` Recent volume ${volConf.ratio}× the 20-day avg — breakout has volume behind it.`
+      : volConf
+        ? ` Recent volume only ${volConf.ratio}× the 20-day avg — breakout lacks conviction.`
+        : '';
     return {
-      label: atHigh ? 'AT HIGH' : `${prox.pctFromHigh.toFixed(1)}% ↓ 52wH`,
-      cls: 'bg-bull-strong/15 text-bull-strong',
-      title: atHigh
-        ? 'At or above its 52-week high — breakout territory'
-        : `${prox.pctFromHigh.toFixed(1)}% below the 52-week high — breakout watch`,
+      label: baseLabel + volSuffix,
+      cls: volConf?.confirmed
+        ? 'bg-bull-strong/25 text-bull-strong font-semibold'
+        : 'bg-bull-strong/15 text-bull-strong',
+      title: baseTitle + volTitle,
     };
   }
 
