@@ -3,7 +3,6 @@
   import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType } from 'lightweight-charts';
   import { fetchCandles, fetchHistoricalEarnings } from '../api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTimeSeries } from '../api/twelvedata.svelte.js';
-  import { getChecklist } from '../stores/checklist.svelte.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeMACDSeries, computeRSISeries, computeBBSeries } from '../indicators.js';
 
@@ -14,7 +13,6 @@
   let series         = null;
   let ma50Series     = null;
   let ma200Series    = null;
-  let stopLine       = null;
   // Sub-pane series
   let volumeSeries    = null;
   let macdHistSeries  = null;
@@ -58,11 +56,6 @@
   let hLineRefs     = {};             // id → priceLine reference
   let trendLineRefs = {};             // id → LineSeries reference
   let rectCoords    = $state([]);     // computed pixel rects for SVG overlay
-
-  const stopLossPrice = $derived(() => {
-    const val = parseFloat(getChecklist(symbol).stopLoss);
-    return isNaN(val) || val <= 0 ? null : val;
-  });
 
   const TIMEFRAMES = {
     '1D': { days: 1,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 200 },
@@ -544,14 +537,6 @@
   $effect(() => {
     timeframe; symbol; showMA; showAnnotations;
     if (chartReady) loadCandles();
-  });
-
-  // Stop loss price line
-  $effect(() => {
-    if (!series) return;
-    const sl = stopLossPrice();
-    if (stopLine) { series.removePriceLine(stopLine); stopLine = null; }
-    if (sl) stopLine = series.createPriceLine({ price: sl, color: '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `SL $${sl.toFixed(2)}` });
   });
 
   // Volume profile (reactive to toggle)

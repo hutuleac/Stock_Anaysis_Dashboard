@@ -1,7 +1,6 @@
 <script>
   import { getTickers, getTickerData } from '../stores/watchlist.svelte.js';
   import { computeScore, getBadgeStyle, getDaysToEarnings } from '../scoring.js';
-  import { getChecklist } from '../stores/checklist.svelte.js';
   import { selectTicker } from '../stores/watchlist.svelte.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
@@ -15,18 +14,16 @@
     const scored = tickers.map(t => {
       const data = getTickerData(t.symbol);
       const score = computeScore(data);
-      const checklist = getChecklist(t.symbol);
       const daysToEarnings = getDaysToEarnings(data?.earnings);
-      const isBlocked = checklist.hardWarning && !checklist.hardWarningDismissed;
       const dp = data?.quote?.data?.dp ?? null;
-      return { ticker: t, data, score, daysToEarnings, isBlocked, dp };
+      return { ticker: t, data, score, daysToEarnings, dp };
     }).filter(s => s.score.score !== null);
 
     if (!scored.length) return null;
 
-    // Top 3 setups by score (not blocked)
+    // Top 3 setups by score
     const topSetups = scored
-      .filter(s => !s.isBlocked && s.score.score >= 55)
+      .filter(s => s.score.score >= 55)
       .sort((a, b) => b.score.score - a.score.score)
       .slice(0, 3);
 
@@ -35,22 +32,19 @@
       .filter(s => s.daysToEarnings !== null && s.daysToEarnings <= 7)
       .sort((a, b) => a.daysToEarnings - b.daysToEarnings);
 
-    // Blocked tickers
-    const blocked = scored.filter(s => s.isBlocked);
-
     // Big movers today (|dp| > 3%)
     const movers = scored
       .filter(s => s.dp !== null && Math.abs(s.dp) >= 3)
       .sort((a, b) => Math.abs(b.dp) - Math.abs(a.dp))
       .slice(0, 3);
 
-    return { topSetups, earningsWarnings, blocked, movers };
+    return { topSetups, earningsWarnings, movers };
   });
 </script>
 
 {#if brief()}
   {@const b = brief()}
-  {#if b.topSetups.length || b.earningsWarnings.length || b.blocked.length || b.movers.length}
+  {#if b.topSetups.length || b.earningsWarnings.length || b.movers.length}
     <div class="mb-4 border border-border/60 rounded-lg overflow-hidden bg-surface-800/60">
       <!-- Header -->
       <button
@@ -59,9 +53,6 @@
       >
         <div class="flex items-center gap-2">
           <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">Morning Brief</span>
-          {#if b.blocked.length}
-            <span class="text-[10px] bg-danger/20 text-danger px-1.5 py-0.5 rounded font-semibold">{b.blocked.length} blocked</span>
-          {/if}
           {#if b.earningsWarnings.length}
             <span class="text-[10px] bg-warning/20 text-warning px-1.5 py-0.5 rounded font-semibold">{b.earningsWarnings.length} earnings soon</span>
           {/if}
@@ -135,26 +126,6 @@
               </div>
             {:else}
               <p class="text-xs text-text-muted italic">No major moves</p>
-            {/if}
-          </div>
-
-          <!-- Blocked -->
-          <div>
-            <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 cursor-default" use:tipAction={TIPS.blockedTickers}>Blocked</p>
-            {#if b.blocked.length}
-              <div class="space-y-1.5">
-                {#each b.blocked as s}
-                  <button
-                    class="w-full flex items-center gap-2 hover:bg-surface-700/40 rounded px-1.5 py-1 transition-colors text-left"
-                    onclick={() => selectTicker(s.ticker.symbol)}
-                  >
-                    <span class="font-mono font-semibold text-sm text-text-primary w-14 shrink-0">{s.ticker.symbol}</span>
-                    <span class="text-[10px] bg-danger/20 text-danger px-1.5 rounded">BLOCKED</span>
-                  </button>
-                {/each}
-              </div>
-            {:else}
-              <p class="text-xs text-text-muted italic">No blocked tickers</p>
             {/if}
           </div>
 

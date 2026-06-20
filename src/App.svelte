@@ -6,14 +6,9 @@
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
-  import { getTrades, getRealizedPnL } from './lib/stores/tradelog.svelte.js';
-  import { getPositions } from './lib/stores/portfolio.svelte.js';
   import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
-  import { setEarningsAnswer, setSectorAnswer } from './lib/stores/checklist.svelte.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
-  import PortfolioStats from './lib/components/PortfolioStats.svelte';
-  import PaperTradesOverview from './lib/components/PaperTradesOverview.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   // OnboardingModal removed — demo mode replaces it
@@ -165,27 +160,16 @@
         const data = results[ticker.symbol];
         if (!data) continue;
 
-        // Earnings auto-answer (Q2)
-        const daysToEarnings = getDaysToEarnings(data.earnings);
-        if (data.earnings.stale && !data.earnings.data) {
-          setEarningsAnswer(ticker.symbol, null);
-        } else {
-          setEarningsAnswer(ticker.symbol, daysToEarnings ?? 999);
-        }
-
-        // Sector trend auto-answer (Q3)
+        // Sector trend
         try {
           const etfQuote = await fetchSectorETFQuote(ticker.sector);
-          if (etfQuote.stale && !etfQuote.data) {
-            setSectorAnswer(ticker.symbol, null);
+          if (etfQuote.data) {
+            results[ticker.symbol].sectorTrend = etfQuote.data.dp < -1;
+          } else {
             results[ticker.symbol].sectorTrend = null;
-          } else if (etfQuote.data) {
-            const isDowntrend = etfQuote.data.dp < -1;
-            setSectorAnswer(ticker.symbol, isDowntrend);
-            results[ticker.symbol].sectorTrend = isDowntrend;
           }
         } catch {
-          setSectorAnswer(ticker.symbol, null);
+          results[ticker.symbol].sectorTrend = null;
         }
 
         // Company profile (cached 7d) → USD market cap + listing currency.
@@ -330,7 +314,6 @@
             quote:       d.quote       ?? null,
             earnings:    d.earnings    ?? null,
             metrics:     d.metrics     ?? null,
-            insider:     d.insider     ?? null,
             indicators:  d.indicators  ?? null,
             tdQuote:     d.tdQuote     ?? null,
             weekly:      d.weekly      ?? null,
@@ -366,9 +349,6 @@
       setMarketData(DEMO_MARKET_DATA);
       marketContextData = DEMO_MARKET_CONTEXT;
       setMarketContext({ vixPrice: 22.4, spyDowntrend: true, fearGreedValue: 38 });
-      for (const t of DEMO_TICKERS) {
-        setEarningsAnswer(t.symbol, getDaysToEarnings(DEMO_MARKET_DATA[t.symbol]?.earnings) ?? null);
-      }
       isDemoMode = true;
       return;
     }
@@ -376,7 +356,7 @@
     const symbols = getSymbols();
     if (!symbols.length) return;
 
-    // Start with Finnhub-cached fields (quote, earnings, metrics, news, insider)
+    // Start with Finnhub-cached fields (quote, earnings, metrics, news)
     const results = hydrateFromCache(symbols);
     const tickerList = getTickers();
     for (const ticker of tickerList) {
@@ -402,7 +382,6 @@
             if (s.quote       != null) results[sym].quote       = s.quote;
             if (s.earnings    != null) results[sym].earnings    = s.earnings;
             if (s.metrics     != null) results[sym].metrics     = s.metrics;
-            if (s.insider     != null) results[sym].insider     = s.insider;
             if (s.indicators  != null) results[sym].indicators  = s.indicators;
             if (s.tdQuote     != null) results[sym].tdQuote     = s.tdQuote;
             if (s.weekly      != null) results[sym].weekly      = s.weekly;
@@ -424,10 +403,6 @@
       }
     } catch { /* corrupted supplement — non-fatal */ }
 
-    // Single setMarketData call with fully merged data
-    for (const ticker of tickerList) {
-      setEarningsAnswer(ticker.symbol, getDaysToEarnings(results[ticker.symbol]?.earnings) ?? null);
-    }
     setMarketData(results);
   }
 
@@ -560,43 +535,14 @@
     <SetupRadar />
     <WatchlistTable onTickerAdded={handleRefresh} />
 
-    <PortfolioStats />
-    <PaperTradesOverview />
-
-    <!-- Portfolio summary strip -->
-    {#if getTrades().length > 0 || getPositions().length > 0}
-      {@const tradeSymbols = [...new Set(getTrades().map(t => t.symbol))]}
-      {@const totalRealized = tradeSymbols.reduce((sum, s) => sum + getRealizedPnL(s), 0)}
-      {@const openPositions = getPositions().length}
-      {@const totalTrades = getTrades().length}
-      <div class="mt-6 border-t border-border/50 pt-4 flex flex-wrap gap-6 text-xs text-text-muted">
-        <span class="flex items-center gap-1.5">
-          <span>Realized P&L:</span>
-          <span class="font-mono font-semibold {totalRealized >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">
-            {totalRealized >= 0 ? '+' : ''}${Math.abs(totalRealized).toFixed(2)}
-          </span>
-        </span>
-        {#if openPositions > 0}
-          <span>{openPositions} open position{openPositions > 1 ? 's' : ''}</span>
-        {/if}
-        <span>{totalTrades} trade{totalTrades > 1 ? 's' : ''} logged</span>
-        <span class="ml-auto hidden sm:block text-[13px]">
-          Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">J</kbd><kbd class="bg-surface-700 px-1 rounded">K</kbd> navigate
-        </span>
-      </div>
-    {:else}
-      <div class="mt-6 border-t border-border/50 pt-3 flex justify-end">
-        <span class="text-[13px] text-text-muted hidden sm:block">
-          Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
-          <kbd class="bg-surface-700 px-1 rounded">J</kbd><kbd class="bg-surface-700 px-1 rounded">K</kbd> navigate
-        </span>
-      </div>
-    {/if}
+    <div class="mt-6 border-t border-border/50 pt-3 flex justify-end">
+      <span class="text-[13px] text-text-muted hidden sm:block">
+        Shortcuts: <kbd class="bg-surface-700 px-1 rounded">R</kbd> refresh &nbsp;
+        <kbd class="bg-surface-700 px-1 rounded">Esc</kbd> close &nbsp;
+        <kbd class="bg-surface-700 px-1 rounded">/</kbd> search &nbsp;
+        <kbd class="bg-surface-700 px-1 rounded">J</kbd><kbd class="bg-surface-700 px-1 rounded">K</kbd> navigate
+      </span>
+    </div>
   </main>
 </div>
 
