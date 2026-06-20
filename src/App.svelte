@@ -330,7 +330,6 @@
             quote:       d.quote       ?? null,
             earnings:    d.earnings    ?? null,
             metrics:     d.metrics     ?? null,
-            priceTarget: d.priceTarget ?? null,
             insider:     d.insider     ?? null,
             indicators:  d.indicators  ?? null,
             tdQuote:     d.tdQuote     ?? null,
@@ -403,7 +402,6 @@
             if (s.quote       != null) results[sym].quote       = s.quote;
             if (s.earnings    != null) results[sym].earnings    = s.earnings;
             if (s.metrics     != null) results[sym].metrics     = s.metrics;
-            if (s.priceTarget != null) results[sym].priceTarget = s.priceTarget;
             if (s.insider     != null) results[sym].insider     = s.insider;
             if (s.indicators  != null) results[sym].indicators  = s.indicators;
             if (s.tdQuote     != null) results[sym].tdQuote     = s.tdQuote;

@@ -43,7 +43,6 @@ export function computeScore(tickerData, marketContext = _marketContext) {
 
   const quote   = tickerData.quote.data;
   const metrics = tickerData.metrics?.data?.metric || {};
-  const pt      = tickerData.priceTarget?.data;
   const news    = tickerData.news;
 
   const ind = tickerData.indicators || null;
@@ -52,7 +51,7 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   if (ind?.macd   != null) techTotal++;
   if (ind?.adx    != null) techTotal++;
   if (ind?.stochK != null) techTotal++;
-  let fundScore = 0, fundFactors = 0, fundTotal = 3;
+  let fundScore = 0, fundFactors = 0, fundTotal = 2;
   let sentScore = 0, sentFactors = 0, sentTotal = 3;
 
   // Collect individual signal values for conviction scoring (only when data present)
@@ -163,13 +162,6 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   const epsGrowth = metrics['epsGrowthTTMYoy'] ?? metrics['epsGrowth3Y'];
   if (epsGrowth != null) {
     const v = epsGrowth > 20 ? 1 : epsGrowth > 5 ? 0.75 : epsGrowth > 0 ? 0.55 : epsGrowth > -10 ? 0.3 : 0;
-    fundScore += v; fundFactors++; signals.push(v);
-  } else fundScore += 0.5;
-
-  const targetMid = pt?.targetMean ?? pt?.targetHigh;
-  if (targetMid && quote.c) {
-    const premium = (targetMid - quote.c) / quote.c;
-    const v = premium > 0.20 ? 1 : premium > 0.10 ? 0.75 : premium > 0 ? 0.55 : premium > -0.05 ? 0.35 : 0.1;
     fundScore += v; fundFactors++; signals.push(v);
   } else fundScore += 0.5;
 
@@ -397,7 +389,6 @@ export function generateThesis(tickerData, scoreResult) {
 
   const quote   = tickerData.quote.data;
   const metrics = tickerData.metrics?.data?.metric || {};
-  const pt      = tickerData.priceTarget?.data;
   const bulls   = [];
   const bears   = [];
   const warnings = [];
@@ -449,14 +440,6 @@ export function generateThesis(tickerData, scoreResult) {
     if (epsGrowth > 20)       bulls.push(`Earnings growing ${epsGrowth.toFixed(0)}% YoY — strong fundamental tailwind.`);
     else if (epsGrowth > 5)   bulls.push(`EPS up ${epsGrowth.toFixed(0)}% YoY — fundamentals trending in the right direction.`);
     else if (epsGrowth < -10) bears.push(`Earnings declining ${Math.abs(epsGrowth).toFixed(0)}% YoY — fundamental headwind.`);
-  }
-
-  const targetMid = pt?.targetMean ?? pt?.targetHigh;
-  if (targetMid && quote.c) {
-    const premium = Math.round(((targetMid - quote.c) / quote.c) * 100);
-    if (premium > 20)      bulls.push(`Analyst consensus sees ${premium}% upside to $${targetMid.toFixed(2)}.`);
-    else if (premium > 5)  bulls.push(`Analyst target at $${targetMid.toFixed(2)} (+${premium}%) — modest upside confirmed.`);
-    else if (premium < -5) bears.push(`Trading above analyst consensus — current price is already stretched.`);
   }
 
   // ── SENTIMENT ──
