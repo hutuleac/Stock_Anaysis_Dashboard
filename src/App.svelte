@@ -418,7 +418,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.14</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.15</span>
       </div>
 
       <div class="flex items-center gap-3">
