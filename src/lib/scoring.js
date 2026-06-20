@@ -465,6 +465,18 @@ export function getBadgeStyle(badge) {
   }
 }
 
+// ─── BETA-ADJUSTED RISK % ─────────────────────────────────────────────────────
+// Returns the recommended per-trade risk % of portfolio, scaled by beta.
+// High-beta stocks amplify market moves — smaller risk allocation compensates.
+// Returns { riskPct, tier } where tier describes the reason for the adjustment.
+export function betaAdjustedRiskPct(beta) {
+  if (beta == null || beta <= 0) return { riskPct: 2.0, tier: 'normal' };
+  if (beta <= 0.8)  return { riskPct: 2.5, tier: 'low' };
+  if (beta <= 1.2)  return { riskPct: 2.0, tier: 'normal' };
+  if (beta <= 1.8)  return { riskPct: 1.5, tier: 'elevated' };
+  return              { riskPct: 1.0, tier: 'high' };
+}
+
 // ─── EARNINGS HELPER ──────────────────────────────────────────────────────────
 
 export function getDaysToEarnings(earningsData) {

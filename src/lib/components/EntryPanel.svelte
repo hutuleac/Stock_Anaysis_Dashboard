@@ -2,7 +2,7 @@
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { getPortfolioValue } from '../stores/portfolio.svelte.js';
   import ThesisSummary from './ThesisSummary.svelte';
-  import { getDaysToEarnings } from '../scoring.js';
+  import { getDaysToEarnings, betaAdjustedRiskPct } from '../scoring.js';
 
   let { symbol } = $props();
 
@@ -40,10 +40,11 @@
       : null
   );
 
-  // Position sizing: risk 2% of portfolio per trade
-  const RISK_PCT_PER_TRADE = 2;
+  // Position sizing: beta-adjusted risk % of portfolio per trade
+  const beta = $derived(data?.metrics?.data?.metric?.beta ?? null);
+  const betaAdj = $derived(betaAdjustedRiskPct(beta));
   const portfolioVal = $derived(getPortfolioValue());
-  const maxRiskDollars = $derived(portfolioVal > 0 ? portfolioVal * (RISK_PCT_PER_TRADE / 100) : null);
+  const maxRiskDollars = $derived(portfolioVal > 0 ? portfolioVal * (betaAdj.riskPct / 100) : null);
   const recommendedShares = $derived(
     maxRiskDollars && riskPerShare ? Math.floor(maxRiskDollars / riskPerShare) : null
   );
@@ -180,13 +181,19 @@
 
       <!-- Position size recommendation -->
       <div class="bg-surface-700 rounded-lg p-3 border-l-2 border-uncertain">
-        <p class="text-xs text-text-muted mb-2">Position Size (2% risk rule)</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-text-muted">Position Size ({betaAdj.riskPct}% risk rule)</p>
+          {#if beta !== null}
+            {@const betaColor = betaAdj.tier === 'high' ? 'text-danger' : betaAdj.tier === 'elevated' ? 'text-uncertain' : betaAdj.tier === 'low' ? 'text-bull-strong' : 'text-text-muted'}
+            <span class="text-[11px] font-mono {betaColor}" title="Beta {beta.toFixed(2)} → {betaAdj.riskPct}% risk allocation">β {beta.toFixed(2)}</span>
+          {/if}
+        </div>
         {#if recommendedShares !== null}
           <div class="flex items-baseline gap-3 flex-wrap">
             <span class="font-mono font-semibold text-text-primary text-sm">{recommendedShares} shares</span>
             <span class="text-xs text-text-muted">≈ ${positionCost?.toLocaleString('en-US', { maximumFractionDigits: 0 })} ({positionPct?.toFixed(1)}% of portfolio)</span>
           </div>
-          <p class="text-xs text-text-muted mt-1">Max loss: ${maxRiskDollars?.toFixed(0)} ({RISK_PCT_PER_TRADE}% of ${portfolioVal?.toLocaleString()})</p>
+          <p class="text-xs text-text-muted mt-1">Max loss: ${maxRiskDollars?.toFixed(0)} ({betaAdj.riskPct}% of ${portfolioVal?.toLocaleString()})</p>
         {:else}
           <p class="text-xs text-text-secondary">
             {#if !portfolioVal}Set portfolio value in Settings to see recommended shares.
