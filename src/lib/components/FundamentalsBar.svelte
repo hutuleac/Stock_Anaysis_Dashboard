@@ -433,6 +433,28 @@
       </div>
     {/if}
 
+    <!-- Swing-low support levels — last 3 significant pivot lows -->
+    {#if data?.indicators?.swingLows?.length}
+      {@const levels = data.indicators.swingLows}
+      {@const labels = ['S1', 'S2', 'S3']}
+      {@const pctAbove = (p) => price ? Math.round((price - p) / p * 100 * 10) / 10 : null}
+      <div class="flex flex-col min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.swingLows, current: { value: `$${levels[0].price}`, label: 'Nearest support', color: '#22c55e' } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Support</span>
+        <div class="flex flex-col gap-0.5 mt-0.5">
+          {#each levels as lvl, i}
+            {@const pct = pctAbove(lvl.price)}
+            <div class="flex items-baseline gap-1">
+              <span class="text-[11px] text-text-muted font-mono w-[14px]">{labels[i]}</span>
+              <span class="text-[12px] font-mono text-text-primary">${lvl.price}</span>
+              {#if pct !== null}
+                <span class="text-[11px] {pct < 3 ? 'text-uncertain' : 'text-text-muted'}">+{pct}%</span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <!-- Volume ratio — from TwelveData live quote -->
     {#if tdQuote?.volume && tdQuote?.avgVolume}
       {@const ratio = tdQuote.volumeRatio}
