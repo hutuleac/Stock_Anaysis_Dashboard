@@ -283,6 +283,19 @@ export const TIPS = {
     why: '20d ROC rising while 60d is flat flags a trend turning up before price confirms it. Display-only — does not feed the score.',
   },
 
+  obv: {
+    title: 'On-Balance Volume (OBV)',
+    subtitle: 'Accumulation vs distribution read',
+    category: 'Trend',
+    description: 'Cumulative volume indicator: adds volume on up-close days, subtracts on down-close days. When OBV rises while price consolidates, institutions are accumulating. When OBV falls while price holds, distribution is underway.',
+    levels: [
+      { range: 'Rising',  label: 'Accumulation', color: C.green, desc: 'Volume is flowing in on up days — buyers are more committed than sellers.' },
+      { range: 'Flat',    label: 'Neutral',       color: C.dim,   desc: 'OBV not trending — no clear accumulation or distribution signal.' },
+      { range: 'Falling', label: 'Distribution',  color: C.red,   desc: 'Volume is flowing out on down days — selling pressure is building.' },
+    ],
+    why: 'OBV divergence from price is a leading signal: price can hold while OBV quietly falls (topping), or price can dip while OBV holds (accumulation before a move). Display-only — does not feed the score.',
+  },
+
   oversoldConfluence: {
     title: 'Oversold Confluence',
     subtitle: 'RSI < 35 + price at the lower BB',
