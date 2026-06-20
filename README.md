@@ -9,7 +9,7 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.13-blue)
+![Version](https://img.shields.io/badge/version-0.14-blue)
 ![Tests](https://img.shields.io/badge/tests-163_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -53,7 +53,7 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 ## Features
 
 ### Morning Brief
-- Top 3 setups by score (≥ 55), earnings warnings (≤ 7 days), big movers (|Δ| ≥ 3%), blocked tickers — all at a glance above the table
+- Top 3 setups by score (≥ 55), earnings warnings (≤ 7 days), big movers (|Δ| ≥ 3%) — all at a glance above the table
 - Collapsible, click any ticker to jump straight to the expanded row
 
 ### Watchlist
@@ -65,7 +65,6 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 - Score velocity arrow (↑↓→) — 3-day delta
 - Price alerts — set above/below targets, notified on next refresh
 - CSV export — all tickers with score, sub-scores, price, sector, earnings countdown
-- BLOCKED badge — automatically shown when a hard warning is active
 
 ### Scoring Engine (up to 12 signals)
 
@@ -73,14 +72,14 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 |----------|---------|
 | **Technical 35%** | EMA50 position, MA200 regime, 52-week range, daily momentum, RSI(14), MACD crossover, ADX trend strength, Stochastic %K momentum |
 | **Fundamental 45%** | P/E ratio, EPS growth YoY |
-| **Sentiment 20%** | News headline keywords (last 5), sector ETF trend, insider net buying (90d) |
+| **Sentiment 20%** | News headline keywords (last 5), sector ETF trend |
 
 - T5 RSI(14) + T6 MACD computed locally from candle data — no extra API key needed
 - T7 ADX(14): trend quality signal — strong trending + MACD direction = high conviction
 - T8 Stochastic(14,3,3): oversold/overbought zones + %K/%D crossover detection
 - EMA50 + MA200 fall back to locally-computed values when Finnhub metrics unavailable
 - Optional TwelveData key adds BBands, ADX, Stochastic, and higher-precision indicator values
-- Score badges: `STRONG` · `LEAN LONG` · `NEUTRAL` · `LEAN SHORT` · `STRONG SHORT` · `BLOCKED`
+- Score badges: `STRONG` · `LEAN LONG` · `NEUTRAL` · `LEAN SHORT` · `STRONG SHORT`
 - Confidence band: `(factors/total)` shows how many signals had live data
 - T/F/S sub-score mini bars inline per row
 - **Conviction %** — signal agreement score separate from directional strength ("how bullish" vs "how many signals agree") — HIGH / MODERATE / LOW / MIXED label
@@ -102,7 +101,6 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 **Charts**
 - Candlestick chart — 1D / 5D / 1M / 3M / 6M / 1Y (TradingView lightweight-charts)
 - MA50 (amber) + MA200 (blue) overlays with toggle button
-- Stop-loss price line auto-drawn from checklist input
 - **Volume bars** sub-pane (default on) — green/red colored, toggleable
 - **MACD** sub-pane (12,26,9) — histogram + line + signal with crossover coloring; exclusive with volume
 - **RSI(14)** overlaid on volume/MACD pane — 70/30 reference lines, toggleable
@@ -111,40 +109,24 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 
 **Data panels**
 - News panel — last 6 headlines with bull/bear/neutral sentiment dots + timeAgo
-- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · Analyst Target · Insider 90d net shares · 52w range bar · RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · Score Z · Weekly trend · Volume ratio · Conviction %
+- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · 52w range bar · RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · Score Z · Weekly trend · Volume ratio · Conviction %
 - **"So what" tooltips** — hover any indicator for plain-English interpretation (e.g. RSI 38 → "approaching oversold; potential base forming")
 - Score history chart — full-width SVG with area fill, delta header, 50-point reference line
 
-**Decision flow (left → right)**
-1. **Pre-Buy Checklist** — macro calendar check, earnings gate (auto), sector trend (auto), stop-loss entry + 3/5/8% quick-picks
-2. **Entry Panel** (unlocks after checklist):
-   - Thesis Summary — 2–4 plain-English bullets explaining exactly why the score is what it is (positives ▲, negatives ▼, warnings ⚠)
-   - Trade Window — explicit countdown to earnings with risk colour coding
-   - High-volatility day warning — fires when |dp| ≥ 5% with contextual copy
-   - Risk Snapshot — current price, stop-loss, risk/share, risk %
-   - ATR(14) intraday volatility card — stop-too-tight warnings (< 0.5 ATR = noise range)
-   - Position sizing — 2% rule: recommended shares, cost, % of portfolio, max loss
-   - Scenario table — Base (1:2 R:R), Extended (1:3), Stop-out
-3. **Trade Log** — BUY/SELL entries, FIFO realized P&L, unrealized P&L, CSV export
-4. **Paper Trades** — record a hypothetical BUY/SELL today and track it over weeks/months:
-   - Snapshots score, badge, conviction, and thesis bulls/bears at entry time
-   - Live unrealized P&L ($ + %), days held, score-at-entry vs score-now comparison
-   - Verdict badge: **CONFIRMED** (price moved your way) / **AGAINST** / **FLAT**
-   - Inline close form captures exit price + exit score snapshot for post-mortem
-   - **Paper Trades Overview** panel on main dashboard: table of all open ideas + W/L/P&L summary
-   - ⚠️ Data lives in `localStorage` (per-browser, per-domain) — use Settings → Export to back up across devices
+**Entry Panel** (always visible)
+- Thesis Summary — 2–4 plain-English bullets explaining exactly why the score is what it is (positives ▲, negatives ▼, warnings ⚠)
+- Trade Window — explicit countdown to earnings with risk colour coding
+- High-volatility day warning — fires when |dp| ≥ 5% with contextual copy
+- Risk Snapshot — current price, suggested stop (2× weekly ATR), risk/share, risk %
+- ATR(14) intraday volatility card — daily noise range reference
+- R:R to swing-high target (chartAnchors AVWAP swing high)
+- Position sizing — 2% rule: recommended shares, cost, % of portfolio, max loss
+- Scenario table — Base (1:2 R:R), Extended (1:3), Stop-out
 
 **Notes**
 - Free-text note field per ticker — auto-saves on every keystroke
 - 📝 badge on table row when notes exist
 - Survives cache clear, persists indefinitely in localStorage
-
-### Portfolio Stats (appears once you have closed trades)
-- Realized P&L · Win Rate · Avg Win · Avg Loss · R:R Ratio · Best/Worst trade · Unrealized P&L
-- Weighted portfolio beta — "Market sensitivity: your portfolio moves ~1.4× SPY"
-- Sector exposure breakdown — bars per sector with ⚠ warning if any sector > 40%
-- **Correlation warning** — ⚡ flag when 2+ open positions are in the same sector (e.g. TSLA + AMZN both Consumer Cyclical)
-- **Edge Analysis** (unlocks after 5+ closed trades): Expectancy/trade · Kelly % · probability of 5/10 consecutive losses
 
 ### Market Context Bar
 - VIX with plain-English interpretation (CALM → EXTREME)
@@ -236,11 +218,16 @@ npm run test:watch  # watch mode (dev)
 | Quotes | No cache (always fresh on refresh) |
 | News / Earnings / Candles | 24h |
 | Indicators (TwelveData) | 1h |
-| Fundamentals / Profile / Insider | 7d |
+| Fundamentals / Profile | 7d |
 
 ---
 
 ## Changelog
+
+### v0.14 (2026-06-20)
+- **Interface cleanup** — removed four features that were non-functional on the Finnhub free tier: **Insider 90d** (endpoint always returned empty), **Pre-Buy Checklist** (friction with no payoff), **Trade Log**, and **Paper Trades** (including the Paper Trades Overview panel and Settings backup). **Replay / Backtest** panel also removed.
+- **Entry Panel always unlocked** — no longer gated behind the checklist. Stop-loss input replaced by the ATR-derived suggested stop (2× weekly ATR) which now drives all risk math: risk/share, risk %, position sizing, and the scenario table.
+- ~500 lines of dead UI removed; scoring engine, indicators, and test suite unchanged (163 tests).
 
 ### v0.13 (2026-06-19)
 - **Chart anchors** — four price-anchored signals from one zero-API-call module (`chartAnchors.js`, computed on daily candles). **AVWAP** (anchored to the most significant swing low — institutional cost basis) and **POC + value area** surface as Fundamentals-Bar pills; **Fibonacci retracements** and **Fair Value Gaps** are optional daily-only chart overlays (FIB/FVG toggles). AVWAP-reclaimed + POC-not-below nudge a name's Setup-Radar readiness one tier (WATCH→SOON→ACT); the calibrated `computeScore` and `signals.js` are untouched.
