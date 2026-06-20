@@ -18,6 +18,7 @@
   let searchResults = $state([]);
   let searching = $state(false);
   let searchOpen = $state(false);
+  let searchError = $state(false);
   let sortBy = $state('score');
   let sortDir = $state('desc');
   let alertSymbol = $state(null);
@@ -49,22 +50,26 @@
   let dragIndex = $state(null);
 
   async function handleSearch() {
-    if (searchQuery.length < 1) {
+    if (searchQuery.length < 2) {
       searchResults = [];
+      searchError = false;
       return;
     }
     searching = true;
+    searchError = false;
     try {
       const result = await searchTicker(searchQuery);
       searchResults = result.data || result || [];
     } catch {
       searchResults = [];
+      searchError = true;
     }
     searching = false;
   }
 
   function debounceSearch() {
     clearTimeout(searchTimeout);
+    if (searchQuery.length < 2) { searchResults = []; searchError = false; return; }
     searchTimeout = setTimeout(handleSearch, 300);
   }
 
@@ -301,20 +306,33 @@
     {#if searchOpen && searchResults.length > 0}
       <div class="absolute z-50 w-full mt-1 bg-surface-700 border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto">
         {#each searchResults as result}
+          {@const alreadyAdded = getTickers().some(t => t.symbol === result.symbol)}
           <button
-            class="w-full px-4 py-2.5 text-left hover:bg-surface-600 flex justify-between items-center transition-colors first:rounded-t-lg last:rounded-b-lg"
-            onclick={() => handleAddTicker(result)}
+            class="w-full px-4 py-2.5 text-left flex justify-between items-center transition-colors first:rounded-t-lg last:rounded-b-lg {alreadyAdded ? 'opacity-40 cursor-default' : 'hover:bg-surface-600'}"
+            onclick={() => { if (!alreadyAdded) handleAddTicker(result); }}
           >
-            <span class="font-mono font-semibold text-text-primary">{result.symbol}</span>
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono font-semibold text-text-primary">{result.symbol}</span>
+              {#if alreadyAdded}
+                <span class="text-xs text-text-muted">in watchlist</span>
+              {/if}
+            </div>
             <span class="text-sm text-text-secondary truncate ml-4">{result.description}</span>
           </button>
         {/each}
       </div>
     {/if}
 
-    {#if searchOpen && searchQuery.length > 0 && !searching && searchResults.length === 0}
+    {#if searchOpen && searchError}
+      <div class="absolute z-50 w-full mt-1 bg-surface-700 border border-border rounded-lg shadow-xl px-4 py-3 text-sm">
+        <span class="text-bear-strong">Search unavailable</span>
+        <span class="text-text-muted ml-1">— check your connection or API key and try again.</span>
+      </div>
+    {/if}
+
+    {#if searchOpen && searchQuery.length >= 2 && !searching && !searchError && searchResults.length === 0}
       <div class="absolute z-50 w-full mt-1 bg-surface-700 border border-border rounded-lg shadow-xl px-4 py-3 text-text-muted text-sm">
-        No results for "{searchQuery}"
+        No US-listed results for "<span class="text-text-secondary">{searchQuery}</span>" — try the full ticker symbol.
       </div>
     {/if}
   </div>
