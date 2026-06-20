@@ -21,7 +21,6 @@ function makeTicker({
   ema200 = null,
   pe = null,
   epsGrowth = null,
-  targetMean = null,
   rsi = null,
   macd = null,
   macdCrossover = null,
@@ -48,7 +47,6 @@ function makeTicker({
         },
       },
     },
-    priceTarget: targetMean != null ? { data: { targetMean } } : null,
     news: news ?? null,
     sectorTrend,
     insider: insider ?? null,
@@ -145,17 +143,17 @@ describe('computeScore', () => {
   });
 
   it('score is always in [0, 100]', () => {
-    const ticker = makeTicker({ price: 100, dp: 5, ema50: 80, pe: 20, epsGrowth: 25, targetMean: 130, rsi: 45 });
+    const ticker = makeTicker({ price: 100, dp: 5, ema50: 80, pe: 20, epsGrowth: 25, rsi: 45 });
     const { score } = computeScore(ticker);
     expect(score).toBeGreaterThanOrEqual(0);
     expect(score).toBeLessThanOrEqual(100);
   });
 
   it('counts factors correctly', () => {
-    // Provide: EMA50 (T1), MA200 (T2), 52w (T3), dp (T4), RSI (T5), PE, epsGrowth, target → 8+ data points
+    // Provide: EMA50 (T1), MA200 (T2), 52w (T3), dp (T4), RSI (T5), PE, epsGrowth → data points
     const ticker = makeTicker({
       price: 100, dp: 1, ema50: 90, ema200: 80, high52: 120, low52: 60,
-      pe: 20, epsGrowth: 15, targetMean: 120, rsi: 50,
+      pe: 20, epsGrowth: 15, rsi: 50,
     });
     const { factors, total } = computeScore(ticker);
     expect(factors).toBeGreaterThan(0);
@@ -216,7 +214,7 @@ describe('computeScore', () => {
   // ── Badge thresholds ──
   it('badge reflects score thresholds', () => {
     // Override by injecting predictable full-data ticker
-    const highTicker = makeTicker({ price: 100, dp: 5, ema50: 80, ema200: 70, rsi: 35, pe: 20, epsGrowth: 30, targetMean: 140, high52: 110, low52: 70 });
+    const highTicker = makeTicker({ price: 100, dp: 5, ema50: 80, ema200: 70, rsi: 35, pe: 20, epsGrowth: 30, high52: 110, low52: 70 });
     const { badge, score } = computeScore(highTicker);
     if (score >= 72) expect(badge).toBe('STRONG_LONG');
     else if (score >= 58) expect(badge).toBe('LEAN_LONG');
@@ -248,7 +246,7 @@ describe('computeScore', () => {
   // ── SPY downtrend penalty ──
   it('SPY downtrend pulls LONG score 20% toward 50', () => {
     // Use a ticker that will give a score > 50 without penalty
-    const ticker = makeTicker({ price: 100, dp: 3, ema50: 80, ema200: 75, pe: 20, epsGrowth: 25, targetMean: 130 });
+    const ticker = makeTicker({ price: 100, dp: 3, ema50: 80, ema200: 75, pe: 20, epsGrowth: 25 });
     const noFear  = computeScore(ticker, { spyDowntrend: false });
     const penalty = computeScore(ticker, { spyDowntrend: true });
 
@@ -270,7 +268,7 @@ describe('computeScore', () => {
 
   // ── Fear & Greed modifier ──
   it('extreme fear (F&G < 25) reduces LONG scores by up to 3', () => {
-    const ticker = makeTicker({ price: 100, dp: 3, ema50: 80, pe: 20, epsGrowth: 25, targetMean: 130 });
+    const ticker = makeTicker({ price: 100, dp: 3, ema50: 80, pe: 20, epsGrowth: 25 });
     const noFG    = computeScore(ticker, { fearGreedValue: 50 });
     const fearFG  = computeScore(ticker, { fearGreedValue: 20 });
     if (noFG.score > 50) {

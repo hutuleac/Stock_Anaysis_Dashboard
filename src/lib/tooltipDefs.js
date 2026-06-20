@@ -338,7 +338,7 @@ export const TIPS = {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',
     category: 'Composite',
-    description: 'The three pillars of the composite score. T scores price action and momentum signals. F scores valuation and earnings quality. S scores insider activity, analyst targets, and positioning. Weights shown are regime-adjusted when VIX is elevated.',
+    description: 'The three pillars of the composite score. T scores price action and momentum signals. F scores valuation and earnings quality. S scores insider activity, news sentiment, and positioning. Weights shown are regime-adjusted when VIX is elevated.',
     levels: [
       { range: '> 60',  label: 'Bullish',  color: C.green, desc: 'This pillar is sending a bullish signal — contributes positively to overall score.' },
       { range: '40–60', label: 'Neutral',  color: C.dim,   desc: 'Neutral pillar — neither confirming nor contradicting the thesis.' },
@@ -389,20 +389,6 @@ export const TIPS = {
       { range: '> $100B',  label: 'Mega Cap',   color: C.dim,   desc: 'Market-moving stocks. Highly liquid and covered. Index-level risk in a single name.' },
     ],
     why: 'Small caps move faster with more upside but also more fake-outs. Large caps have cleaner technicals due to institutional positioning and higher analyst scrutiny.',
-  },
-
-  analystTarget: {
-    title: 'Analyst Price Target',
-    subtitle: 'Consensus Mean Target (12-Month)',
-    category: 'Sentiment',
-    description: 'Average analyst price target for the next 12 months. Premium to current price = expected upside per Wall Street consensus. Meaningful when there are 3+ analysts covering the stock.',
-    levels: [
-      { range: '> +20%',  label: 'Strong upside',    color: C.green,  desc: 'Analysts see significant runway — strong buy-side backdrop for the thesis.' },
-      { range: '+5–20%',  label: 'Moderate upside',  color: C.amber,  desc: 'Analysts expect moderate gains. Consistent with a reasonable long thesis.' },
-      { range: '±5%',     label: 'Near target',      color: C.dim,    desc: 'Price approaching analyst targets — upside limited per consensus.' },
-      { range: '< -5%',   label: 'Above target',     color: C.red,    desc: 'Priced above consensus — market more bullish than analysts. Contrarian risk.' },
-    ],
-    why: 'Analyst targets are backward-looking and slow to update, but extreme deviations signal sentiment extremes. Being 30%+ above consensus has historically predicted underperformance.',
   },
 
   insider: {
