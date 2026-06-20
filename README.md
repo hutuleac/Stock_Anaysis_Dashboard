@@ -52,10 +52,6 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 
 ## Features
 
-### Morning Brief
-- Top 3 setups by score (≥ 55), earnings warnings (≤ 7 days), big movers (|Δ| ≥ 3%) — all at a glance above the table
-- Collapsible, click any ticker to jump straight to the expanded row
-
 ### Watchlist
 - Search and add tickers via Finnhub search API
 - Bulk import — paste comma/newline-separated list
