@@ -270,6 +270,20 @@ export const TIPS = {
     why: 'Leaders keep leading. Buying relative-strength names in an uptrend beats bottom-fishing laggards. Pair 1M (recent) with 3M (sustained) to filter one-week pops.',
   },
 
+  shortInterest: {
+    title: 'Short Interest',
+    subtitle: 'Days to cover (short squeeze risk)',
+    category: 'Sentiment',
+    description: 'Number of days of average trading volume it would take to cover all short positions. High days-to-cover + improving fundamentals = potential short squeeze setup.',
+    levels: [
+      { range: '< 2d',   label: 'Low',      color: C.dim,   desc: 'Low short interest — squeeze potential minimal.' },
+      { range: '2–5d',   label: 'Moderate', color: C.dim,   desc: 'Some short positioning — monitor for change.' },
+      { range: '5–10d',  label: 'Elevated', color: C.amber, desc: 'Elevated short interest — squeeze risk if catalyst appears.' },
+      { range: '> 10d',  label: 'High',     color: C.green, desc: 'High short interest — strong squeeze candidate, especially with bullish fundamentals.' },
+    ],
+    why: 'Short sellers must eventually buy to cover. When a stock moves up sharply with high short interest, forced covering accelerates the move. Most relevant for mid/small caps. Display-only — does not feed the score.',
+  },
+
   swingLows: {
     title: 'Swing-Low Support',
     subtitle: 'Last 3 significant pivot lows (daily)',

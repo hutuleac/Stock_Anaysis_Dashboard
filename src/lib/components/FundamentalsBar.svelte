@@ -419,6 +419,20 @@
       </div>
     {/if}
 
+    <!-- Short Interest — days to cover (squeeze risk) -->
+    {#if data?.shortInterest?.data != null}
+      {@const si = data.shortInterest.data}
+      {@const dtc = si.daysToCover}
+      {@const dtcColor = dtc == null ? 'text-text-muted' : dtc > 10 ? 'text-bull-strong' : dtc > 5 ? 'text-uncertain' : 'text-text-muted'}
+      {@const dtcCssColor = dtc == null ? '#9ca3af' : dtc > 10 ? '#22c55e' : dtc > 5 ? '#f59e0b' : '#9ca3af'}
+      {@const dtcLabel = dtc == null ? '—' : dtc > 10 ? 'High' : dtc > 5 ? 'Elevated' : dtc > 2 ? 'Moderate' : 'Low'}
+      <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.shortInterest, current: { value: dtc != null ? dtc + 'd' : '—', label: dtcLabel, color: dtcCssColor } })}>
+        <span class="text-[13px] text-text-muted uppercase tracking-wider">Short</span>
+        <span class="text-sm font-mono font-semibold mt-0.5 {dtcColor}">{dtc != null ? dtc + 'd' : '—'}</span>
+        <span class="text-[12px] {dtcColor}">{dtcLabel} cover</span>
+      </div>
+    {/if}
+
     <!-- OBV — accumulation/distribution from candle volume -->
     {#if data?.indicators?.obv != null}
       {@const obv = data.indicators.obv}
