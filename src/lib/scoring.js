@@ -9,7 +9,6 @@
 let _marketContext = null;
 
 export function setMarketContext(ctx) { _marketContext = ctx; }
-export function getMarketContext()    { return _marketContext; }
 
 // ─── NEWS SENTIMENT ────────────────────────────────────────────────────────────
 
@@ -267,9 +266,6 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     scoreZScore: null, // computed separately via computeScoreZScore(symbol)
   };
 }
-
-// Keep legacy export for any components still referencing it
-export const computeSimpleScore = computeScore;
 
 // ─── SCORE VELOCITY ───────────────────────────────────────────────────────────
 // Stores daily score snapshots in localStorage, returns delta vs ~3 days ago.

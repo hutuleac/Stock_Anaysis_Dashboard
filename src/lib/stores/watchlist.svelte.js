@@ -67,7 +67,7 @@ function persistTickers() {
 
 export function getTickers() { return tickers; }
 export function getSelectedSymbol() { return selectedSymbol; }
-export function getMarketData() { return marketData; }
+function getMarketData() { return marketData; }
 
 export function selectTicker(symbol) {
   selectedSymbol = selectedSymbol === symbol ? null : symbol;

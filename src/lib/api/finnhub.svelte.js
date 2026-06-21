@@ -110,7 +110,7 @@ async function fetchWithCache(type, symbol, fetcher) {
   }
 }
 
-export async function fetchQuote(symbol) {
+async function fetchQuote(symbol) {
   return fetchWithCache('quote', symbol, () =>
     fetchFinnhub(`/quote?symbol=${encodeURIComponent(symbol)}`)
   );
@@ -122,13 +122,13 @@ export async function fetchProfile(symbol) {
   );
 }
 
-export async function fetchMetrics(symbol) {
+async function fetchMetrics(symbol) {
   return fetchWithCache('fundamentals', symbol, () =>
     fetchFinnhub(`/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`)
   );
 }
 
-export async function fetchEarnings(symbol) {
+async function fetchEarnings(symbol) {
   const now = new Date();
   const from = now.toISOString().split('T')[0];
   const to = new Date(now.getTime() + 90 * 86400000).toISOString().split('T')[0];
@@ -138,7 +138,7 @@ export async function fetchEarnings(symbol) {
 }
 
 
-export async function fetchNews(symbol) {
+async function fetchNews(symbol) {
   const now = new Date();
   const to = now.toISOString().split('T')[0];
   const from = new Date(now - 7 * 86400000).toISOString().split('T')[0];
@@ -157,7 +157,7 @@ export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
   );
 }
 
-export async function fetchShortInterest(symbol) {
+async function fetchShortInterest(symbol) {
   const to = new Date().toISOString().split('T')[0];
   const from = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
   return fetchWithCache('short_interest', symbol, async () => {
@@ -236,7 +236,7 @@ export async function refreshAll(symbols, onProgress) {
 }
 
 // Sector → ETF mapping
-export const SECTOR_ETF_MAP = {
+const SECTOR_ETF_MAP = {
   'Technology': 'XLK',
   'Financial Services': 'XLF',
   'Financials': 'XLF',
@@ -274,7 +274,7 @@ export async function fetchHistoricalEarnings(symbol, limit = 8) {
 
 // ── CNN Fear & Greed Index ────────────────────────────────────────────────────
 // Returns { score: 0–100, rating: string } or null on failure.
-export async function fetchFearAndGreed() {
+async function fetchFearAndGreed() {
   const key = 'fh_feargreed_market';
   const ttl = CACHE_TTL.feargreed;
   const cached = readCache(key, ttl);
