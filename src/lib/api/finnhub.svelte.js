@@ -217,13 +217,11 @@ export async function refreshAll(symbols, onProgress) {
     refreshProgress = { current: i + 1, total: symbols.length };
     onProgress?.(refreshProgress);
 
-    const [quote, earnings, metrics, news, shortInterest] = await Promise.all([
-      fetchQuote(symbol),
-      fetchEarnings(symbol),
-      fetchMetrics(symbol),
-      fetchNews(symbol),
-      fetchShortInterest(symbol),
-    ]);
+    const quote         = await fetchQuote(symbol);        await delay(CALL_DELAY_MS);
+    const earnings      = await fetchEarnings(symbol);     await delay(CALL_DELAY_MS);
+    const metrics       = await fetchMetrics(symbol);      await delay(CALL_DELAY_MS);
+    const news          = await fetchNews(symbol);         await delay(CALL_DELAY_MS);
+    const shortInterest = await fetchShortInterest(symbol);
 
     results[symbol] = { quote, earnings, metrics, news, shortInterest };
 
