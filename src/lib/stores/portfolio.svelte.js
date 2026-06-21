@@ -1,8 +1,8 @@
 let positions = $state([]);
 let portfolioValue = $state(0);
 let storageWarning = $state(false);
-export function isPortfolioStorageFull() { return storageWarning; }
-export function clearPortfolioStorageWarning() { storageWarning = false; }
+function isPortfolioStorageFull() { return storageWarning; }
+function clearPortfolioStorageWarning() { storageWarning = false; }
 
 // Initialize from localStorage
 try {
@@ -36,7 +36,7 @@ export function setPortfolioValue(val) {
 
 export function getPositions() { return positions; }
 
-export function addPosition(ticker, qty, avgCost) {
+function addPosition(ticker, qty, avgCost) {
   const existing = positions.findIndex(p => p.ticker === ticker);
   if (existing !== -1) {
     positions[existing] = { ticker, qty, avgCost };
@@ -46,21 +46,21 @@ export function addPosition(ticker, qty, avgCost) {
   persistPositions();
 }
 
-export function removePosition(ticker) {
+function removePosition(ticker) {
   const idx = positions.findIndex(p => p.ticker === ticker);
   if (idx !== -1) positions.splice(idx, 1);
   persistPositions();
 }
 
-export function getPosition(ticker) {
+function getPosition(ticker) {
   return positions.find(p => p.ticker === ticker) || null;
 }
 
-export function hasPosition(ticker) {
+function hasPosition(ticker) {
   return positions.some(p => p.ticker === ticker);
 }
 
-export function clearPositions() {
+function clearPositions() {
   positions.length = 0;
   persistPositions();
 }
