@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
@@ -171,6 +171,7 @@
         } catch {
           results[ticker.symbol].sectorTrend = null;
         }
+        await delay(100);
 
         // Company profile (cached 7d) → USD market cap + listing currency.
         // The metrics endpoint reports market cap in the company's reporting
@@ -184,6 +185,7 @@
             };
           }
         } catch { /* non-blocking */ }
+        await delay(100);
 
         // Daily candles → local RSI/MACD indicators
         try {
@@ -239,6 +241,7 @@
             }
           } else {
             const candleRes = await fetchCandles(ticker.symbol, 'D', fromTs, toTs);
+            await delay(100);
             const localInd = computeIndicatorsFromCandles(candleRes?.data);
             if (localInd) {
               results[ticker.symbol].indicators = localInd;
@@ -252,6 +255,7 @@
 
             const weeklyFromTs = toTs - 52 * 7 * 86400;
             const weeklyRes = await fetchCandles(ticker.symbol, 'W', weeklyFromTs, toTs);
+            await delay(100);
             const weeklyTrend = computeWeeklyTrend(weeklyRes?.data);
             if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
             const setups = computeSetupSignals(weeklyRes?.data);
