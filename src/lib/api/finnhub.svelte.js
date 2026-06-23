@@ -13,6 +13,8 @@ const CACHE_TTL = {
 };
 
 const CALL_DELAY_MS = 100;
+const FH_MIN_INTERVAL = 1100; // Finnhub free: 60 calls/min → enforce 1.1s between live calls
+let _fhLastCall = 0;
 
 let apiKey = $state('');
 let refreshing = $state(false);
@@ -68,6 +70,9 @@ export function delay(ms) {
 
 async function fetchFinnhub(path) {
   if (!apiKey) throw new Error('No API key configured');
+  const wait = Math.max(0, FH_MIN_INTERVAL - (Date.now() - _fhLastCall));
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  _fhLastCall = Date.now();
   const url = `https://finnhub.io/api/v1${path}&token=${apiKey}`;
   const res = await fetch(url);
   if (res.status === 429) throw new Error('RATE_LIMITED');
