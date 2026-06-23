@@ -312,18 +312,27 @@
       // First remove the old large snapshot key to free quota space.
       try { localStorage.removeItem('dashboard_snapshot'); } catch { /* noop */ }
       try {
+        // Read previous supplement so candle-derived fields (indicators, weekly,
+        // setups, rs) survive a refresh where candle fetches fail or are rate-limited.
+        let prevSupp = null;
+        try {
+          const ps = localStorage.getItem('dashboard_supplement');
+          if (ps) prevSupp = JSON.parse(ps)?.tickers ?? null;
+        } catch { /* noop */ }
+
         const supplement = {};
         for (const [sym, d] of Object.entries(results)) {
+          const p = prevSupp?.[sym];
           supplement[sym] = {
             quote:       d.quote       ?? null,
             earnings:    d.earnings    ?? null,
             metrics:     d.metrics     ?? null,
-            indicators:  d.indicators  ?? null,
-            tdQuote:     d.tdQuote     ?? null,
-            weekly:      d.weekly      ?? null,
-            setups:      d.setups      ?? null,
-            profile:     d.profile     ?? null,
-            rs:          d.rs          ?? null,
+            indicators:  d.indicators  ?? p?.indicators  ?? null,
+            tdQuote:     d.tdQuote     ?? p?.tdQuote     ?? null,
+            weekly:      d.weekly      ?? p?.weekly      ?? null,
+            setups:      d.setups      ?? p?.setups      ?? null,
+            profile:     d.profile     ?? p?.profile     ?? null,
+            rs:          d.rs          ?? p?.rs          ?? null,
             sectorTrend: d.sectorTrend ?? null,
           };
         }
@@ -372,6 +381,46 @@
       if (data._candlesDaily)  { const an  = computeChartAnchors(data._candlesDaily);           if (an)  data.anchors   = an;  }
       delete data._candlesDaily;
       delete data._candlesWeekly;
+
+      // TwelveData candle cache — used when Finnhub candles are unavailable (403).
+      // Converts the cached td_ts_1day_* values into indicators on startup so tickers
+      // load fully without needing a fresh API refresh.
+      if (!data.indicators) {
+        try {
+          const tdRaw = localStorage.getItem(`td_ts_1day_${ticker.symbol}_1day_250`);
+          if (tdRaw) {
+            const td = JSON.parse(tdRaw);
+            if (td?.data?.length >= 30) {
+              const vals = td.data;
+              const synthetic = {
+                s: 'ok',
+                t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
+                o: vals.map(v => parseFloat(v.open)),
+                h: vals.map(v => parseFloat(v.high)),
+                l: vals.map(v => parseFloat(v.low)),
+                c: vals.map(v => parseFloat(v.close)),
+                v: vals.map(v => parseInt(v.volume, 10)),
+              };
+              const ind = computeIndicatorsFromCandles(synthetic);
+              if (ind) {
+                data.indicators = ind;
+                const vols = synthetic.v.filter(v => v > 0);
+                if (vols.length >= 20) {
+                  const vol = vols[vols.length - 1];
+                  const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
+                  data.tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
+                }
+                // Resample daily→weekly (every 5th bar) for weekly trend + setups
+                const wIdx = synthetic.c.map((_, i) => i).filter(i => i % 5 === 0);
+                const weeklyRaw = { s: 'ok', c: wIdx.map(i => synthetic.c[i]), h: wIdx.map(i => synthetic.h[i]), l: wIdx.map(i => synthetic.l[i]), v: wIdx.map(i => synthetic.v[i]), t: wIdx.map(i => synthetic.t[i]) };
+                const wt = computeWeeklyTrend(weeklyRaw); if (wt) data.weekly = wt;
+                const st = computeSetupSignals(weeklyRaw); if (st) data.setups = st;
+                const an = computeChartAnchors(synthetic); if (an) data.anchors = an;
+              }
+            }
+          }
+        } catch { /* noop */ }
+      }
     }
 
     // Patch supplement fields directly into results (same object, no extra setMarketData call)
