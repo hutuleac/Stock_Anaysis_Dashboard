@@ -469,6 +469,32 @@ export const TIPS = {
     why: 'Pairs timing with quality: catch the early entry, but only in companies that are growing and already leading the market. Ranked ACT → SOON → WATCH, strongest setup first.',
   },
 
+  radarReadiness: {
+    title: 'Entry Readiness',
+    subtitle: 'How close the setup is to triggering',
+    category: 'Entry Timing',
+    description: 'How close a weekly setup is to an actionable entry. Derived from the setup score plus urgency components (squeeze, breakout imminent, divergence recency).',
+    levels: [
+      { range: 'WATCH', label: 'Watch', color: C.muted,  desc: 'Setup forming but no trigger yet — put on radar, check weekly.' },
+      { range: 'SOON',  label: 'Soon',  color: C.amber, desc: 'Entry conditions aligning — prepare a plan and watch for a trigger this week.' },
+      { range: 'ACT',   label: 'Act',   color: C.green, desc: 'Setup fully triggered — conditions are in place for entry now.' },
+    ],
+    why: 'Readiness separates "interesting" from "tradeable". ACT means the weekly pattern is complete and the risk/reward is defined. ~Xw shows how many weeks until the setup is estimated to fully mature.',
+  },
+
+  radarRsRank: {
+    title: 'RS Rank (3M)',
+    subtitle: 'Relative Strength rank within your watchlist',
+    category: 'Trend',
+    description: 'Ranks all watchlist tickers by 3-month RS vs SPY, from strongest (#1) to weakest. Only tickers with positive rs3m qualify for the Radar — so every rank shown is already beating the market.',
+    levels: [
+      { range: '#1–3',  label: 'Top tier',  color: C.green, desc: 'Among the strongest performers in your list vs the index — institutions are in.' },
+      { range: '#4–7',  label: 'Mid tier',  color: C.dim,   desc: 'Solid outperformers — ahead of the market, not leading the watchlist.' },
+      { range: '#8+',   label: 'Lower',     color: C.amber, desc: 'Outperforming SPY but lower in the pack — setup must be strong to justify entry.' },
+    ],
+    why: 'Institutions buy the leaders. Pairing an early entry setup with a top-RS stock maximises the probability of catching an institutional trend already in motion.',
+  },
+
   earningsSoon: {
     title: 'Earnings Soon',
     subtitle: 'Reports Within 7 Days',
