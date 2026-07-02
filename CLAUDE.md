@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.12
+# Project State — Stock Analysis Dashboard v0.16
 
 ## What this is
 
@@ -99,6 +99,7 @@ src/lib/
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)
+  dip.js              — Dip Hunter: quality gate + 8-component 0–10 dip score
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
@@ -110,6 +111,7 @@ src/lib/
     ThesisSummary.svelte    — plain-English score explanation
     PaperTradePanel.svelte  — paper trade entry + tracking
     PortfolioStats.svelte   — P&L, edge analysis, sector exposure
+    DipRadar.svelte         — Dip Hunter card, collapsible watchlist-scan panel
   stores/
     watchlist.svelte.js     — ticker list, fetch orchestration
     portfolio.svelte.js     — trade log, FIFO P&L
@@ -119,7 +121,8 @@ tests/
   indicators.test.js  — 59 unit tests for indicators.js
   scoring.test.js     — 42 unit tests for scoring.js
   signals.test.js     — 32 unit tests for signals.js
-  valuation.test.js   — 3 unit tests for valuation.js  (136 total)
+  valuation.test.js   — 3 unit tests for valuation.js
+  dip.test.js         — 20 unit tests for dip.js  (214 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -152,6 +155,26 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 
 **Inversions from the crypto source** (grid bots want chop; we want trends): high ADX/trend is positive for momentum, divergence is used long-only (bullish at lows), and everything runs on weekly not 4H. Crypto-only inputs (funding, OI, order-flow CVD) were dropped. Squeeze COMPRESSING is gated on bandwidth percentile (scale-agnostic across tickers), not an absolute bandwidth level.
 
+## Dip Hunter (dip.js)
+
+Watchlist-wide scan for early entries in quality names on sale — display-only, does not feed `computeScore`. Two stages, entry point `computeDipRadar(list, marketCtx)`:
+
+1. **Quality gate** (`gateMetrics`, ALL must pass): EPS growth > 0, revenue growth > 0, net margin > 0, PEG < 3 (via `valuation.js`, skipped if growth ≤ 0), fundamental score ≥ 60. Filters falling knives before any dip scoring happens.
+2. **Dip score**, 0–10 across 8 components, rebalanced whenever a component is added — always keep the maxes summing to 10:
+
+| Component | Max | Signal |
+|---|---|---|
+| Market Fear | 1.5 | F&G in fear zone + SPY below EMA50 |
+| Oversold | 2.0 | RSI tiers + z-score ≤ −1.5 + BB confluence |
+| Drawdown | 1.0 | 60d/20d ROC decline |
+| 52w Low | 1.0 | proximity to 52-week low (own tiers, not folded into Drawdown) |
+| Turn | 1.0 | MACD histogram just crossed bullish — leading reversal, complements the coincident Oversold reading |
+| Rel. Strength | 1.0 | mild RS underperformance vs SPY (−5% to −15%) reads as overreaction; beyond −15% or positive RS scores 0 — extreme weakness is a flag, not a discount |
+| Value | 1.0 | grades PEG *within* the gate's <3 band — PEG<1 scores higher than PEG 2–3 |
+| Smart Money | 1.5 | insider net-buying (MSPR) + ≥60% analyst buy ratio, not deteriorating |
+
+Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component (never fires in a greedy market) · `SOON` ≥ 5 · `WATCH` ≥ 3 (below 3, excluded entirely). All inputs are already computed elsewhere on the ticker object (`data.indicators`, `data.rs`, `data.smartMoney`, `data.metrics`) — zero new API calls.
+
 ## Known conventions / gotchas
 
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
@@ -168,10 +191,10 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 136 unit tests, ~200ms
+npm test          # 214 unit tests, ~250ms
 npm run build     # production build → dist/
 ```
 
 ## What's next (BACKLOG.md)
 
-Open queue, priority order: OBV, 52w-high volume confirmation, swing-low support levels, beta-adjusted sizing — all zero-API-call. Short interest is the one queued item that costs +1 endpoint/ticker (needs approval). Plus the two-view (Momentum / Pullback) detail-panel tab toggle that organizes the shipped signals into two named playbooks. See `BACKLOG.md` for the full list and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).
+PR #16 (`feat/dip-hunter-extra-signals`) open at session end — Dip Hunter's Value/52w-Low/Rel.Strength components, awaiting merge. See `BACKLOG.md` for the full queue and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).
