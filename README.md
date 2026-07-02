@@ -220,6 +220,11 @@ npm run test:watch  # watch mode (dev)
 
 ## Changelog
 
+### v0.16 (2026-07-02) — Dip Hunter
+- **Dip Hunter card** — finds early entries when quality stocks go on sale. A strict quality gate must pass first (EPS growth > 0, revenue growth > 0, profitability, PEG < 3, fundamental score ≥ 60); survivors are scored 0–10 on **Market Fear** (F&G zone + SPY below EMA50), **Oversold** (RSI tiers, RSI z-score, BB confluence), **Drawdown** (60d/20d decline, lower half of 52w range), and **Smart Money** (insider net buying + analyst buy ratio). ACT requires an active fear component — the card never says ACT in a greedy market. Display-only; the composite score is untouched.
+- **Smart-money data** — two new free Finnhub endpoints (`/stock/recommendation`, `/stock/insider-sentiment`), combined into one 7-day cache entry: +2 calls/ticker on the first refresh of a week, zero after.
+- 16 new unit tests (210 total).
+
 ### v0.15.1 (2026-07-02) — audit fixes
 - **Real weekly bars** — daily candles are now aggregated into true weekly OHLCV (max high / min low / last close / summed volume, current partial week included) instead of sampling every 5th bar. Weekly ATR is now a true weekly value (Entry Panel suggested stops widen accordingly) and setup signals always reflect the latest trading day.
 - **Volatility regime proxy** — Finnhub free tier returns zeros for VIX, so the regime logic silently never fired. The market bar now shows **VOL**: SPY 20-day realized volatility (annualized, VIX-comparable), computed from already-fetched SPY closes. Two dead API calls per refresh removed.
