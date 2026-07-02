@@ -9,6 +9,7 @@ const CACHE_TTL = {
   candles_intraday: 900, // 15 min — intraday data refreshes frequently
   feargreed:    3600,       // CNN Fear & Greed — 1 hour
   earnings_hist: 86400,    // historical earnings surprises — 24h
+  smart_money: 604800,     // analyst recs + insider sentiment — 7d cache
 };
 
 const CALL_DELAY_MS = 100;
@@ -161,6 +162,46 @@ export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
   );
 }
 
+// ── Smart money: analyst recommendations + insider sentiment ─────────────────
+// Two free endpoints, one cache entry (7d). rec.buyRatio = (strongBuy+buy)/total
+// for the latest month; deteriorating = ratio dropped >5pts vs prior month.
+// mspr3m = mean insider MSPR over the 3 most recent months (>0 = net buying).
+export async function fetchSmartMoney(symbol) {
+  return fetchWithCache('smart_money', symbol, async () => {
+    const rec = await fetchFinnhub(`/stock/recommendation?symbol=${encodeURIComponent(symbol)}`)
+      .catch(() => null);
+    const to = new Date().toISOString().split('T')[0];
+    const from = new Date(Date.now() - 200 * 86400000).toISOString().split('T')[0];
+    const ins = await fetchFinnhub(`/stock/insider-sentiment?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`)
+      .catch(() => null);
+
+    let recOut = null;
+    if (Array.isArray(rec) && rec.length) {
+      const ratio = (r) => {
+        const total = r.strongBuy + r.buy + r.hold + r.sell + r.strongSell;
+        return total > 0 ? (r.strongBuy + r.buy) / total : null;
+      };
+      const curr = ratio(rec[0]);
+      const prev = rec.length > 1 ? ratio(rec[1]) : null;
+      if (curr !== null) {
+        recOut = {
+          buyRatio: Math.round(curr * 100) / 100,
+          deteriorating: prev !== null && curr < prev - 0.05,
+        };
+      }
+    }
+
+    let mspr3m = null;
+    const months = ins?.data;
+    if (Array.isArray(months) && months.length) {
+      const last3 = months.slice(-3).map(m => m.mspr).filter(v => typeof v === 'number');
+      if (last3.length) mspr3m = Math.round((last3.reduce((s, v) => s + v, 0) / last3.length) * 10) / 10;
+    }
+
+    return (recOut || mspr3m !== null) ? { rec: recOut, mspr3m } : null;
+  });
+}
+
 export async function searchTicker(query) {
   if (!query || query.length < 1) return [];
   return fetchWithCache('search', query, async () => {
@@ -187,6 +228,7 @@ export function hydrateFromCache(symbols) {
       quote:          { data: readStale(cacheKey('quote', symbol)),                stale: true },
       earnings:       { data: readStale(cacheKey('earnings', symbol)),             stale: true },
       metrics:        { data: readStale(cacheKey('fundamentals', symbol)),         stale: true },
+      smartMoney:     { data: readStale(cacheKey('smart_money', symbol)),          stale: true },
       news:           { data: readStale(cacheKey('news', symbol)),                 stale: true },
       _candlesDaily:  readStale(cacheKey('candles', `${symbol}_D`)),
       _candlesWeekly: readStale(cacheKey('candles', `${symbol}_W`)),

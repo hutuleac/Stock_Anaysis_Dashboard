@@ -455,6 +455,35 @@ export const TIPS = {
     why: 'Pairs timing with quality: catch the early entry, but only in companies that are growing and already leading the market. Ranked ACT → SOON → WATCH, strongest setup first.',
   },
 
+  dipRadar: {
+    title: 'Dip Hunter',
+    subtitle: 'Quality stocks on sale',
+    category: 'Signals',
+    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A strict quality gate (EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) must pass first — then the dip is scored 0–10 on market fear (F&G, SPY trend), oversold readings (RSI, z-score, BB confluence), drawdown depth, and smart-money confirmation (insider buying, analyst recs).',
+    why: 'The best swing entries happen when a great business goes on sale for market-wide reasons, not company-specific ones. The gate filters falling knives; the fear component ensures you buy weakness, not strength. Display-only — does not feed the composite score.',
+  },
+
+  dipScore: {
+    title: 'Dip Score',
+    subtitle: '0–10 across four components',
+    category: 'Signals',
+    description: 'Market Fear (max 2.5): F&G in fear zone + SPY below EMA50. Oversold (max 3): RSI tiers, RSI z-score ≤ −1.5, price at lower Bollinger band. Drawdown (max 2.5): 60d/20d decline + lower half of 52w range. Smart Money (max 2): insiders net-buying + ≥60% analyst buy ratings.',
+    levels: [
+      { range: '≥ 7',   label: 'ACT',   color: C.green, desc: 'Deep, fear-driven dip in a quality name — the setup this card exists for. ACT requires the fear component (never fires in a greedy market).' },
+      { range: '5–7',   label: 'SOON',  color: C.amber, desc: 'Dip forming — stage in or wait for a fear spike / deeper oversold reading.' },
+      { range: '3–5',   label: 'WATCH', color: C.dim,   desc: 'Early weakness in a quality name — on the radar, not actionable yet.' },
+    ],
+    why: 'A score, not a verdict: check the chart, support levels, and earnings date before entering. Position size per the Entry Panel.',
+  },
+
+  dipSmartMoney: {
+    title: 'Smart Money Confirmation',
+    subtitle: 'Insider sentiment + analyst recommendations',
+    category: 'Sentiment',
+    description: 'Insider MSPR (monthly share purchase ratio, averaged over 3 months): positive = executives are net buyers of their own stock. Analyst buy ratio: share of strong-buy + buy ratings, flagged if deteriorating month-over-month. Both from free Finnhub endpoints, cached 7 days.',
+    why: 'Insiders buying while price falls is the strongest available tell that a dip is company-value, not company-trouble. It distinguishes a discount from a falling knife.',
+  },
+
   radarReadiness: {
     title: 'Entry Readiness',
     subtitle: 'How close the setup is to triggering',
