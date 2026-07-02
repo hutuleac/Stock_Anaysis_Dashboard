@@ -43,8 +43,9 @@ export const DEMO_MARKET_DATA = {
   AMZN: {
     quote:         { data: { c: 196.40, d: 0.59,  dp: 0.3,   pc: 195.81 }, stale: true },
     earnings:      { data: { earningsCalendar: [{ date: '2026-04-30', symbol: 'AMZN' }] }, stale: true },
-    metrics:       { data: { metric: { marketCapitalization: 2100, peNormalizedAnnual: 42.8, peBasicExclExtraTTM: 42.8, epsGrowthTTMYoy: 58.4, epsGrowth3Y: 38.7, '50DayMovingAverage': 190.50, '200DayMovingAverage': 178.20, '52WeekHigh': 218.71, '52WeekLow': 151.61, beta: 1.14 } }, stale: true },
+    metrics:       { data: { metric: { marketCapitalization: 2100, peNormalizedAnnual: 42.8, peBasicExclExtraTTM: 42.8, epsGrowthTTMYoy: 58.4, epsGrowth3Y: 38.7, revenueGrowthTTMYoy: 12.5, netProfitMarginTTM: 8.1, '50DayMovingAverage': 190.50, '200DayMovingAverage': 178.20, '52WeekHigh': 218.71, '52WeekLow': 151.61, beta: 1.14 } }, stale: true },
     news:          { data: [], stale: true },
+    smartMoney:    { data: { rec: { buyRatio: 0.72, deteriorating: false }, mspr3m: 8.4 }, stale: true },
     indicators:    { rsi: 54.8, rsiDirection: 'rising', rsiZScore: 0.4, macd: { macd: 0.42, signal: 0.18, histogram: 0.24 }, macdCrossover: null, adx: 27.3, stochK: 58.2, stochD: 52.1, stochCross: 'bullish_cross', bb: { upper: 210.0, middle: 193.5, lower: 177.0 }, ema20: 194.8, ema50: 190.50, ema200: 178.20, source: 'demo' },
     tdQuote:       { volume: 32_100_000, avgVolume: 35_800_000, volumeRatio: 0.90 },
     weekly:        { trend: 'up', rsi: 57.2, ema10: 191.0, aboveEma: true, atr: 5.1, macd: { macd: 0.9, signal: 0.5, histogram: 0.4 } },
@@ -53,9 +54,10 @@ export const DEMO_MARKET_DATA = {
   MSFT: {
     quote:         { data: { c: 378.90, d: -1.91, dp: -0.5,  pc: 380.81 }, stale: true },
     earnings:      { data: { earningsCalendar: [{ date: '2026-04-29', symbol: 'MSFT' }] }, stale: true },
-    metrics:       { data: { metric: { marketCapitalization: 2815, peNormalizedAnnual: 34.1, peBasicExclExtraTTM: 34.1, epsGrowthTTMYoy: 21.3, epsGrowth3Y: 18.9, '50DayMovingAverage': 373.80, '200DayMovingAverage': 352.40, '52WeekHigh': 420.82, '52WeekLow': 309.45, beta: 0.91 } }, stale: true },
+    metrics:       { data: { metric: { marketCapitalization: 2815, peNormalizedAnnual: 34.1, peBasicExclExtraTTM: 34.1, epsGrowthTTMYoy: 21.3, epsGrowth3Y: 18.9, revenueGrowthTTMYoy: 14.8, netProfitMarginTTM: 35.6, '50DayMovingAverage': 373.80, '200DayMovingAverage': 352.40, '52WeekHigh': 420.82, '52WeekLow': 309.45, beta: 0.91 } }, stale: true },
     news:          { data: [], stale: true },
-    indicators:    { rsi: 53.2, rsiDirection: 'flat', rsiZScore: 0.2, macd: { macd: 0.68, signal: 0.42, histogram: 0.26 }, macdCrossover: null, adx: 29.4, stochK: 61.4, stochD: 58.7, stochCross: null, bb: { upper: 395.0, middle: 375.0, lower: 355.0 }, ema20: 377.4, ema50: 373.80, ema200: 352.40, source: 'demo' },
+    smartMoney:    { data: { rec: { buyRatio: 0.81, deteriorating: false }, mspr3m: 15.2 }, stale: true },
+    indicators:    { rsi: 53.2, rsiDirection: 'flat', rsiZScore: 0.2, roc20: -5.5, roc60: -9.2, macd: { macd: 0.68, signal: 0.42, histogram: 0.26 }, macdCrossover: null, adx: 29.4, stochK: 61.4, stochD: 58.7, stochCross: null, bb: { upper: 395.0, middle: 375.0, lower: 355.0 }, ema20: 377.4, ema50: 373.80, ema200: 352.40, source: 'demo' },
     tdQuote:       { volume: 18_700_000, avgVolume: 22_400_000, volumeRatio: 0.83 },
     weekly:        { trend: 'up', rsi: 56.1, ema10: 374.0, aboveEma: true, atr: 6.8, macd: { macd: 1.4, signal: 0.9, histogram: 0.5 } },
     sectorTrend:   false,
