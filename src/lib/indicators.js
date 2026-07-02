@@ -320,6 +320,53 @@ export function computeVolumeConfirmation(volumes, recentBars = 5, avgBars = 20)
   return { ratio: Math.round(ratio * 100) / 100, confirmed: ratio >= 1.2 };
 }
 
+// ── Daily → weekly OHLCV resampling ──────────────────────────────────────────
+// Groups daily bars into ISO weeks (Mon-start): open = first, high = max,
+// low = min, close = last, volume = sum. Includes the current partial week,
+// so weekly signals always reflect the latest trading day.
+export function resampleWeekly(raw) {
+  if (!raw?.c?.length || raw.s !== 'ok' || !raw.t || raw.t.length !== raw.c.length) return null;
+  // Epoch day 0 (1970-01-01) was a Thursday; +3 aligns week boundaries to Monday.
+  const weekKey = (ts) => Math.floor((Math.floor(ts / 86400) + 3) / 7);
+  const out = { s: 'ok', t: [], o: [], h: [], l: [], c: [], v: [] };
+  let key = null;
+  for (let i = 0; i < raw.c.length; i++) {
+    const k = weekKey(raw.t[i]);
+    if (k !== key) {
+      key = k;
+      out.t.push(raw.t[i]);
+      out.o.push(raw.o?.[i] ?? raw.c[i]);
+      out.h.push(raw.h?.[i] ?? raw.c[i]);
+      out.l.push(raw.l?.[i] ?? raw.c[i]);
+      out.c.push(raw.c[i]);
+      out.v.push(raw.v?.[i] ?? 0);
+    } else {
+      const j = out.c.length - 1;
+      out.h[j] = Math.max(out.h[j], raw.h?.[i] ?? raw.c[i]);
+      out.l[j] = Math.min(out.l[j], raw.l?.[i] ?? raw.c[i]);
+      out.c[j] = raw.c[i];
+      out.v[j] += raw.v?.[i] ?? 0;
+    }
+  }
+  return out;
+}
+
+// ── Realized volatility (VIX proxy) ──────────────────────────────────────────
+// Annualized stdev of the last `window` daily log returns, in % points —
+// comparable to VIX levels. Finnhub free returns zeros for the real VIX,
+// so the regime logic runs on SPY realized vol instead.
+export function realizedVol(closes, window = 20) {
+  if (!closes || closes.length < window + 1) return null;
+  const rets = [];
+  for (let i = closes.length - window; i < closes.length; i++) {
+    if (closes[i - 1] > 0 && closes[i] > 0) rets.push(Math.log(closes[i] / closes[i - 1]));
+  }
+  if (rets.length < window) return null;
+  const mean = rets.reduce((s, v) => s + v, 0) / rets.length;
+  const variance = rets.reduce((s, v) => s + (v - mean) ** 2, 0) / rets.length;
+  return Math.round(Math.sqrt(variance) * Math.sqrt(252) * 1000) / 10;
+}
+
 // ── Main: compute all indicators from raw Finnhub/TwelveData candle response ──
 export function computeIndicatorsFromCandles(raw) {
   if (!raw?.c || raw.s !== 'ok' || raw.c.length < 30) return null;
