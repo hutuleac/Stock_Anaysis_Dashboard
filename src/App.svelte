@@ -1,7 +1,7 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
-  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength } from './lib/indicators.js';
+  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
@@ -131,8 +131,8 @@
         // Push regime context into scoring engine — all computeScore() calls
         // this session will automatically use regime-aware weights + penalties.
         setMarketContext({
-          vixPrice:       marketContextData.vix?.data?.c ?? null,
-          spyDowntrend:   (marketContextData.spy?.data?.dp ?? 0) < -0.5,
+          vixPrice:       null, // refined below from SPY realized vol
+          spyDowntrend:   (marketContextData.spy?.data?.dp ?? 0) < -0.5, // refined below
           fearGreedValue: marketContextData.fearGreed?.data?.score ?? null,
         });
       } catch { /* non-blocking — market context is informational */ }
@@ -155,6 +155,24 @@
           if (r?.data?.c?.length) spyCloses = r.data.c;
         }
       } catch { /* RS unavailable this refresh */ }
+
+      // Volatility regime + SPY trend from the closes just fetched (audit F2+F4):
+      // realized vol is the vixPrice proxy; downtrend = SPY below its EMA50.
+      if (spyCloses?.length) {
+        const volProxy = realizedVol(spyCloses);
+        const ema50arr = emaArray(spyCloses, 50);
+        const spyBelowEma50 = ema50arr.length
+          ? spyCloses[spyCloses.length - 1] < ema50arr[ema50arr.length - 1] : null;
+        if (marketContextData) {
+          marketContextData.volProxy = volProxy;
+          marketContextData.spyBelowEma50 = spyBelowEma50;
+        }
+        setMarketContext({
+          vixPrice:       volProxy,
+          spyDowntrend:   spyBelowEma50 ?? ((marketContextData?.spy?.data?.dp ?? 0) < -0.5),
+          fearGreedValue: marketContextData?.fearGreed?.data?.score ?? null,
+        });
+      }
 
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -216,16 +234,8 @@
                 }
               }
 
-              // Weekly trend — resample daily to weekly by taking every 5th bar
-              const wIdx = synthetic.c.map((_, i) => i).filter(i => i % 5 === 0);
-              const weeklyRaw = {
-                s: 'ok',
-                c: wIdx.map(i => synthetic.c[i]),
-                h: wIdx.map(i => synthetic.h[i]),
-                l: wIdx.map(i => synthetic.l[i]),
-                v: wIdx.map(i => synthetic.v[i]),
-                t: wIdx.map(i => synthetic.t[i]),
-              };
+              // Weekly trend — aggregate daily bars into true weekly OHLCV
+              const weeklyRaw = resampleWeekly(synthetic);
               const weeklyTrend = computeWeeklyTrend(weeklyRaw);
               if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
               const setups = computeSetupSignals(weeklyRaw);
@@ -410,9 +420,8 @@
                   const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
                   data.tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
                 }
-                // Resample daily→weekly (every 5th bar) for weekly trend + setups
-                const wIdx = synthetic.c.map((_, i) => i).filter(i => i % 5 === 0);
-                const weeklyRaw = { s: 'ok', c: wIdx.map(i => synthetic.c[i]), h: wIdx.map(i => synthetic.h[i]), l: wIdx.map(i => synthetic.l[i]), v: wIdx.map(i => synthetic.v[i]), t: wIdx.map(i => synthetic.t[i]) };
+                // Aggregate daily→weekly (true OHLCV bars) for weekly trend + setups
+                const weeklyRaw = resampleWeekly(synthetic);
                 const wt = computeWeeklyTrend(weeklyRaw); if (wt) data.weekly = wt;
                 const st = computeSetupSignals(weeklyRaw); if (st) data.setups = st;
                 const an = computeChartAnchors(synthetic); if (an) data.anchors = an;
@@ -446,8 +455,9 @@
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
             setMarketContext({
-              vixPrice:       sup.marketContextData.vix?.data?.c        ?? null,
-              spyDowntrend:   (sup.marketContextData.spy?.data?.dp ?? 0) < -0.5,
+              vixPrice:       sup.marketContextData.volProxy ?? null,
+              spyDowntrend:   sup.marketContextData.spyBelowEma50
+                                ?? ((sup.marketContextData.spy?.data?.dp ?? 0) < -0.5),
               fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
             });
           }
@@ -471,7 +481,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.15</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.15.1</span>
       </div>
 
       <div class="flex items-center gap-3">

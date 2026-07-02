@@ -220,6 +220,13 @@ npm run test:watch  # watch mode (dev)
 
 ## Changelog
 
+### v0.15.1 (2026-07-02) — audit fixes
+- **Real weekly bars** — daily candles are now aggregated into true weekly OHLCV (max high / min low / last close / summed volume, current partial week included) instead of sampling every 5th bar. Weekly ATR is now a true weekly value (Entry Panel suggested stops widen accordingly) and setup signals always reflect the latest trading day.
+- **Volatility regime proxy** — Finnhub free tier returns zeros for VIX, so the regime logic silently never fired. The market bar now shows **VOL**: SPY 20-day realized volatility (annualized, VIX-comparable), computed from already-fetched SPY closes. Two dead API calls per refresh removed.
+- **SPY trend** — the "SPY downtrend" score penalty now uses SPY below its EMA50 instead of a single red day (dp < −0.5%).
+- **Short Interest removed** — `/stock/short-interest` regressed to 403 (premium) on the free tier; the dead cell and fetch are gone.
+- Full audit report: `docs/audit-2026-07-02.md`. 7 new unit tests (194 total).
+
 ### v0.15 (2026-06-20)
 - **OBV** — On-Balance Volume with 20-bar EMA trend; Accumulation / Neutral / Distribution cell in Fundamentals Bar.
 - **52w-High Volume Confirmation** — breakout chip in the watchlist table now shows `· ↑ vol` / `· low vol` based on recent vs baseline average volume ratio.

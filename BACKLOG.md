@@ -24,10 +24,8 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 ### ~~3. Swing-low support levels~~ ✓ DONE (v0.15)
 ### ~~4. Beta-adjusted position sizing~~ ✓ DONE (v0.15)
 
-### 5. Short interest *(needs a new endpoint — approve first)*
-- Finnhub `/stock/short-interest`. High short % + improving fundamentals = potential squeeze; most relevant for mid/small caps.
-- Add to `finnhub.svelte.js`, display in Fundamentals Bar.
-- Cost: **+1 call/ticker** — free tier endpoint, but adds to rate-limit budget. Approve before building.
+### ~~5. Short interest~~ ✗ REMOVED (2026-07)
+- Shipped in v0.15, but the endpoint regressed to premium (403 on free tier) — feature removed in the 2026-07 audit fixes. Restore if Finnhub re-opens `/stock/short-interest`.
 
 ### 6. Ticker-search edge cases *(carried over from old TODOS)*
 - Search works, but failure/ambiguity states are undefined: no results, multiple matches (e.g. "META" → Meta + Metavisio), `/search` down, debounce timing, US-exchange filtering.
