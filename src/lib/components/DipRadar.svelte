@@ -27,6 +27,7 @@
   }
   const scoreColor = (s) => s >= 7 ? '#22c55e' : s >= 5 ? '#f59e0b' : '#6b7280';
   const componentSummary = (h) => h.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
+  const comp = (h, label) => h.components.find(c => c.label === label);
 </script>
 
 {#if getTickers().length}
@@ -100,16 +101,29 @@
 
                 <!-- Turn (MACD bullish cross) -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default {h.components[3].score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
+                  class="text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default {comp(h, 'Turn').score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
                   use:tipAction={() => ({
                     ...TIPS.macd,
                     current: {
-                      value: h.components[3].detail,
-                      label: h.components[3].score > 0 ? 'Momentum already turning up' : 'Still waiting on a turn',
-                      color: h.components[3].score > 0 ? '#22c55e' : '#6b7280',
+                      value: comp(h, 'Turn').detail,
+                      label: comp(h, 'Turn').score > 0 ? 'Momentum already turning up' : 'Still waiting on a turn',
+                      color: comp(h, 'Turn').score > 0 ? '#22c55e' : '#6b7280',
                     },
                   })}
-                >↗ {h.components[3].detail}</span>
+                >↗ {comp(h, 'Turn').detail}</span>
+
+                <!-- Value (PEG) -->
+                <span
+                  class="font-mono text-xs shrink-0 cursor-default"
+                  style="color:{comp(h, 'Value').score >= 0.7 ? '#22c55e' : comp(h, 'Value').score > 0 ? '#86efac' : '#6b7280'}"
+                  use:tipAction={{
+                    title: 'Value (PEG)', subtitle: 'P/E ÷ EPS growth, within the quality gate',
+                    category: 'Signals',
+                    description: 'PEG < 3 is already required to appear on this card. This scores how cheap the growth is within that band — PEG < 1 is a strong value dip, 2–3 barely clears the bar.',
+                    why: 'A quality name at PEG 0.8 is a better dip than one at PEG 2.8, even if both passed the gate.',
+                    current: { value: comp(h, 'Value').detail, label: '', color: comp(h, 'Value').score >= 0.7 ? '#22c55e' : '#6b7280' },
+                  }}
+                >{comp(h, 'Value').detail}</span>
 
                 <!-- Smart money -->
                 <span
@@ -117,12 +131,12 @@
                   use:tipAction={() => ({
                     ...TIPS.dipSmartMoney,
                     current: {
-                      value: h.components[4].detail,
-                      label: `${h.components[4].score}/2 confirmation`,
-                      color: h.components[4].score >= 2 ? '#22c55e' : h.components[4].score >= 1 ? '#86efac' : '#6b7280',
+                      value: comp(h, 'Smart Money').detail,
+                      label: `${comp(h, 'Smart Money').score}/1.5 confirmation`,
+                      color: comp(h, 'Smart Money').score >= 1.5 ? '#22c55e' : comp(h, 'Smart Money').score > 0 ? '#86efac' : '#6b7280',
                     },
                   })}
-                >💰 {h.components[4].detail}</span>
+                >💰 {comp(h, 'Smart Money').detail}</span>
               </button>
             {/each}
           </div>
