@@ -1,7 +1,7 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
-  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength } from './lib/indicators.js';
+  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
@@ -216,16 +216,8 @@
                 }
               }
 
-              // Weekly trend — resample daily to weekly by taking every 5th bar
-              const wIdx = synthetic.c.map((_, i) => i).filter(i => i % 5 === 0);
-              const weeklyRaw = {
-                s: 'ok',
-                c: wIdx.map(i => synthetic.c[i]),
-                h: wIdx.map(i => synthetic.h[i]),
-                l: wIdx.map(i => synthetic.l[i]),
-                v: wIdx.map(i => synthetic.v[i]),
-                t: wIdx.map(i => synthetic.t[i]),
-              };
+              // Weekly trend — aggregate daily bars into true weekly OHLCV
+              const weeklyRaw = resampleWeekly(synthetic);
               const weeklyTrend = computeWeeklyTrend(weeklyRaw);
               if (weeklyTrend) results[ticker.symbol].weekly = weeklyTrend;
               const setups = computeSetupSignals(weeklyRaw);
@@ -410,9 +402,8 @@
                   const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
                   data.tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
                 }
-                // Resample daily→weekly (every 5th bar) for weekly trend + setups
-                const wIdx = synthetic.c.map((_, i) => i).filter(i => i % 5 === 0);
-                const weeklyRaw = { s: 'ok', c: wIdx.map(i => synthetic.c[i]), h: wIdx.map(i => synthetic.h[i]), l: wIdx.map(i => synthetic.l[i]), v: wIdx.map(i => synthetic.v[i]), t: wIdx.map(i => synthetic.t[i]) };
+                // Aggregate daily→weekly (true OHLCV bars) for weekly trend + setups
+                const weeklyRaw = resampleWeekly(synthetic);
                 const wt = computeWeeklyTrend(weeklyRaw); if (wt) data.weekly = wt;
                 const st = computeSetupSignals(weeklyRaw); if (st) data.setups = st;
                 const an = computeChartAnchors(synthetic); if (an) data.anchors = an;

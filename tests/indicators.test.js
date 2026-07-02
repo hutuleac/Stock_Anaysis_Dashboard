@@ -15,6 +15,8 @@ import {
   computeOBV,
   computeVolumeConfirmation,
   computeSwingLows,
+  resampleWeekly,
+  realizedVol,
 } from '../src/lib/indicators.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -619,5 +621,75 @@ describe('computeSwingLows', () => {
     // lows.length = 11, pivot at index 5, barsAgo = 11-1-5 = 5
     const result = computeSwingLows(lows);
     expect(result[0].barsAgo).toBe(5);
+  });
+});
+
+// ─── resampleWeekly ──────────────────────────────────────────────────────────
+describe('resampleWeekly', () => {
+  const D = 86400;
+  const MON = 1780272000; // Mon 2026-06-01 00:00 UTC
+  function bars(ts) {
+    return {
+      s: 'ok',
+      t: ts,
+      o: ts.map((_, i) => 10 + i),
+      h: ts.map((_, i) => 20 + i),
+      l: ts.map((_, i) => 5 + i),
+      c: ts.map((_, i) => 15 + i),
+      v: ts.map(() => 100),
+    };
+  }
+
+  it('aggregates a full Mon–Fri week into one bar', () => {
+    const w = resampleWeekly(bars([MON, MON + D, MON + 2 * D, MON + 3 * D, MON + 4 * D]));
+    expect(w.c.length).toBe(1);
+    expect(w.o[0]).toBe(10);        // first open
+    expect(w.h[0]).toBe(24);        // max high
+    expect(w.l[0]).toBe(5);         // min low
+    expect(w.c[0]).toBe(19);        // last close
+    expect(w.v[0]).toBe(500);       // summed volume
+    expect(w.t[0]).toBe(MON);       // week's first bar ts
+  });
+
+  it('splits across the weekend and keeps the partial current week', () => {
+    // Thu+Fri, then Mon+Tue of next week
+    const w = resampleWeekly(bars([MON + 3 * D, MON + 4 * D, MON + 7 * D, MON + 8 * D]));
+    expect(w.c.length).toBe(2);
+    expect(w.v[0]).toBe(200);
+    expect(w.v[1]).toBe(200);
+    expect(w.c[1]).toBe(18);        // latest daily close survives
+  });
+
+  it('handles a holiday-short week (4 bars) as one week', () => {
+    const w = resampleWeekly(bars([MON + D, MON + 2 * D, MON + 3 * D, MON + 4 * D]));
+    expect(w.c.length).toBe(1);
+    expect(w.o[0]).toBe(10);
+  });
+
+  it('returns null on invalid input', () => {
+    expect(resampleWeekly(null)).toBeNull();
+    expect(resampleWeekly({ s: 'no_data' })).toBeNull();
+    expect(resampleWeekly({ s: 'ok', c: [1], t: [] })).toBeNull();
+  });
+});
+
+// ─── realizedVol ─────────────────────────────────────────────────────────────
+describe('realizedVol', () => {
+  it('is ~0 for a flat series', () => {
+    expect(realizedVol(Array(30).fill(100))).toBeCloseTo(0, 5);
+  });
+
+  it('matches hand-computed annualized stdev of log returns', () => {
+    // alternating ±1% daily moves → per-bar log-return stdev ≈ 0.01
+    const closes = [100];
+    for (let i = 0; i < 25; i++) closes.push(closes[i] * (i % 2 ? 0.99 : 1.01));
+    const v = realizedVol(closes, 20);
+    expect(v).toBeGreaterThan(14);  // ≈ 0.01 * sqrt(252) * 100 ≈ 15.9
+    expect(v).toBeLessThan(18);
+  });
+
+  it('returns null with insufficient data', () => {
+    expect(realizedVol([1, 2, 3], 20)).toBeNull();
+    expect(realizedVol(null)).toBeNull();
   });
 });
