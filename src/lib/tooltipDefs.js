@@ -459,15 +459,15 @@ export const TIPS = {
     title: 'Dip Hunter',
     subtitle: 'Quality stocks on sale',
     category: 'Signals',
-    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A strict quality gate (EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) must pass first — then the dip is scored 0–10 on market fear (F&G, SPY trend), oversold readings (RSI, z-score, BB confluence), drawdown depth, a MACD turn signal, and smart-money confirmation (insider buying, analyst recs).',
+    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A strict quality gate (EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) must pass first — then the dip is scored 0–10 across market fear, oversold readings, drawdown depth, 52w-low proximity, a MACD turn signal, relative strength vs SPY, PEG-based value, and smart-money confirmation.',
     why: 'The best swing entries happen when a great business goes on sale for market-wide reasons, not company-specific ones. The gate filters falling knives; the fear component ensures you buy weakness, not strength. Display-only — does not feed the composite score.',
   },
 
   dipScore: {
     title: 'Dip Score',
-    subtitle: '0–10 across five components',
+    subtitle: '0–10 across eight components',
     category: 'Signals',
-    description: 'Market Fear (max 2): F&G in fear zone + SPY below EMA50. Oversold (max 2.5): RSI tiers, RSI z-score ≤ −1.5, price at lower Bollinger band. Drawdown (max 2): 60d/20d decline + lower half of 52w range. Turn (max 1.5): MACD histogram just crossed bullish. Smart Money (max 2): insiders net-buying + ≥60% analyst buy ratings.',
+    description: 'Market Fear (max 1.5): F&G in fear zone + SPY below EMA50. Oversold (max 2): RSI tiers, RSI z-score ≤ −1.5, price at lower Bollinger band. Drawdown (max 1): 60d/20d decline. 52w Low (max 1): proximity to the 52-week low. Turn (max 1): MACD histogram just crossed bullish. Rel. Strength (max 1): mild underperformance vs SPY (−5% to −15%) reads as overreaction; beyond −15% scores zero, it’s a flag not a discount. Value (max 1): PEG within the quality gate — cheaper growth scores higher. Smart Money (max 1.5): insiders net-buying + ≥60% analyst buy ratings.',
     levels: [
       { range: '≥ 7',   label: 'ACT',   color: C.green, desc: 'Deep, fear-driven dip in a quality name — the setup this card exists for. ACT requires the fear component (never fires in a greedy market).' },
       { range: '5–7',   label: 'SOON',  color: C.amber, desc: 'Dip forming — stage in or wait for a fear spike / deeper oversold reading.' },

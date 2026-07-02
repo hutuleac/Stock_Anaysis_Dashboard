@@ -9,11 +9,12 @@ function makeTicker(overrides = {}) {
       quote: { data: { c: 80 } },
       metrics: { data: { metric: {
         epsGrowthTTMYoy: 15, revenueGrowthTTMYoy: 10, netProfitMarginTTM: 12,
-        peNormalizedAnnual: 20, '52WeekHigh': 120, '52WeekLow': 70,
+        peNormalizedAnnual: 10, '52WeekHigh': 120, '52WeekLow': 78,
         '50DayMovingAverage': 90, '200DayMovingAverage': 95,
       } } },
       indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true, macdCrossover: 'bullish_cross' },
       smartMoney: { data: { rec: { buyRatio: 0.7, deteriorating: false }, mspr3m: 12 } },
+      rs: { rs3m: -10 },
       ...overrides,
     },
   };
@@ -61,7 +62,7 @@ describe('dip score components', () => {
   it('degrades gracefully with F&G and smart money missing', () => {
     const t = makeTicker({ smartMoney: null });
     const hits = computeDipRadar([t], { fearGreedValue: null, spyBelowEma50: null });
-    expect(hits.length).toBe(1); // oversold + drawdown alone still qualify
+    expect(hits.length).toBe(1); // other components still qualify
     expect(comp(hits, 'Market Fear').score).toBe(0);
     expect(comp(hits, 'Market Fear').detail).toBe('n/a');
     const sm = comp(hits, 'Smart Money');
@@ -71,14 +72,17 @@ describe('dip score components', () => {
 
   it('hides shallow dips (score < 3)', () => {
     const t = makeTicker({
-      indicators: { rsi: 55, rsiZScore: 0.2, roc20: 1, roc60: 4, oversoldConfluence: false },
+      indicators: { rsi: 55, rsiZScore: 0.2, roc20: 1, roc60: 4, oversoldConfluence: false, macdCrossover: null },
       smartMoney: null,
+      rs: { rs3m: 10 },
     });
+    t.data.metrics.data.metric.peNormalizedAnnual = 40; // PEG 2.67 — gate-passing but no Value bonus
+    t.data.metrics.data.metric['52WeekLow'] = 10; // far from price — no 52w-Low bonus
     expect(computeDipRadar([t], GREED).length).toBe(0);
   });
 
-  it('scores RSI tiers: <30 → 1.25, <35 → 0.85, <40 → 0.4', () => {
-    for (const [rsi, expected] of [[29, 1.25], [34, 0.85], [39, 0.4], [45, 0]]) {
+  it('scores RSI tiers: <30 → 1.0, <35 → 0.7, <40 → 0.3', () => {
+    for (const [rsi, expected] of [[29, 1.0], [34, 0.7], [39, 0.3], [45, 0]]) {
       const t = makeTicker({
         indicators: { rsi, rsiZScore: 0, roc20: 0, roc60: 0, oversoldConfluence: false },
         smartMoney: null,
@@ -88,28 +92,36 @@ describe('dip score components', () => {
     }
   });
 
-  it('scores F&G tiers: <25 → 1.6, <35 → 1.2, <45 → 0.6 (+0.4 SPY)', () => {
-    for (const [fg, spy, expected] of [[20, false, 1.6], [30, false, 1.2], [40, false, 0.6], [60, false, 0], [20, true, 2.0]]) {
+  it('scores F&G tiers: <25 → 1.2, <35 → 0.9, <45 → 0.45 (+0.3 SPY)', () => {
+    for (const [fg, spy, expected] of [[20, false, 1.2], [30, false, 0.9], [40, false, 0.45], [60, false, 0], [20, true, 1.5]]) {
       const hits = computeDipRadar([makeTicker()], { fearGreedValue: fg, spyBelowEma50: spy });
       expect(comp(hits, 'Market Fear').score).toBe(expected);
     }
   });
 
-  it('scores drawdown tiers and caps at 2.0', () => {
-    // roc60 −18 → 1.0, roc20 −7 → 0.4, range pos 0.2 → 0.6 = 2.0
+  it('scores drawdown tiers and caps at 1.0', () => {
+    // roc60 −18 → 0.6, roc20 −7 → 0.4 = 1.0
     const hits = computeDipRadar([makeTicker()], FEAR);
-    expect(comp(hits, 'Drawdown').score).toBe(2.0);
+    expect(comp(hits, 'Drawdown').score).toBe(1.0);
     const mild = makeTicker({
       indicators: { rsi: 28, rsiZScore: -1.8, roc20: 0, roc60: -9, oversoldConfluence: true },
     });
-    mild.data.metrics.data.metric['52WeekLow'] = 20; // range pos (80-20)/100 = 0.6 → no bonus
     const h2 = computeDipRadar([mild], FEAR);
-    expect(comp(h2, 'Drawdown').score).toBe(0.6);
+    expect(comp(h2, 'Drawdown').score).toBe(0.3);
   });
 
-  it('turn: MACD bullish cross scores 1.5, otherwise 0', () => {
+  it('scores 52w-low proximity tiers', () => {
+    for (const [low, expected] of [[78, 1.0], [68, 0.7], [55, 0.4], [20, 0]]) {
+      const t = makeTicker();
+      t.data.metrics.data.metric['52WeekLow'] = low;
+      const hits = computeDipRadar([t], FEAR);
+      expect(comp(hits, '52w Low').score).toBe(expected);
+    }
+  });
+
+  it('turn: MACD bullish cross scores 1.0, otherwise 0', () => {
     const hits = computeDipRadar([makeTicker()], FEAR);
-    expect(comp(hits, 'Turn').score).toBe(1.5);
+    expect(comp(hits, 'Turn').score).toBe(1.0);
     expect(comp(hits, 'Turn').detail).toBe('MACD bull cross');
     const noCross = makeTicker({
       indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true, macdCrossover: null },
@@ -119,13 +131,30 @@ describe('dip score components', () => {
     expect(comp(h2, 'Turn').detail).toBe('no turn yet');
   });
 
-  it('smart money: insider buying + analyst buys = 2; deteriorating recs drop 1', () => {
+  it('relative strength: rewards mild underperformance, not extreme or positive', () => {
+    for (const [rs3m, expected] of [[-10, 1.0], [-15, 1.0], [-5, 1.0], [-3, 0.4], [-20, 0], [5, 0]]) {
+      const t = makeTicker({ rs: { rs3m } });
+      const hits = computeDipRadar([t], FEAR);
+      expect(comp(hits, 'Rel. Strength').score).toBe(expected);
+    }
+  });
+
+  it('value: PEG < 1 → 1.0, < 1.5 → 0.7, < 2 → 0.4, else 0', () => {
+    for (const [pe, expected] of [[10, 1.0], [18, 0.7], [25, 0.4], [35, 0]]) {
+      const t = makeTicker();
+      t.data.metrics.data.metric.peNormalizedAnnual = pe; // eps growth 15 → PEG = pe/15
+      const hits = computeDipRadar([t], FEAR);
+      expect(comp(hits, 'Value').score).toBe(expected);
+    }
+  });
+
+  it('smart money: insider buying + analyst buys = 1.5; deteriorating recs drop 0.75', () => {
     const hits = computeDipRadar([makeTicker()], FEAR);
-    expect(comp(hits, 'Smart Money').score).toBe(2);
+    expect(comp(hits, 'Smart Money').score).toBe(1.5);
     const det = makeTicker({
       smartMoney: { data: { rec: { buyRatio: 0.7, deteriorating: true }, mspr3m: 12 } },
     });
-    expect(comp(computeDipRadar([det], FEAR), 'Smart Money').score).toBe(1);
+    expect(comp(computeDipRadar([det], FEAR), 'Smart Money').score).toBe(0.75);
   });
 
   it('sorts by readiness then score', () => {
