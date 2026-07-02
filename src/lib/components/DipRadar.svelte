@@ -74,18 +74,6 @@
                   })}
                 >{h.readiness}</span>
 
-                <!-- Market fear (F&G) -->
-                <span
-                  class="font-mono text-xs w-16 shrink-0 cursor-default"
-                  style="color:{h.fearGreed == null ? '#6b7280' : h.fearGreed < 25 ? '#ef4444' : h.fearGreed < 45 ? '#f97316' : '#6b7280'}"
-                  use:tipAction={() => ({
-                    ...TIPS.fearGreed,
-                    current: h.fearGreed != null
-                      ? { value: String(h.fearGreed), label: h.fearGreed < 25 ? 'Extreme fear — max discount' : h.fearGreed < 45 ? 'Fear — discounts appearing' : 'No fear discount', color: h.fearGreed < 25 ? '#ef4444' : h.fearGreed < 45 ? '#f97316' : '#6b7280' }
-                      : { value: '—', label: 'Fear & Greed unavailable', color: '#6b7280' },
-                  })}
-                >F&G {h.fearGreed ?? '—'}</span>
-
                 <!-- RSI -->
                 <span
                   class="font-mono text-xs w-16 shrink-0 cursor-default"
@@ -110,18 +98,31 @@
                   })}
                 >60d {h.roc60 != null ? `${h.roc60 > 0 ? '+' : ''}${h.roc60.toFixed(1)}%` : '—'}</span>
 
+                <!-- Turn (MACD bullish cross) -->
+                <span
+                  class="text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default {h.components[3].score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
+                  use:tipAction={() => ({
+                    ...TIPS.macd,
+                    current: {
+                      value: h.components[3].detail,
+                      label: h.components[3].score > 0 ? 'Momentum already turning up' : 'Still waiting on a turn',
+                      color: h.components[3].score > 0 ? '#22c55e' : '#6b7280',
+                    },
+                  })}
+                >↗ {h.components[3].detail}</span>
+
                 <!-- Smart money -->
                 <span
                   class="text-[10px] text-text-secondary shrink-0 cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.dipSmartMoney,
                     current: {
-                      value: h.components[3].detail,
-                      label: `${h.components[3].score}/2 confirmation`,
-                      color: h.components[3].score >= 2 ? '#22c55e' : h.components[3].score >= 1 ? '#86efac' : '#6b7280',
+                      value: h.components[4].detail,
+                      label: `${h.components[4].score}/2 confirmation`,
+                      color: h.components[4].score >= 2 ? '#22c55e' : h.components[4].score >= 1 ? '#86efac' : '#6b7280',
                     },
                   })}
-                >💰 {h.components[3].detail}</span>
+                >💰 {h.components[4].detail}</span>
               </button>
             {/each}
           </div>
