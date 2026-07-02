@@ -9,7 +9,6 @@ const CACHE_TTL = {
   candles_intraday: 900, // 15 min — intraday data refreshes frequently
   feargreed:    3600,       // CNN Fear & Greed — 1 hour
   earnings_hist: 86400,    // historical earnings surprises — 24h
-  short_interest: 604800,  // bi-monthly reporting cadence — 7d cache
 };
 
 const CALL_DELAY_MS = 100;
@@ -162,21 +161,6 @@ export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
   );
 }
 
-async function fetchShortInterest(symbol) {
-  const to = new Date().toISOString().split('T')[0];
-  const from = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
-  return fetchWithCache('short_interest', symbol, async () => {
-    const result = await fetchFinnhub(`/stock/short-interest?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`);
-    // Return the most recent data point with days-to-cover computed
-    const latest = result?.data?.[result.data.length - 1] ?? null;
-    if (!latest) return null;
-    const daysToCover = latest.avgDailyVolume > 0
-      ? Math.round((latest.shortInterest / latest.avgDailyVolume) * 10) / 10
-      : null;
-    return { shortInterest: latest.shortInterest, avgDailyVolume: latest.avgDailyVolume, daysToCover, date: latest.date };
-  });
-}
-
 export async function searchTicker(query) {
   if (!query || query.length < 1) return [];
   return fetchWithCache('search', query, async () => {
@@ -203,7 +187,6 @@ export function hydrateFromCache(symbols) {
       quote:          { data: readStale(cacheKey('quote', symbol)),                stale: true },
       earnings:       { data: readStale(cacheKey('earnings', symbol)),             stale: true },
       metrics:        { data: readStale(cacheKey('fundamentals', symbol)),         stale: true },
-      shortInterest:  { data: readStale(cacheKey('short_interest', symbol)),      stale: true },
       news:           { data: readStale(cacheKey('news', symbol)),                 stale: true },
       _candlesDaily:  readStale(cacheKey('candles', `${symbol}_D`)),
       _candlesWeekly: readStale(cacheKey('candles', `${symbol}_W`)),
@@ -225,10 +208,9 @@ export async function refreshAll(symbols, onProgress) {
     const quote         = await fetchQuote(symbol);        await delay(CALL_DELAY_MS);
     const earnings      = await fetchEarnings(symbol);     await delay(CALL_DELAY_MS);
     const metrics       = await fetchMetrics(symbol);      await delay(CALL_DELAY_MS);
-    const news          = await fetchNews(symbol);         await delay(CALL_DELAY_MS);
-    const shortInterest = await fetchShortInterest(symbol);
+    const news          = await fetchNews(symbol);
 
-    results[symbol] = { quote, earnings, metrics, news, shortInterest };
+    results[symbol] = { quote, earnings, metrics, news };
 
     if (i < symbols.length - 1) await delay(CALL_DELAY_MS);
   }
