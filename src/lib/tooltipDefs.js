@@ -459,15 +459,15 @@ export const TIPS = {
     title: 'Dip Hunter',
     subtitle: 'Quality stocks on sale',
     category: 'Signals',
-    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A strict quality gate (EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) must pass first — then the dip is scored 0–10 on market fear (F&G, SPY trend), oversold readings (RSI, z-score, BB confluence), drawdown depth, and smart-money confirmation (insider buying, analyst recs).',
+    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A strict quality gate (EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) must pass first — then the dip is scored 0–10 on market fear (F&G, SPY trend), oversold readings (RSI, z-score, BB confluence), drawdown depth, a MACD turn signal, and smart-money confirmation (insider buying, analyst recs).',
     why: 'The best swing entries happen when a great business goes on sale for market-wide reasons, not company-specific ones. The gate filters falling knives; the fear component ensures you buy weakness, not strength. Display-only — does not feed the composite score.',
   },
 
   dipScore: {
     title: 'Dip Score',
-    subtitle: '0–10 across four components',
+    subtitle: '0–10 across five components',
     category: 'Signals',
-    description: 'Market Fear (max 2.5): F&G in fear zone + SPY below EMA50. Oversold (max 3): RSI tiers, RSI z-score ≤ −1.5, price at lower Bollinger band. Drawdown (max 2.5): 60d/20d decline + lower half of 52w range. Smart Money (max 2): insiders net-buying + ≥60% analyst buy ratings.',
+    description: 'Market Fear (max 2): F&G in fear zone + SPY below EMA50. Oversold (max 2.5): RSI tiers, RSI z-score ≤ −1.5, price at lower Bollinger band. Drawdown (max 2): 60d/20d decline + lower half of 52w range. Turn (max 1.5): MACD histogram just crossed bullish. Smart Money (max 2): insiders net-buying + ≥60% analyst buy ratings.',
     levels: [
       { range: '≥ 7',   label: 'ACT',   color: C.green, desc: 'Deep, fear-driven dip in a quality name — the setup this card exists for. ACT requires the fear component (never fires in a greedy market).' },
       { range: '5–7',   label: 'SOON',  color: C.amber, desc: 'Dip forming — stage in or wait for a fear spike / deeper oversold reading.' },
