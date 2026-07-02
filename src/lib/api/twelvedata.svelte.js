@@ -69,14 +69,17 @@ async function _drainQueue() {
   _rlBusy = false;
 }
 
-function enqueueRequest(fn) {
+// priority: true jumps the queue — for user-initiated requests (e.g. opening
+// a chart) that shouldn't wait behind a background bulk-refresh backlog.
+function enqueueRequest(fn, priority = false) {
   return new Promise((resolve, reject) => {
-    _rlQueue.push({ fn, resolve, reject });
+    const entry = { fn, resolve, reject };
+    if (priority) _rlQueue.unshift(entry); else _rlQueue.push(entry);
     _drainQueue();
   });
 }
 
-async function fetchTD(path) {
+async function fetchTD(path, { priority = false } = {}) {
   if (!tdApiKey) throw new Error('No TwelveData API key');
   return enqueueRequest(async () => {
     const url = `${BASE}${path}&apikey=${tdApiKey}`;
@@ -94,7 +97,7 @@ async function fetchTD(path) {
     const json = await res.json();
     if (json.status === 'error') throw new Error(json.message || 'TwelveData error');
     return json;
-  });
+  }, priority);
 }
 
 async function fetchWithCache(type, symbol, fetcher) {
@@ -142,11 +145,12 @@ export async function fetchTDQuote(symbol) {
 // interval: '1day' | '1week' | '1h' | '4h' etc.
 // outputsize: number of bars (max 5000 on free tier)
 // Returns values array sorted ascending (oldest first), ready for lightweight-charts
-export async function fetchTimeSeries(symbol, interval, outputsize) {
+export async function fetchTimeSeries(symbol, interval, outputsize, { priority = false } = {}) {
   const cacheType = interval === '1h' ? 'ts_1h' : 'ts_1day';
   return fetchWithCache(cacheType, `${symbol}_${interval}_${outputsize}`, async () => {
     const json = await fetchTD(
-      `/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputsize}&order=ASC`
+      `/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputsize}&order=ASC`,
+      { priority }
     );
     if (!json.values?.length) throw new Error('No candle data');
     return json.values;
