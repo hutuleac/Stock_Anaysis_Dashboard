@@ -305,13 +305,9 @@ async function fetchFearAndGreed() {
 const ALL_SECTOR_ETFS = ['XLK', 'XLF', 'XLV', 'XLY', 'XLP', 'XLE', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC'];
 
 export async function fetchMarketContext() {
-  const [vixQuote, spyQuote] = await Promise.all([
-    fetchQuote('^GSPC').catch(() => fetchQuote('SPY')), // VIX via SPY fallback
-    fetchQuote('SPY'),
-  ]);
-  await delay(CALL_DELAY_MS);
-
-  const vixResult = await fetchQuote('VIX').catch(() => ({ data: null, stale: true }));
+  // No VIX quote here — Finnhub free tier returns zeros for VIX and errors for
+  // ^GSPC. The volatility regime is computed from SPY closes (realizedVol).
+  const spyQuote = await fetchQuote('SPY');
   await delay(CALL_DELAY_MS);
 
   // Fear & Greed (non-blocking — CORS may fail on some networks)
@@ -325,5 +321,5 @@ export async function fetchMarketContext() {
     await delay(CALL_DELAY_MS);
   }
 
-  return { vix: vixResult, spy: spyQuote, fearGreed, sectors: sectorResults };
+  return { spy: spyQuote, fearGreed, sectors: sectorResults };
 }

@@ -71,8 +71,7 @@
     return null;
   }
 
-  let vixPrice = $derived(marketData?.vix?.data?.c ?? null);
-  let vixChange = $derived(marketData?.vix?.data?.dp ?? null);
+  let vixPrice = $derived(marketData?.volProxy ?? null);
   let vixInfo = $derived(getVixLevel(vixPrice));
   let spyData = $derived(marketData?.spy?.data ?? null);
   let spyTrend = $derived(getSpyTrend(spyData));
@@ -103,15 +102,12 @@
     <!-- Content -->
     {#if !collapsed}
       <div class="flex items-center gap-6 pb-3 flex-wrap overflow-x-auto">
-        <!-- VIX -->
+        <!-- Volatility (SPY 20d realized, annualized — VIX proxy) -->
         <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.vix, current: vixPrice != null ? { value: vixPrice.toFixed(1), label: vixInfo.label, color: vixInfo.level === 'calm' ? '#22c55e' : vixInfo.level === 'normal' ? '#9ca3af' : vixInfo.level === 'elevated' ? '#f59e0b' : vixInfo.level === 'high' ? '#f97316' : '#ef4444' } : undefined })}>
-          <span class="text-[12px] uppercase tracking-wider text-text-muted">VIX</span>
+          <span class="text-[12px] uppercase tracking-wider text-text-muted">VOL</span>
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold font-mono {vixInfo.color}">
               {vixPrice != null ? vixPrice.toFixed(1) : '—'}
-              {#if vixChange != null}
-                <span class="text-xs">{vixChange > 0 ? '↑' : '↓'}</span>
-              {/if}
             </span>
             <span class="text-[13px] font-semibold {vixInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">
               {vixInfo.label}
