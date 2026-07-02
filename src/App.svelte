@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
@@ -205,6 +205,13 @@
         } catch { /* non-blocking */ }
         await delay(100);
 
+        // Smart money (analyst recs + insider sentiment) — 7d cache, free tier
+        try {
+          const sm = await fetchSmartMoney(ticker.symbol);
+          if (sm?.data) results[ticker.symbol].smartMoney = sm;
+        } catch { /* non-blocking */ }
+        await delay(100);
+
         // Daily candles → local RSI/MACD indicators
         try {
           if (hasTDApiKey()) {
@@ -343,6 +350,7 @@
             setups:      d.setups      ?? p?.setups      ?? null,
             profile:     d.profile     ?? p?.profile     ?? null,
             rs:          d.rs          ?? p?.rs          ?? null,
+            smartMoney:  d.smartMoney  ?? p?.smartMoney  ?? null,
             sectorTrend: d.sectorTrend ?? null,
           };
         }
@@ -450,6 +458,7 @@
             if (s.setups      != null) results[sym].setups      = s.setups;
             if (s.profile     != null) results[sym].profile     = s.profile;
             if (s.rs          != null) results[sym].rs          = s.rs;
+            if (s.smartMoney  != null) results[sym].smartMoney  = s.smartMoney;
             if (s.sectorTrend != null) results[sym].sectorTrend = s.sectorTrend;
           }
           if (sup.marketContextData) {
