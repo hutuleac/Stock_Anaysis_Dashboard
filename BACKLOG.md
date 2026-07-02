@@ -42,3 +42,6 @@ Most queued signals slot into one of two setups. Target: a **detail-panel tab to
 - **Pullback Setup tab:** BB+RSI confluence · volume dry-up · ATR stop / R:R · swing lows
 
 Several of these already ship as Fundamentals-Bar cells; this item is the *organizing UI* that groups them into the two named playbooks, not net-new math.
+
+### ✓ Dip Hunter card (v0.16, 2026-07)
+- Quality-gated dip-entry card (market fear + oversold + drawdown + smart money). Uses `/stock/recommendation` + `/stock/insider-sentiment` (free, 7d cache, +2 calls/ticker/week). See `docs/superpowers/specs/2026-07-02-dip-hunter-design.md`.
