@@ -14,6 +14,7 @@
   // OnboardingModal removed — demo mode replaces it
 
   import SetupRadar from './lib/components/SetupRadar.svelte';
+  import DipRadar from './lib/components/DipRadar.svelte';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
 
   // Svelte action: auto-dismiss triggered alert banner after 15s
@@ -605,6 +606,7 @@
   <main class="max-w-[1800px] mx-auto px-4 py-6">
 
     <SetupRadar />
+    <DipRadar marketData={marketContextData} />
     <WatchlistTable onTickerAdded={handleRefresh} />
 
     <div class="mt-6 border-t border-border/50 pt-3 flex justify-end">
