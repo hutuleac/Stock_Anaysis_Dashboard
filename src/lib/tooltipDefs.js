@@ -132,10 +132,10 @@ export const TIPS = {
   },
 
   vix: {
-    title: 'VIX — Volatility Index',
-    subtitle: 'CBOE Fear Gauge',
+    title: 'Volatility — SPY 20d Realized (Annualized)',
+    subtitle: 'Market Fear Gauge (VIX proxy)',
     category: 'Market Context',
-    description: "Measures the market's expected 30-day volatility derived from S&P 500 options pricing. High VIX = fear and uncertainty. Low VIX = complacency and calm conditions.",
+    description: "Annualized volatility of SPY's last 20 daily moves — computed from price history because free API tiers don't serve the real VIX; levels are comparable. High = fear and uncertainty. Low = complacency and calm conditions.",
     levels: [
       { range: '< 15',  label: 'Calm',     color: C.green,  desc: 'Market is complacent — low vol environment ideal for trend-following strategies.' },
       { range: '15–20', label: 'Normal',   color: C.dim,    desc: 'Standard volatility — trade your normal plan without size adjustment.' },

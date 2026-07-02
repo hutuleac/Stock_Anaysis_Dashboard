@@ -131,8 +131,8 @@
         // Push regime context into scoring engine — all computeScore() calls
         // this session will automatically use regime-aware weights + penalties.
         setMarketContext({
-          vixPrice:       marketContextData.vix?.data?.c ?? null,
-          spyDowntrend:   (marketContextData.spy?.data?.dp ?? 0) < -0.5,
+          vixPrice:       null, // refined below from SPY realized vol
+          spyDowntrend:   (marketContextData.spy?.data?.dp ?? 0) < -0.5, // refined below
           fearGreedValue: marketContextData.fearGreed?.data?.score ?? null,
         });
       } catch { /* non-blocking — market context is informational */ }
@@ -155,6 +155,24 @@
           if (r?.data?.c?.length) spyCloses = r.data.c;
         }
       } catch { /* RS unavailable this refresh */ }
+
+      // Volatility regime + SPY trend from the closes just fetched (audit F2+F4):
+      // realized vol is the vixPrice proxy; downtrend = SPY below its EMA50.
+      if (spyCloses?.length) {
+        const volProxy = realizedVol(spyCloses);
+        const ema50arr = emaArray(spyCloses, 50);
+        const spyBelowEma50 = ema50arr.length
+          ? spyCloses[spyCloses.length - 1] < ema50arr[ema50arr.length - 1] : null;
+        if (marketContextData) {
+          marketContextData.volProxy = volProxy;
+          marketContextData.spyBelowEma50 = spyBelowEma50;
+        }
+        setMarketContext({
+          vixPrice:       volProxy,
+          spyDowntrend:   spyBelowEma50 ?? ((marketContextData?.spy?.data?.dp ?? 0) < -0.5),
+          fearGreedValue: marketContextData?.fearGreed?.data?.score ?? null,
+        });
+      }
 
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -437,8 +455,9 @@
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
             setMarketContext({
-              vixPrice:       sup.marketContextData.vix?.data?.c        ?? null,
-              spyDowntrend:   (sup.marketContextData.spy?.data?.dp ?? 0) < -0.5,
+              vixPrice:       sup.marketContextData.volProxy ?? null,
+              spyDowntrend:   sup.marketContextData.spyBelowEma50
+                                ?? ((sup.marketContextData.spy?.data?.dp ?? 0) < -0.5),
               fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
             });
           }

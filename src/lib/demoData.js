@@ -68,7 +68,8 @@ export const DEMO_MARKET_DATA = {
 };
 
 export const DEMO_MARKET_CONTEXT = {
-  vix:       { data: { c: 22.4, dp: 3.1  } },
+  volProxy:  22.4,
+  spyBelowEma50: true,
   spy:       { data: { c: 534.20, dp: -0.8 } },
   fearGreed: { data: { score: 38, rating: 'Fear' } },
   sectors: {
