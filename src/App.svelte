@@ -288,6 +288,11 @@
             }
           }
         } catch { /* non-blocking */ }
+
+        // Commit this ticker as soon as its enrichment lands — with a
+        // rate-limited TD queue (8 req/min) a full watchlist can take
+        // minutes to drain; don't make the UI wait for the last ticker.
+        setMarketData({ [ticker.symbol]: results[ticker.symbol] });
       }
 
       // TwelveData — live quote enrichment only (indicators already computed locally from candles)
@@ -305,13 +310,11 @@
                 results[ticker.symbol].quote.data.pc = q.prevClose;
               }
               results[ticker.symbol].tdQuote = q;
+              setMarketData({ [ticker.symbol]: results[ticker.symbol] });
             }
           } catch { /* non-blocking */ }
         }
       }
-
-      // Commit all enriched data to the store at once
-      setMarketData(results);
 
       // Check price alerts
       checkAlerts(results);

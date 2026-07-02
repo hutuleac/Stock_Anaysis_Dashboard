@@ -459,7 +459,9 @@
       let candles;
 
       if (hasTDApiKey()) {
-        const result = await fetchTimeSeries(symbol, tf.tdInterval, tf.tdOutput);
+        // priority: true — this is a user click, shouldn't queue behind a
+        // background bulk-refresh backlog of 20+ calls.
+        const result = await fetchTimeSeries(symbol, tf.tdInterval, tf.tdOutput, { priority: true });
         const values = result.data;
         if (!values?.length) { error = 'No chart data available'; loading = false; return; }
         candles = values.map(v => ({
