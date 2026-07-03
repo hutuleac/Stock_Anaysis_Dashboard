@@ -19,13 +19,21 @@ export function deriveMacroRegime(series) {
   const ffPrev  = series?.FEDFUNDS?.[1]?.value ?? null;
   if (t10y2y === null && ffNow === null) return null;
 
+  // CPI YoY needs the observation 12 months back (13 obs fetched)
+  const cpiNow  = series?.CPIAUCSL?.[0]?.value ?? null;
+  const cpiYago = series?.CPIAUCSL?.[12]?.value ?? null;
+  const cpiYoY  = cpiNow !== null && cpiYago > 0
+    ? ((cpiNow / cpiYago) - 1) * 100
+    : null;
+
   return {
     curveInverted: t10y2y !== null && t10y2y < 0,
     fedRising:     ffNow !== null && ffPrev !== null && ffNow > ffPrev,
     t10y2y,
     fedFunds:      ffNow,
     fedFundsPrev:  ffPrev,
-    cpi:           series?.CPIAUCSL?.[0]?.value ?? null,
+    cpi:           cpiNow,
+    cpiYoY,
     unemployment:  series?.UNRATE?.[0]?.value ?? null,
   };
 }

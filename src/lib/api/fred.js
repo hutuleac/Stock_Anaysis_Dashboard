@@ -45,7 +45,8 @@ function writeCache(key, data) {
 }
 
 function fredUrl(seriesId) {
-  const params = `series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=12`;
+  // limit=13: thirteen monthly observations span a full year → real CPI YoY
+  const params = `series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=13`;
   if (import.meta.env.DEV) return `/fred-api/fred/series/observations?${params}`;
   const direct = `https://api.stlouisfed.org/fred/series/observations?${params}`;
   return `https://corsproxy.io/?url=${encodeURIComponent(direct)}`;
