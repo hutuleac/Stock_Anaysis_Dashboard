@@ -37,6 +37,14 @@
     return { label: 'Bearish', color: 'text-bear-strong', direction: '↓' };
   }
 
+  // BTC moves ~3x SPY, so risk-on/off thresholds are wider (±1.5% vs ±0.5%)
+  function getBtcRisk(btcData) {
+    if (btcData?.dp == null) return { label: '—', color: 'text-text-muted', direction: '→' };
+    if (btcData.dp > 1.5)  return { label: 'Risk-On',  color: 'text-bull-strong', direction: '↑' };
+    if (btcData.dp > -1.5) return { label: 'Neutral',  color: 'text-text-secondary', direction: '→' };
+    return { label: 'Risk-Off', color: 'text-bear-strong', direction: '↓' };
+  }
+
   function getSectorLeaders(sectors) {
     if (!sectors) return { leaders: [], laggards: [] };
     const sorted = Object.entries(sectors)
@@ -75,6 +83,8 @@
   let vixInfo = $derived(getVixLevel(vixPrice));
   let spyData = $derived(marketData?.spy?.data ?? null);
   let spyTrend = $derived(getSpyTrend(spyData));
+  let btcData = $derived(marketData?.btc?.data ?? null);
+  let btcRisk = $derived(getBtcRisk(btcData));
   let sectorInfo = $derived(getSectorLeaders(marketData?.sectors));
   let fgInfo = $derived(getFearGreedInfo(marketData?.fearGreed?.data));
   let nudge = $derived(getNudge(vixInfo.level, spyTrend.label, fgInfo));
@@ -136,6 +146,22 @@
 
         <!-- Divider -->
         <div class="w-px h-8 bg-border"></div>
+
+        <!-- BTC Risk Appetite -->
+        {#if btcData}
+          <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.btcRisk, current: { value: (btcData.dp > 0 ? '+' : '') + btcData.dp.toFixed(2) + '%', label: btcRisk.label, color: btcRisk.label === 'Risk-On' ? '#22c55e' : btcRisk.label === 'Risk-Off' ? '#ef4444' : '#9ca3af' } })}>
+            <span class="text-[12px] uppercase tracking-wider text-text-muted">BTC Risk</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-bold {btcRisk.color}">{btcRisk.direction}</span>
+              <span class="text-sm font-medium {btcRisk.color}">{btcRisk.label}</span>
+              <span class="text-xs font-mono text-text-muted">({btcData.dp > 0 ? '+' : ''}{btcData.dp.toFixed(2)}%)</span>
+            </div>
+            <span class="text-[13px] text-text-muted font-mono">${Math.round(btcData.price).toLocaleString()}</span>
+          </div>
+
+          <!-- Divider -->
+          <div class="w-px h-8 bg-border"></div>
+        {/if}
 
         <!-- Fear & Greed -->
         {#if fgInfo}

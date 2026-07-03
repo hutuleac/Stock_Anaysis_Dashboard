@@ -1,6 +1,7 @@
 <script>
   import { getApiKey, setApiKey } from '../api/finnhub.svelte.js';
   import { getTDApiKey, setTDApiKey } from '../api/twelvedata.svelte.js';
+  import { getFredApiKey, setFredApiKey } from '../api/fred.js';
   import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
   import { getDefaultTickers, addDefaultTicker, removeDefaultTicker, resetDefaultTickers, addTicker } from '../stores/watchlist.svelte.js';
 
@@ -8,6 +9,7 @@
 
   let apiKeyInput = $state(getApiKey());
   let tdApiKeyInput = $state(getTDApiKey());
+  let fredApiKeyInput = $state(getFredApiKey());
   let notifPermission = $state(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   );
@@ -70,6 +72,12 @@
   function saveTDApiKey() {
     setTDApiKey(tdApiKeyInput.trim());
     saveMessage = 'TwelveData key saved — refresh to load indicators';
+    setTimeout(() => saveMessage = '', 3000);
+  }
+
+  function saveFredApiKey() {
+    setFredApiKey(fredApiKeyInput.trim());
+    saveMessage = 'FRED key saved — refresh to load macro context';
     setTimeout(() => saveMessage = '', 3000);
   }
 
@@ -164,6 +172,30 @@
         <p class="text-xs text-text-muted">
           Adds RSI(14) + MACD to the scoring engine and shows indicators in the detail panel.
           Free key from <a href="https://twelvedata.com/register" target="_blank" rel="noopener" class="text-uncertain hover:underline">twelvedata.com/register</a>
+        </p>
+      </div>
+
+      <!-- FRED API Key -->
+      <div class="space-y-2">
+        <label class="block">
+          <span class="text-sm font-medium text-text-secondary">FRED API Key</span>
+          <span class="ml-2 text-xs text-uncertain bg-uncertain/10 px-1.5 py-0.5 rounded">optional</span>
+          <div class="flex gap-2 mt-1">
+            <input
+              type="password"
+              placeholder="Enables macro regime (CPI, Fed funds, yield curve)"
+              class="flex-1 bg-surface-700 border border-border rounded px-3 py-2 text-text-primary font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50"
+              bind:value={fredApiKeyInput}
+            />
+            <button
+              class="px-4 py-2 bg-bull-strong text-surface-900 font-semibold text-sm rounded hover:brightness-110 transition"
+              onclick={saveFredApiKey}
+            >Save</button>
+          </div>
+        </label>
+        <p class="text-xs text-text-muted">
+          Adds macroeconomic context to scoring: inverted yield curve pulls bullish scores toward neutral, rising Fed funds shifts weight to fundamentals.
+          Free key from <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener" class="text-uncertain hover:underline">fred.stlouisfed.org</a>
         </p>
       </div>
 
@@ -314,7 +346,7 @@
         <button
           class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
           onclick={() => {
-            const keep = ['watchlist', 'watchlist_defaults', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'lastRefreshed'];
+            const keep = ['watchlist', 'watchlist_defaults', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'fred_api_key', 'lastRefreshed'];
             // Preserve per-ticker notes and score velocity history
             for (let i = 0; i < localStorage.length; i++) {
               const k = localStorage.key(i);
