@@ -69,6 +69,7 @@ export const DEMO_MARKET_CONTEXT = {
   spyBelowEma50: true,
   spy:       { data: { c: 534.20, dp: -0.8 } },
   fearGreed: { data: { score: 38, rating: 'Fear' } },
+  btc:       { data: { price: 61840, dp: -2.3 } },
   sectors: {
     XLK:  { data: { dp: -1.1 } },
     XLF:  { data: { dp:  0.4 } },
