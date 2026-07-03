@@ -159,6 +159,19 @@ export const TIPS = {
     why: 'The single biggest factor in daily stock movement is broad market direction. Even the best fundamental setup can get dragged down 2% in a 1.5% down market day.',
   },
 
+  macro: {
+    title: 'Macro Regime',
+    subtitle: 'FRED — yield curve, Fed funds, CPI, unemployment',
+    category: 'Market Context',
+    description: 'Monthly macroeconomic backdrop from the St. Louis Fed. The 10Y–2Y Treasury spread and the Fed funds direction are the two inputs that adjust scoring; CPI (YoY inflation) and unemployment complete the picture.',
+    levels: [
+      { range: 'Spread > 0, Fed flat/cutting', label: 'Normal',     color: C.green,  desc: 'Benign backdrop — no macro adjustment to scores.' },
+      { range: 'Fed funds rising',             label: 'Fed Rising', color: C.orange, desc: 'Tightening cycle — technical signals get less weight, fundamentals more (like the VIX regime shift).' },
+      { range: '10Y–2Y spread < 0',            label: 'Inverted',   color: C.red,    desc: 'Recession signal — bullish scores are pulled 15% toward neutral until the curve normalizes.' },
+    ],
+    why: 'An inverted yield curve has preceded every US recession since 1970, and rising rates compress the P/E multiples that momentum trades depend on. These move monthly — this is regime context, not a timing signal.',
+  },
+
   btcRisk: {
     title: 'BTC Risk Appetite',
     subtitle: 'Bitcoin 24h Change (Binance)',
