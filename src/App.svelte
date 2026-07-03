@@ -1,6 +1,7 @@
 <script>
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
+  import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
@@ -29,6 +30,7 @@
   let offline = $state(!navigator.onLine);
   let refreshError = $state('');
   let marketContextData = $state(null);
+  let macroCtx = null; // FRED macro context — feeds setMarketContext, not the template
   let marketBarCollapsed = $state(false);
   let marketStatus = $state(getMarketStatus());
 
@@ -126,6 +128,10 @@
     if (symbols.length === 0) return;
 
     try {
+      // FRED macro context (CPI, Fed funds, unemployment, yield curve) —
+      // 24h localStorage cache, so this is usually a no-op. Non-blocking.
+      try { macroCtx = await fetchMacroContext(); } catch { /* macro unavailable */ }
+
       // Fetch market context first (VIX, SPY, sectors, Fear & Greed)
       try {
         marketContextData = await fetchMarketContext();
@@ -135,6 +141,7 @@
           vixPrice:       null, // refined below from SPY realized vol
           spyDowntrend:   (marketContextData.spy?.data?.dp ?? 0) < -0.5, // refined below
           fearGreedValue: marketContextData.fearGreed?.data?.score ?? null,
+          macro:          macroCtx?.regime ?? null,
         });
       } catch { /* non-blocking — market context is informational */ }
 
@@ -172,6 +179,7 @@
           vixPrice:       volProxy,
           spyDowntrend:   spyBelowEma50 ?? ((marketContextData?.spy?.data?.dp ?? 0) < -0.5),
           fearGreedValue: marketContextData?.fearGreed?.data?.score ?? null,
+          macro:          macroCtx?.regime ?? null,
         });
       }
 
@@ -467,11 +475,13 @@
           }
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
+            if (!macroCtx) macroCtx = readMacroFromCache(); // startup: cached FRED data only, no network
             setMarketContext({
               vixPrice:       sup.marketContextData.volProxy ?? null,
               spyDowntrend:   sup.marketContextData.spyBelowEma50
                                 ?? ((sup.marketContextData.spy?.data?.dp ?? 0) < -0.5),
               fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
+              macro:          macroCtx?.regime ?? null,
             });
           }
           if (sup.ts) lastRefreshed = new Date(sup.ts);

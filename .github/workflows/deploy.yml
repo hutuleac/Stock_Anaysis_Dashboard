@@ -30,6 +30,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_FRED_API_KEY: ${{ secrets.VITE_FRED_API_KEY }}
 
       - uses: actions/configure-pages@v4
 

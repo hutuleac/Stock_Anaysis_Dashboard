@@ -37,7 +37,7 @@ export function scoreNewsHeadlines(newsData) {
 
 export function computeScore(tickerData, marketContext = _marketContext) {
   if (!tickerData?.quote?.data) {
-    return { score: null, badge: 'NEUTRAL', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null, conviction: null, convictionLabel: null, regimeNote: null, spyPenaltyApplied: false, rsiZScore: null, scoreZScore: null };
+    return { score: null, badge: 'NEUTRAL', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null, conviction: null, convictionLabel: null, regimeNote: null, spyPenaltyApplied: false, macroRegime: null, rsiZScore: null, scoreZScore: null };
   }
 
   const quote   = tickerData.quote.data;
@@ -195,6 +195,18 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     regimeNote = `VIX ${vixPrice.toFixed(0)} elevated — fundamentals weighted higher (55%)`;
   }
 
+  // Macro regime (FRED): a rising Fed funds rate makes technical momentum less
+  // reliable — shift weight toward fundamentals, same rationale as the VIX shift.
+  const macro = marketContext?.macro ?? null;
+  if (macro?.fedRising) {
+    const shift = Math.min(0.07, techWeight - 0.20); // never below the VIX-extreme floor
+    if (shift > 0) {
+      techWeight -= shift; fundWeight += shift;
+      const note = 'Fed funds rising — technical weight reduced';
+      regimeNote = regimeNote ? `${regimeNote}; ${note}` : note;
+    }
+  }
+
   // ── COMPOSITE ────────────────────────────────────────────────────────────────
 
   let score = Math.max(0, Math.min(100, Math.round(
@@ -219,6 +231,16 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     if (fg < 25)      score = Math.max(50, score - 3); // Extreme Fear
     else if (fg > 75) score = Math.max(50, score - 2); // Extreme Greed (contrarian)
     else if (fg < 35) score = Math.max(50, score - 1); // Fear
+  }
+
+  // ── MACRO REGIME PENALTY ────────────────────────────────────────────────────
+  // Inverted yield curve (T10Y2Y < 0) is a recession signal — pull LONG scores
+  // 15% toward neutral, on top of any SPY downtrend penalty.
+
+  let macroPenaltyApplied = false;
+  if (macro?.curveInverted && score > 50) {
+    score = Math.round(score - (score - 50) * 0.15);
+    macroPenaltyApplied = true;
   }
 
   // ── CONVICTION SCORE ────────────────────────────────────────────────────────
@@ -262,6 +284,9 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     convictionLabel,
     regimeNote,
     spyPenaltyApplied,
+    macroRegime: macro
+      ? { curveInverted: macro.curveInverted, fedRising: macro.fedRising, t10y2y: macro.t10y2y, penaltyApplied: macroPenaltyApplied }
+      : null,
     rsiZScore:   ind?.rsiZScore ?? null,
     scoreZScore: null, // computed separately via computeScoreZScore(symbol)
   };
