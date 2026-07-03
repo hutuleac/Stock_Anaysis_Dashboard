@@ -10,6 +10,7 @@ const CACHE_TTL = {
   feargreed:    3600,       // CNN Fear & Greed — 1 hour
   earnings_hist: 86400,    // historical earnings surprises — 24h
   smart_money: 604800,     // analyst recs + insider sentiment — 7d cache
+  btc: 900,                // BTC risk-appetite proxy (Binance public API) — 15 min
 };
 
 const CALL_DELAY_MS = 100;
@@ -325,6 +326,34 @@ async function fetchFearAndGreed() {
   }
 }
 
+// ── BTC risk-appetite proxy ───────────────────────────────────────────────────
+// Binance public REST — keyless, CORS-enabled, no Finnhub budget consumed.
+// Crypto reacts to risk sentiment faster than equities; a sharp BTC move is an
+// early canary. Returns { price, dp } (dp = 24h % change) or null on failure.
+async function fetchBtcQuote() {
+  const key = 'fh_btc_market';
+  const cached = readCache(key, CACHE_TTL.btc);
+  if (cached) return { data: cached, stale: false };
+
+  try {
+    const res  = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const price = parseFloat(json.lastPrice);
+    const dp    = parseFloat(json.priceChangePercent);
+    if (!Number.isFinite(price) || !Number.isFinite(dp)) throw new Error('Unexpected Binance shape');
+    const data = { price, dp };
+    writeCache(key, data);
+    return { data, stale: false };
+  } catch (err) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return { data: JSON.parse(raw).data, stale: true, error: err.message };
+    } catch { /* noop */ }
+    return { data: null, stale: true, error: err.message };
+  }
+}
+
 // All unique sector ETFs for market context
 const ALL_SECTOR_ETFS = ['XLK', 'XLF', 'XLV', 'XLY', 'XLP', 'XLE', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC'];
 
@@ -338,6 +367,9 @@ export async function fetchMarketContext() {
   const fearGreed = await fetchFearAndGreed().catch(() => ({ data: null, stale: true }));
   await delay(CALL_DELAY_MS);
 
+  // BTC risk-appetite proxy (non-blocking, keyless — Binance public API)
+  const btc = await fetchBtcQuote().catch(() => ({ data: null, stale: true }));
+
   // Fetch all sector ETFs
   const sectorResults = {};
   for (const etf of ALL_SECTOR_ETFS) {
@@ -345,5 +377,5 @@ export async function fetchMarketContext() {
     await delay(CALL_DELAY_MS);
   }
 
-  return { spy: spyQuote, fearGreed, sectors: sectorResults };
+  return { spy: spyQuote, fearGreed, btc, sectors: sectorResults };
 }
