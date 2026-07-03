@@ -61,6 +61,19 @@ describe('deriveMacroRegime', () => {
     expect(deriveMacroRegime({ FEDFUNDS: obs([['2026-06-01', 4.25], ['2026-05-01', 4.5]]) }).fedRising).toBe(false);
   });
 
+  it('computes CPI YoY from the observation 12 months back', () => {
+    const cpi = [['2026-06-01', 320.6]];
+    for (let i = 1; i <= 12; i++) cpi.push([`2025-0${i}`, i === 12 ? 313.0 : 315]);
+    const r = deriveMacroRegime({ T10Y2Y: obs([['2026-07-02', 0.3]]), CPIAUCSL: obs(cpi) });
+    expect(r.cpiYoY).toBeCloseTo(((320.6 / 313.0) - 1) * 100, 5);
+  });
+
+  it('cpiYoY is null with fewer than 13 CPI observations', () => {
+    const r = deriveMacroRegime({ T10Y2Y: obs([['2026-07-02', 0.3]]), CPIAUCSL: obs([['2026-06-01', 320.6]]) });
+    expect(r.cpiYoY).toBeNull();
+    expect(r.cpi).toBe(320.6);
+  });
+
   it('returns null when no usable series', () => {
     expect(deriveMacroRegime(null)).toBeNull();
     expect(deriveMacroRegime({})).toBeNull();

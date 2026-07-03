@@ -135,6 +135,7 @@
       // Fetch market context first (VIX, SPY, sectors, Fear & Greed)
       try {
         marketContextData = await fetchMarketContext();
+        marketContextData.macro = macroCtx?.regime ?? null; // for the Macro tile
         // Push regime context into scoring engine — all computeScore() calls
         // this session will automatically use regime-aware weights + penalties.
         setMarketContext({
@@ -476,6 +477,7 @@
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
             if (!macroCtx) macroCtx = readMacroFromCache(); // startup: cached FRED data only, no network
+            marketContextData.macro = macroCtx?.regime ?? marketContextData.macro ?? null;
             setMarketContext({
               vixPrice:       sup.marketContextData.volProxy ?? null,
               spyDowntrend:   sup.marketContextData.spyBelowEma50

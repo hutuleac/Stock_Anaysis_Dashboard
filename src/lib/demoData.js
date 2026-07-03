@@ -70,6 +70,7 @@ export const DEMO_MARKET_CONTEXT = {
   spy:       { data: { c: 534.20, dp: -0.8 } },
   fearGreed: { data: { score: 38, rating: 'Fear' } },
   btc:       { data: { price: 61840, dp: -2.3 } },
+  macro:     { curveInverted: false, fedRising: false, t10y2y: 0.35, fedFunds: 3.63, fedFundsPrev: 3.63, cpi: 320.6, cpiYoY: 2.4, unemployment: 4.1 },
   sectors: {
     XLK:  { data: { dp: -1.1 } },
     XLF:  { data: { dp:  0.4 } },
