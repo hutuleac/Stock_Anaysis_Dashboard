@@ -10,85 +10,114 @@
     XLU: 'Utilities', XLRE: 'Real Estate', XLC: 'Comms'
   };
 
-  function getVixLevel(vixPrice) {
-    if (!vixPrice) return { label: '—', color: 'text-text-muted', level: 'unknown' };
-    if (vixPrice < 15) return { label: 'CALM', color: 'text-bull-strong', level: 'calm' };
-    if (vixPrice < 20) return { label: 'NORMAL', color: 'text-text-secondary', level: 'normal' };
-    if (vixPrice < 25) return { label: 'ELEVATED', color: 'text-warning', level: 'elevated' };
-    if (vixPrice < 35) return { label: 'HIGH', color: 'text-bear-weak', level: 'high' };
-    return { label: 'EXTREME', color: 'text-bear-strong', level: 'extreme' };
+  // Every tile shares one anatomy: status dot + label / value + state / context
+  // line. `dot` is a bg-* class, `color` a text-* class — always paired.
+  const STATES = {
+    good:    { dot: 'bg-bull-strong',    color: 'text-bull-strong' },
+    neutral: { dot: 'bg-text-muted',     color: 'text-text-secondary' },
+    warn:    { dot: 'bg-warning',        color: 'text-warning' },
+    caution: { dot: 'bg-bear-weak',      color: 'text-bear-weak' },
+    bad:     { dot: 'bg-bear-strong',    color: 'text-bear-strong' },
+    unknown: { dot: 'bg-surface-600',    color: 'text-text-muted' },
+  };
+
+  function getVixInfo(vixPrice) {
+    if (vixPrice == null) return { ...STATES.unknown, value: '—', label: '', sub: 'Refresh to load market data', level: 'unknown', hex: '#9ca3af' };
+    if (vixPrice < 15) return { ...STATES.good,    value: vixPrice.toFixed(1), label: 'CALM',     sub: 'Momentum signals reliable',        level: 'calm',     hex: '#22c55e' };
+    if (vixPrice < 20) return { ...STATES.neutral, value: vixPrice.toFixed(1), label: 'NORMAL',   sub: 'Standard conditions',              level: 'normal',   hex: '#9ca3af' };
+    if (vixPrice < 25) return { ...STATES.warn,    value: vixPrice.toFixed(1), label: 'ELEVATED', sub: 'Tighten stops, reduce size',       level: 'elevated', hex: '#f59e0b' };
+    if (vixPrice < 35) return { ...STATES.caution, value: vixPrice.toFixed(1), label: 'HIGH',     sub: 'Consider cash, widen stops 20%',   level: 'high',     hex: '#f97316' };
+    return { ...STATES.bad, value: vixPrice.toFixed(1), label: 'EXTREME', sub: 'Cash is a position', level: 'extreme', hex: '#ef4444' };
   }
 
-  function getVixAdvice(level) {
-    switch (level) {
-      case 'calm': return 'Low volatility — momentum signals reliable';
-      case 'normal': return 'Standard conditions — trade your plan';
-      case 'elevated': return 'Elevated fear — tighten stops, reduce size';
-      case 'high': return 'High anxiety — consider cash, widen stops 20%';
-      case 'extreme': return 'Extreme fear — cash is a position';
-      default: return 'Refresh to load market data';
-    }
-  }
+  function pct(dp) { return (dp > 0 ? '+' : '') + dp.toFixed(2) + '%'; }
 
-  function getSpyTrend(spyData) {
-    if (!spyData?.dp) return { label: '—', color: 'text-text-muted', direction: '→' };
-    if (spyData.dp > 0.5) return { label: 'Bullish', color: 'text-bull-strong', direction: '↑' };
-    if (spyData.dp > -0.5) return { label: 'Neutral', color: 'text-text-secondary', direction: '→' };
-    return { label: 'Bearish', color: 'text-bear-strong', direction: '↓' };
+  function getSpyInfo(spy) {
+    if (spy?.dp == null) return { ...STATES.unknown, value: '—', label: '—', sub: null, hex: '#9ca3af' };
+    const sub = spy.c != null ? '$' + spy.c.toFixed(2) : null;
+    if (spy.dp > 0.5)  return { ...STATES.good,    value: pct(spy.dp), label: 'BULLISH', sub, hex: '#22c55e' };
+    if (spy.dp > -0.5) return { ...STATES.neutral, value: pct(spy.dp), label: 'NEUTRAL', sub, hex: '#9ca3af' };
+    return { ...STATES.bad, value: pct(spy.dp), label: 'BEARISH', sub, hex: '#ef4444' };
   }
 
   // BTC moves ~3x SPY, so risk-on/off thresholds are wider (±1.5% vs ±0.5%)
-  function getBtcRisk(btcData) {
-    if (btcData?.dp == null) return { label: '—', color: 'text-text-muted', direction: '→' };
-    if (btcData.dp > 1.5)  return { label: 'Risk-On',  color: 'text-bull-strong', direction: '↑' };
-    if (btcData.dp > -1.5) return { label: 'Neutral',  color: 'text-text-secondary', direction: '→' };
-    return { label: 'Risk-Off', color: 'text-bear-strong', direction: '↓' };
+  function getBtcInfo(btc) {
+    if (btc?.dp == null) return null;
+    const sub = '$' + Math.round(btc.price).toLocaleString();
+    if (btc.dp > 1.5)  return { ...STATES.good,    value: pct(btc.dp), label: 'RISK-ON',  sub, hex: '#22c55e' };
+    if (btc.dp > -1.5) return { ...STATES.neutral, value: pct(btc.dp), label: 'NEUTRAL',  sub, hex: '#9ca3af' };
+    return { ...STATES.bad, value: pct(btc.dp), label: 'RISK-OFF', sub, hex: '#ef4444' };
   }
 
-  function getSectorLeaders(sectors) {
-    if (!sectors) return { leaders: [], laggards: [] };
-    const sorted = Object.entries(sectors)
+  function getMacroInfo(macro) {
+    if (!macro) return null;
+    const value = macro.t10y2y != null ? (macro.t10y2y > 0 ? '+' : '') + macro.t10y2y.toFixed(2) : '—';
+    const parts = [];
+    // all three read as percent — units live in the tooltip, keep the line tight
+    if (macro.fedFunds != null) parts.push(`Fed ${macro.fedFunds.toFixed(2)}${macro.fedRising ? '↑' : '→'}`);
+    if (macro.cpiYoY != null) parts.push(`CPI ${macro.cpiYoY.toFixed(1)}`);
+    if (macro.unemployment != null) parts.push(`U ${macro.unemployment.toFixed(1)}`);
+    const sub = parts.join(' · ') || null;
+    if (macro.curveInverted) return { ...STATES.bad,  value, label: 'INVERTED',   sub, hex: '#ef4444' };
+    if (macro.fedRising)     return { ...STATES.warn, value, label: 'FED RISING', sub, hex: '#f59e0b' };
+    return { ...STATES.good, value, label: 'NORMAL', sub, hex: '#22c55e' };
+  }
+
+  function getFgInfo(fg) {
+    if (fg?.score == null) return null;
+    const s = fg.score;
+    const base =
+      s <= 25 ? { ...STATES.bad,     label: 'Extreme Fear',  hex: '#ef4444' } :
+      s <= 40 ? { ...STATES.caution, label: 'Fear',          hex: '#f97316' } :
+      s <= 60 ? { ...STATES.neutral, label: 'Neutral',       hex: '#9ca3af' } :
+      s <= 75 ? { ...STATES.good,    label: 'Greed',         hex: '#f59e0b' } :
+                { ...STATES.warn,    label: 'Extreme Greed', hex: '#ef4444' };
+    return { ...base, score: s, label: fg.rating ?? base.label };
+  }
+
+  // One Rotation tile replaces Leading/Lagging: breadth (advancers/total) is
+  // the state, top/bottom sectors are the context lines.
+  function getRotation(sectors) {
+    const all = Object.entries(sectors ?? {})
       .filter(([, v]) => v?.data?.dp != null)
-      .map(([etf, v]) => ({ etf, name: SECTOR_NAMES[etf] || etf, change: v.data.dp }))
-      .sort((a, b) => b.change - a.change);
-    return {
-      leaders: sorted.slice(0, 2),
-      laggards: sorted.slice(-2).reverse()
-    };
+      .map(([etf, v]) => ({ name: SECTOR_NAMES[etf] || etf, dp: v.data.dp }))
+      .sort((a, b) => b.dp - a.dp);
+    if (!all.length) return null;
+    const up = all.filter(s => s.dp > 0).length;
+    const state = up >= 7 ? { ...STATES.good, label: 'BROAD' }
+                : up <= 4 ? { ...STATES.bad,  label: 'WEAK' }
+                :           { ...STATES.neutral, label: 'MIXED' };
+    return { ...state, value: `${up}/${all.length}`, leaders: all.slice(0, 2), laggards: all.slice(-2).reverse() };
   }
 
-  function getFearGreedInfo(fg) {
-    if (!fg) return null;
-    const score = fg.score;
-    if (score == null) return null;
-    let color, label;
-    if (score <= 25)      { color = 'text-bear-strong'; label = 'Extreme Fear'; }
-    else if (score <= 40) { color = 'text-bear-weak';   label = 'Fear'; }
-    else if (score <= 60) { color = 'text-text-secondary'; label = 'Neutral'; }
-    else if (score <= 75) { color = 'text-bull-strong'; label = 'Greed'; }
-    else                  { color = 'text-bull-strong'; label = 'Extreme Greed'; }
-    return { score, label: fg.rating ?? label, color };
-  }
-
-  function getNudge(vixLevel, spyTrend, fgInfo) {
+  function getNudge(vixLevel, spyLabel, fg) {
     if (vixLevel === 'extreme') return { text: 'Extreme fear in the market — cash is a valid position today', type: 'danger' };
-    if (fgInfo?.score != null && fgInfo.score <= 25) return { text: `Fear & Greed at ${fgInfo.score} (Extreme Fear) — market in panic mode, tread carefully`, type: 'danger' };
+    if (fg?.score != null && fg.score <= 25) return { text: `Fear & Greed at ${fg.score} (Extreme Fear) — market in panic mode, tread carefully`, type: 'danger' };
     if (vixLevel === 'high') return { text: 'Market anxiety is high — consider reducing position sizes', type: 'warning' };
-    if (vixLevel === 'elevated' && spyTrend === 'Bearish') return { text: 'Elevated VIX + bearish trend — not ideal for new longs', type: 'warning' };
-    if (fgInfo?.score != null && fgInfo.score >= 80) return { text: `Fear & Greed at ${fgInfo.score} (Extreme Greed) — market extended, contrarian caution`, type: 'warning' };
+    if (vixLevel === 'elevated' && spyLabel === 'BEARISH') return { text: 'Elevated VIX + bearish trend — not ideal for new longs', type: 'warning' };
+    if (fg?.score != null && fg.score >= 80) return { text: `Fear & Greed at ${fg.score} (Extreme Greed) — market extended, contrarian caution`, type: 'warning' };
     return null;
   }
 
-  let vixPrice = $derived(marketData?.volProxy ?? null);
-  let vixInfo = $derived(getVixLevel(vixPrice));
-  let spyData = $derived(marketData?.spy?.data ?? null);
-  let spyTrend = $derived(getSpyTrend(spyData));
-  let btcData = $derived(marketData?.btc?.data ?? null);
-  let btcRisk = $derived(getBtcRisk(btcData));
-  let sectorInfo = $derived(getSectorLeaders(marketData?.sectors));
-  let fgInfo = $derived(getFearGreedInfo(marketData?.fearGreed?.data));
-  let nudge = $derived(getNudge(vixInfo.level, spyTrend.label, fgInfo));
+  let vixInfo  = $derived(getVixInfo(marketData?.volProxy ?? null));
+  let spyInfo  = $derived(getSpyInfo(marketData?.spy?.data ?? null));
+  let btcInfo  = $derived(getBtcInfo(marketData?.btc?.data ?? null));
+  let macroInfo = $derived(getMacroInfo(marketData?.macro ?? null));
+  let fgInfo   = $derived(getFgInfo(marketData?.fearGreed?.data ?? null));
+  let rotation = $derived(getRotation(marketData?.sectors));
+  let nudge    = $derived(getNudge(vixInfo.level, spyInfo.label, fgInfo));
 </script>
+
+{#snippet tileHeader(info, name)}
+  <div class="flex items-center gap-1.5">
+    <span class="w-1.5 h-1.5 rounded-full shrink-0 {info.dot}"></span>
+    <span class="text-[11px] uppercase tracking-wider text-text-muted truncate">{name}</span>
+  </div>
+  <div class="flex items-baseline gap-1.5 min-w-0">
+    <span class="text-sm font-bold font-mono {info.color}">{info.value}</span>
+    <span class="text-[12px] font-semibold {info.color} truncate">{info.label}</span>
+  </div>
+{/snippet}
 
 <!-- Nudge Banner -->
 {#if nudge && !collapsed}
@@ -100,7 +129,6 @@
 <!-- Market Context Bar -->
 <div class="border-b border-border bg-surface-800/30">
   <div class="max-w-[1800px] mx-auto px-4">
-    <!-- Collapse toggle -->
     <button
       class="w-full flex items-center justify-between py-2 text-left"
       onclick={() => collapsed = !collapsed}
@@ -109,115 +137,74 @@
       <span class="text-xs text-text-muted transition-transform {collapsed ? '' : 'rotate-180'}">▾</span>
     </button>
 
-    <!-- Content -->
     {#if !collapsed}
-      <div class="flex items-center gap-6 pb-3 flex-wrap overflow-x-auto">
-        <!-- Volatility (SPY 20d realized, annualized — VIX proxy) -->
-        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.vix, current: vixPrice != null ? { value: vixPrice.toFixed(1), label: vixInfo.label, color: vixInfo.level === 'calm' ? '#22c55e' : vixInfo.level === 'normal' ? '#9ca3af' : vixInfo.level === 'elevated' ? '#f59e0b' : vixInfo.level === 'high' ? '#f97316' : '#ef4444' } : undefined })}>
-          <span class="text-[12px] uppercase tracking-wider text-text-muted">VOL</span>
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold font-mono {vixInfo.color}">
-              {vixPrice != null ? vixPrice.toFixed(1) : '—'}
-            </span>
-            <span class="text-[13px] font-semibold {vixInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">
-              {vixInfo.label}
-            </span>
-          </div>
-          <span class="text-[13px] text-text-muted">{getVixAdvice(vixInfo.level)}</span>
-        </div>
+      <!-- Hairline grid: gap-px over the border color draws the dividers.
+           auto-fit keeps it responsive — 2-up on phones, one row on desktop. -->
+      <div class="grid gap-px bg-border/60 border border-border/60 rounded-lg overflow-hidden mb-3 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
 
-        <!-- Divider -->
-        <div class="w-px h-8 bg-border"></div>
+        <!-- Volatility (SPY 20d realized, annualized — VIX proxy) -->
+        <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+          use:tipAction={() => ({ ...TIPS.vix, current: vixInfo.level !== 'unknown' ? { value: vixInfo.value, label: vixInfo.label, color: vixInfo.hex } : undefined })}>
+          {@render tileHeader(vixInfo, 'Volatility')}
+          <span class="text-[12px] text-text-muted truncate">{vixInfo.sub}</span>
+        </div>
 
         <!-- SPY Trend -->
-        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.spyTrend, current: spyData?.dp != null ? { value: (spyData.dp > 0 ? '+' : '') + spyData.dp.toFixed(2) + '%', label: spyTrend.label, color: spyTrend.label === 'Bullish' ? '#22c55e' : spyTrend.label === 'Bearish' ? '#ef4444' : '#9ca3af' } : undefined })}>
-          <span class="text-[12px] uppercase tracking-wider text-text-muted">SPY Trend</span>
-          <div class="flex items-center gap-1.5">
-            <span class="text-sm font-bold {spyTrend.color}">{spyTrend.direction}</span>
-            <span class="text-sm font-medium {spyTrend.color}">{spyTrend.label}</span>
-            {#if spyData?.dp != null}
-              <span class="text-xs font-mono text-text-muted">({spyData.dp > 0 ? '+' : ''}{spyData.dp.toFixed(2)}%)</span>
-            {/if}
-          </div>
-          {#if spyData?.c != null}
-            <span class="text-[13px] text-text-muted font-mono">${spyData.c.toFixed(2)}</span>
-          {/if}
+        <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+          use:tipAction={() => ({ ...TIPS.spyTrend, current: spyInfo.sub ? { value: spyInfo.value, label: spyInfo.label, color: spyInfo.hex } : undefined })}>
+          {@render tileHeader(spyInfo, 'SPY Trend')}
+          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono truncate">{spyInfo.sub}</span>{/if}
         </div>
 
-        <!-- Divider -->
-        <div class="w-px h-8 bg-border"></div>
-
         <!-- BTC Risk Appetite -->
-        {#if btcData}
-          <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.btcRisk, current: { value: (btcData.dp > 0 ? '+' : '') + btcData.dp.toFixed(2) + '%', label: btcRisk.label, color: btcRisk.label === 'Risk-On' ? '#22c55e' : btcRisk.label === 'Risk-Off' ? '#ef4444' : '#9ca3af' } })}>
-            <span class="text-[12px] uppercase tracking-wider text-text-muted">BTC Risk</span>
-            <div class="flex items-center gap-1.5">
-              <span class="text-sm font-bold {btcRisk.color}">{btcRisk.direction}</span>
-              <span class="text-sm font-medium {btcRisk.color}">{btcRisk.label}</span>
-              <span class="text-xs font-mono text-text-muted">({btcData.dp > 0 ? '+' : ''}{btcData.dp.toFixed(2)}%)</span>
-            </div>
-            <span class="text-[13px] text-text-muted font-mono">${Math.round(btcData.price).toLocaleString()}</span>
+        {#if btcInfo}
+          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+            use:tipAction={() => ({ ...TIPS.btcRisk, current: { value: btcInfo.value, label: btcInfo.label, color: btcInfo.hex } })}>
+            {@render tileHeader(btcInfo, 'BTC Risk')}
+            <span class="text-[12px] text-text-muted font-mono truncate">{btcInfo.sub}</span>
           </div>
+        {/if}
 
-          <!-- Divider -->
-          <div class="w-px h-8 bg-border"></div>
+        <!-- Macro Regime (FRED) -->
+        {#if macroInfo}
+          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+            use:tipAction={() => ({ ...TIPS.macro, current: { value: macroInfo.value, label: macroInfo.label, color: macroInfo.hex } })}>
+            {@render tileHeader(macroInfo, 'Macro · 10Y–2Y')}
+            {#if macroInfo.sub}<span class="text-[12px] text-text-muted font-mono truncate">{macroInfo.sub}</span>{/if}
+          </div>
         {/if}
 
         <!-- Fear & Greed -->
         {#if fgInfo}
-          <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={() => ({ ...TIPS.fearGreed, current: { value: String(fgInfo.score), label: fgInfo.label, color: fgInfo.score <= 25 ? '#ef4444' : fgInfo.score <= 40 ? '#f97316' : fgInfo.score <= 60 ? '#9ca3af' : fgInfo.score <= 75 ? '#f59e0b' : '#ef4444' } })}>
-            <span class="text-[12px] uppercase tracking-wider text-text-muted">Fear & Greed</span>
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-bold font-mono {fgInfo.color}">{fgInfo.score}</span>
-              <span class="text-[13px] font-semibold {fgInfo.color} bg-surface-700 px-1.5 py-0.5 rounded">{fgInfo.label}</span>
-            </div>
-            <!-- Gauge bar 0–100 -->
-            <div class="w-20 h-1 bg-surface-700 rounded-full overflow-hidden">
+          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+            use:tipAction={() => ({ ...TIPS.fearGreed, current: { value: String(fgInfo.score), label: fgInfo.label, color: fgInfo.hex } })}>
+            {@render tileHeader({ ...fgInfo, value: String(fgInfo.score) }, 'Fear & Greed')}
+            <div class="w-full max-w-24 h-1 bg-surface-700 rounded-full overflow-hidden mt-0.5">
               <div
                 class="h-full rounded-full transition-all {fgInfo.score <= 40 ? 'bg-bear-strong' : fgInfo.score <= 60 ? 'bg-text-muted' : 'bg-bull-strong'}"
                 style="width: {fgInfo.score}%"
               ></div>
             </div>
           </div>
-
-          <!-- Divider -->
-          <div class="w-px h-8 bg-border"></div>
         {/if}
 
-        <!-- Sector Leaders -->
-        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={TIPS.sectorLeaders}>
-          <span class="text-[12px] uppercase tracking-wider text-text-muted">Leading</span>
-          <div class="flex items-center gap-2">
-            {#each sectorInfo.leaders as s}
-              <span class="text-xs font-mono">
-                <span class="text-text-secondary">{s.name}</span>
-                <span class="text-bull-strong">{s.change > 0 ? '+' : ''}{s.change.toFixed(1)}%</span>
+        <!-- Sector Rotation (breadth + leaders/laggards) -->
+        {#if rotation}
+          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+            use:tipAction={TIPS.sectorLeaders}>
+            {@render tileHeader(rotation, 'Rotation')}
+            <div class="flex flex-col text-[12px] font-mono min-w-0 leading-tight">
+              <span class="truncate">
+                <span class="text-bull-strong">▲</span>
+                {#each rotation.leaders as s, i}{#if i > 0}<span class="text-text-muted"> · </span>{/if}<span class="text-text-secondary">{s.name}</span>&nbsp;<span class="text-bull-strong">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>{/each}
               </span>
-            {/each}
-            {#if sectorInfo.leaders.length === 0}
-              <span class="text-xs text-text-muted">—</span>
-            {/if}
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div class="w-px h-8 bg-border"></div>
-
-        <!-- Sector Laggards -->
-        <div class="flex flex-col gap-0.5 cursor-default" use:tipAction={TIPS.sectorLaggards}>
-          <span class="text-[12px] uppercase tracking-wider text-text-muted">Lagging</span>
-          <div class="flex items-center gap-2">
-            {#each sectorInfo.laggards as s}
-              <span class="text-xs font-mono">
-                <span class="text-text-secondary">{s.name}</span>
-                <span class="text-bear-weak">{s.change > 0 ? '+' : ''}{s.change.toFixed(1)}%</span>
+              <span class="truncate">
+                <span class="text-bear-weak">▼</span>
+                {#each rotation.laggards as s, i}{#if i > 0}<span class="text-text-muted"> · </span>{/if}<span class="text-text-secondary">{s.name}</span>&nbsp;<span class="text-bear-weak">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>{/each}
               </span>
-            {/each}
-            {#if sectorInfo.laggards.length === 0}
-              <span class="text-xs text-text-muted">—</span>
-            {/if}
+            </div>
           </div>
-        </div>
+        {/if}
       </div>
     {/if}
   </div>
