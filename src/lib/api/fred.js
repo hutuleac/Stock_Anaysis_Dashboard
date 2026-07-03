@@ -8,7 +8,15 @@ import { parseFredObservations, deriveMacroRegime } from '../macro.js';
 
 const FRED_TTL = 86400; // 24h — these series update monthly (T10Y2Y daily)
 
-const API_KEY = import.meta.env.VITE_FRED_API_KEY || '';
+// API key — localStorage-backed, entered in Settings (same pattern as Finnhub/TwelveData)
+let apiKey = '';
+export function getFredApiKey() { return apiKey; }
+export function setFredApiKey(key) {
+  apiKey = key;
+  try { localStorage.setItem('fred_api_key', key); }
+  catch (e) { console.warn('localStorage full:', e); }
+}
+try { apiKey = localStorage.getItem('fred_api_key') || ''; } catch { /* noop */ }
 
 export const FRED_SERIES = ['CPIAUCSL', 'FEDFUNDS', 'UNRATE', 'T10Y2Y'];
 
@@ -37,7 +45,7 @@ function writeCache(key, data) {
 }
 
 function fredUrl(seriesId) {
-  const params = `series_id=${seriesId}&api_key=${API_KEY}&file_type=json&sort_order=desc&limit=12`;
+  const params = `series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=12`;
   if (import.meta.env.DEV) return `/fred-api/fred/series/observations?${params}`;
   const direct = `https://api.stlouisfed.org/fred/series/observations?${params}`;
   return `https://corsproxy.io/?url=${encodeURIComponent(direct)}`;
@@ -48,7 +56,7 @@ export async function fetchFredSeries(seriesId) {
   const key = cacheKey(seriesId);
   const cached = readCache(key, FRED_TTL);
   if (cached) return { data: cached, stale: false };
-  if (!API_KEY) return { data: null, stale: true, error: 'No FRED API key' };
+  if (!apiKey) return { data: null, stale: true, error: 'No FRED API key' };
 
   try {
     const res = await fetch(fredUrl(seriesId));
