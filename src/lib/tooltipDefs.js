@@ -159,6 +159,19 @@ export const TIPS = {
     why: 'The single biggest factor in daily stock movement is broad market direction. Even the best fundamental setup can get dragged down 2% in a 1.5% down market day.',
   },
 
+  btcRisk: {
+    title: 'BTC Risk Appetite',
+    subtitle: 'Bitcoin 24h Change (Binance)',
+    category: 'Market Context',
+    description: 'Crypto reacts to risk sentiment faster than equities — no market hours, no circuit breakers. A sharp BTC move often front-runs the same move in risk assets like growth stocks. Informational only; does not feed the score.',
+    levels: [
+      { range: '> +1.5%', label: 'Risk-On',  color: C.green, desc: 'Speculative appetite flowing in — supportive backdrop for growth and momentum longs.' },
+      { range: '±1.5%',   label: 'Neutral',  color: C.dim,   desc: 'No strong risk signal from crypto. Equity-specific factors dominate.' },
+      { range: '< -1.5%', label: 'Risk-Off', color: C.red,   desc: 'Speculative capital retreating — early warning for high-beta equities, tighten stops.' },
+    ],
+    why: 'BTC trades 24/7, so it prices weekend news and sentiment shifts before the equity open. Thresholds are ±1.5% (vs ±0.5% for SPY) because BTC is roughly 3x as volatile.',
+  },
+
   fearGreed: {
     title: 'Fear & Greed Index',
     subtitle: 'CNN Market Sentiment Score (0–100)',
