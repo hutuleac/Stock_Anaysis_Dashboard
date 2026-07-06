@@ -100,6 +100,7 @@ src/lib/
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)
   dip.js              — Dip Hunter: quality gate + 8-component 0–10 dip score
+  etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
@@ -112,17 +113,20 @@ src/lib/
     PaperTradePanel.svelte  — paper trade entry + tracking
     PortfolioStats.svelte   — P&L, edge analysis, sector exposure
     DipRadar.svelte         — Dip Hunter card, collapsible watchlist-scan panel
+    EtfDashboard.svelte     — UCITS ETF table (Stocks|ETFs header toggle)
   stores/
     watchlist.svelte.js     — ticker list, fetch orchestration
     portfolio.svelte.js     — trade log, FIFO P&L
     papertrades.svelte.js   — paper trade state
     alerts.svelte.js        — price alert state
+    etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
 tests/
   indicators.test.js  — 59 unit tests for indicators.js
   scoring.test.js     — 42 unit tests for scoring.js
   signals.test.js     — 32 unit tests for signals.js
   valuation.test.js   — 3 unit tests for valuation.js
-  dip.test.js         — 20 unit tests for dip.js  (214 total)
+  dip.test.js         — 20 unit tests for dip.js
+  etf.test.js         — 19 unit tests for etf.js  (246 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -175,6 +179,18 @@ Watchlist-wide scan for early entries in quality names on sale — display-only,
 
 Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component (never fires in a greedy market) · `SOON` ≥ 5 · `WATCH` ≥ 3 (below 3, excluded entirely). All inputs are already computed elsewhere on the ticker object (`data.indicators`, `data.rs`, `data.smartMoney`, `data.metrics`) — zero new API calls.
 
+## ETF section (etf.js)
+
+Dedicated `Stocks | ETFs` header-toggle view for Ireland-domiciled accumulating UCITS ETFs, months-to-a-year horizon. **Key decision:** Finnhub/TwelveData free tiers have no European-exchange candles, so every UCITS ETF is mapped to a US-listed proxy tracking the same index (CSPX/VUAA→SPY, CNDX/EQQQ→QQQ, SMGB→SMH, AIAI→THNQ, AIRO→BOTZ, IUES→XLE, INRG→ICLN); all math runs on the proxy — zero new APIs. Displayed price is the proxy's (USD). Spec: `docs/superpowers/specs/2026-07-06-etf-section-design.md`.
+
+Entry point `computeEtfSignals(list, spyCloses)` — per proxy `{ price, rs, groupMedianRs3m, entry, exit }`, null under 20 weekly bars. Two 0–10 scores (component maxes sum to 10, dip.js convention):
+
+- **Entry** (buy weakness): Oversold 3.0 (weekly RSI tiers + weekly BB touch) · Rotation 3.0 (mild RS3m lag vs SPY + vs group median; **0 if rs3m < −25** — falling knife) · Turn 2.0 (weekly MACD bull cross + bull divergence) · Drawdown 2.0 (off 52w daily high).
+- **Exit** (sell exhaustion): Overbought 3.0 (weekly RSI ≥65/70/75) · Extension 3.0 (% above weekly EMA30) · Rotation Loss 2.0 (rs1m negative while rs3m positive = capital rotating out) · Climax Vol 2.0 (weekly volume ≥1.5×/2× avg, only when wRSI ≥ 60).
+- Readiness both: ACT ≥ 7 · SOON ≥ 5 · WATCH ≥ 3 · else WAIT (no filtering — table shows all).
+
+Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, localStorage key `etfList`, user-editable (add needs UCITS ticker + US proxy). Proxy candles fetched in `handleRefresh` per unique proxy (SPY/QQQ usually cache hits) and hydrated on startup from `td_ts_1day_<proxy>_1day_250`.
+
 ## Known conventions / gotchas
 
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
@@ -191,7 +207,7 @@ Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component (never fire
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 214 unit tests, ~250ms
+npm test          # 246 unit tests, ~250ms
 npm run build     # production build → dist/
 ```
 
