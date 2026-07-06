@@ -16,6 +16,8 @@
 
   import SetupRadar from './lib/components/SetupRadar.svelte';
   import DipRadar from './lib/components/DipRadar.svelte';
+  import EtfDashboard from './lib/components/EtfDashboard.svelte';
+  import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses } from './lib/stores/etflist.svelte.js';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
 
   // Svelte action: auto-dismiss triggered alert banner after 15s
@@ -25,6 +27,7 @@
   }
 
   let settingsOpen = $state(false);
+  let activeView = $state('stocks'); // 'stocks' | 'etfs'
   let isDemoMode = $state(false);
   let lastRefreshed = $state(null);
   let offline = $state(!navigator.onLine);
@@ -164,6 +167,7 @@
           if (r?.data?.c?.length) spyCloses = r.data.c;
         }
       } catch { /* RS unavailable this refresh */ }
+      if (spyCloses) setEtfSpyCloses(spyCloses);
 
       // Volatility regime + SPY trend from the closes just fetched (audit F2+F4):
       // realized vol is the vixPrice proxy; downtrend = SPY below its EMA50.
@@ -302,6 +306,39 @@
         // rate-limited TD queue (8 req/min) a full watchlist can take
         // minutes to drain; don't make the UI wait for the last ticker.
         setMarketData({ [ticker.symbol]: results[ticker.symbol] });
+      }
+
+      // ETF proxies — daily candles per unique proxy → weekly resample → etf store.
+      // TD path: SPY/QQQ often already cached from RS/watchlist fetches (cache hit = free).
+      for (const proxy of getUniqueProxies()) {
+        try {
+          let synthetic = null;
+          if (hasTDApiKey()) {
+            const r = await fetchTimeSeries(proxy, '1day', 250);
+            if (r?.data?.length) {
+              const vals = r.data;
+              synthetic = {
+                s: 'ok',
+                t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
+                o: vals.map(v => parseFloat(v.open)),
+                h: vals.map(v => parseFloat(v.high)),
+                l: vals.map(v => parseFloat(v.low)),
+                c: vals.map(v => parseFloat(v.close)),
+                v: vals.map(v => parseInt(v.volume, 10)),
+              };
+            }
+          } else {
+            const r = await fetchCandles(proxy, 'D', fromTs, toTs);
+            if (r?.data?.c?.length) synthetic = r.data;
+          }
+          if (synthetic) {
+            setEtfProxyData(proxy, {
+              weeklyRaw: resampleWeekly(synthetic),
+              dailyCloses: synthetic.c,
+            });
+          }
+        } catch { /* non-blocking — ETF row shows 'no data' */ }
+        await delay(100);
       }
 
       // TwelveData — live quote enrichment only (indicators already computed locally from candles)
@@ -453,6 +490,27 @@
       }
     }
 
+    // ETF proxy candles from the TwelveData localStorage cache
+    for (const proxy of getUniqueProxies()) {
+      try {
+        const tdRaw = localStorage.getItem(`td_ts_1day_${proxy}_1day_250`);
+        if (!tdRaw) continue;
+        const vals = JSON.parse(tdRaw)?.data;
+        if (!vals?.length) continue;
+        const synthetic = {
+          s: 'ok',
+          t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
+          o: vals.map(v => parseFloat(v.open)),
+          h: vals.map(v => parseFloat(v.high)),
+          l: vals.map(v => parseFloat(v.low)),
+          c: vals.map(v => parseFloat(v.close)),
+          v: vals.map(v => parseInt(v.volume, 10)),
+        };
+        setEtfProxyData(proxy, { weeklyRaw: resampleWeekly(synthetic), dailyCloses: synthetic.c });
+        if (proxy === 'SPY') setEtfSpyCloses(synthetic.c);
+      } catch { /* noop */ }
+    }
+
     // Patch supplement fields directly into results (same object, no extra setMarketData call)
     try {
       const raw = localStorage.getItem('dashboard_supplement');
@@ -507,6 +565,18 @@
           <span class="sm:hidden">StockDash</span>
         </h1>
         <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.16</span>
+
+        <!-- Stocks | ETFs view toggle -->
+        <div class="flex items-center gap-0.5 bg-surface-700/60 rounded-lg p-0.5">
+          <button
+            class="text-xs px-3 py-1 rounded-md transition-colors {activeView === 'stocks' ? 'bg-surface-600 text-text-primary' : 'text-text-muted hover:text-text-secondary'}"
+            onclick={() => activeView = 'stocks'}
+          >Stocks</button>
+          <button
+            class="text-xs px-3 py-1 rounded-md transition-colors {activeView === 'etfs' ? 'bg-surface-600 text-text-primary' : 'text-text-muted hover:text-text-secondary'}"
+            onclick={() => activeView = 'etfs'}
+          >ETFs</button>
+        </div>
       </div>
 
       <div class="flex items-center gap-3">
@@ -620,9 +690,13 @@
   <!-- Main content -->
   <main class="max-w-[1800px] mx-auto px-4 py-6">
 
-    <SetupRadar />
-    <DipRadar marketData={marketContextData} />
-    <WatchlistTable onTickerAdded={handleRefresh} />
+    {#if activeView === 'stocks'}
+      <SetupRadar />
+      <DipRadar marketData={marketContextData} />
+      <WatchlistTable onTickerAdded={handleRefresh} />
+    {:else}
+      <EtfDashboard />
+    {/if}
 
     <div class="mt-6 border-t border-border/50 pt-3 flex justify-end">
       <span class="text-[13px] text-text-muted hidden sm:block">
