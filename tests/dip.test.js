@@ -205,6 +205,27 @@ describe('dip score components', () => {
     expect(hits[0].risk.strongDowntrend).toBe(false);
   });
 
+  it('flags when price has broken the most recent swing-low support', () => {
+    const t = makeTicker({ quote: { data: { c: 60 } } }); // below any swing low
+    t.data.indicators.swingLows = [{ price: 65, barsAgo: 10 }, { price: 50, barsAgo: 40 }];
+    const hits = computeDipRadar([t], FEAR);
+    expect(hits[0].support.belowSupport).toBe(true);
+    expect(hits[0].support.nearestSupport).toBe(65);
+  });
+
+  it('does not flag when price is holding above the most recent swing low', () => {
+    const t = makeTicker(); // default price 80
+    t.data.indicators.swingLows = [{ price: 65, barsAgo: 10 }];
+    const hits = computeDipRadar([t], FEAR);
+    expect(hits[0].support.belowSupport).toBe(false);
+    expect(hits[0].support.nearestSupport).toBe(65);
+  });
+
+  it('degrades gracefully with no swing lows', () => {
+    const hits = computeDipRadar([makeTicker()], FEAR); // default fixture has no swingLows
+    expect(hits[0].support).toEqual({ belowSupport: false, nearestSupport: null });
+  });
+
   it('sorts by readiness then score', () => {
     const deep = makeTicker();
     const mild = makeTicker({
