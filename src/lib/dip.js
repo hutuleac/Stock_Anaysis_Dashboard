@@ -1,7 +1,7 @@
 // Dip Hunter — early entries when quality stocks go on sale.
 // Pure logic, display-only: quality-gates each watchlist name on fundamentals,
 // then scores the dip 0–10 across fear / oversold / drawdown / 52w-low / turn /
-// relative strength / value / smart money.
+// relative strength / value / smart money / OBV accumulation.
 // Reads data already on the ticker object — no API calls, no scoring changes.
 import { computeScore } from './scoring.js';
 import { computePEG } from './valuation.js';
@@ -35,12 +35,12 @@ function fearComponent(ctx) {
 
 function oversoldComponent(ind) {
   const rsi = num(ind?.rsi);
-  let s = rsi === null ? 0 : rsi < 30 ? 1.0 : rsi < 35 ? 0.7 : rsi < 40 ? 0.3 : 0;
-  if (ind?.oversoldConfluence === true) s += 0.5;
+  let s = rsi === null ? 0 : rsi < 30 ? 0.75 : rsi < 35 ? 0.5 : rsi < 40 ? 0.25 : 0;
+  if (ind?.oversoldConfluence === true) s += 0.375;
   const z = num(ind?.rsiZScore);
-  if (z !== null && z <= -1.5) s += 0.5;
-  s = Math.min(2.0, s);
-  return { label: 'Oversold', score: s, max: 2.0, detail: rsi === null ? 'n/a' : `RSI ${rsi}${z !== null ? `, z ${z}` : ''}` };
+  if (z !== null && z <= -1.5) s += 0.375;
+  s = Math.min(1.5, s);
+  return { label: 'Oversold', score: s, max: 1.5, detail: rsi === null ? 'n/a' : `RSI ${rsi}${z !== null ? `, z ${z}` : ''}` };
 }
 
 function drawdownComponent(ind) {
@@ -87,14 +87,29 @@ function valueComponent(peg) {
   return { label: 'Value', score: s, max: 1.0, detail: peg === null ? 'n/a' : `PEG ${peg}` };
 }
 
+// Volume-based accumulation tell: OBV rising while price is still declining
+// means buyers are absorbing supply ahead of the turn — a more real-time
+// "smart money" signal than the 7d-cached insider/analyst data below.
+function obvComponent(ind) {
+  const trend = ind?.obv?.trend ?? null;
+  if (trend === null) return { label: 'OBV', score: 0, max: 1.0, detail: 'n/a' };
+  const roc60 = num(ind?.roc60);
+  const declining = roc60 !== null && roc60 <= -8;
+  const s = trend === 'rising' && declining ? 1.0 : trend === 'rising' ? 0.3 : 0;
+  const detail = trend === 'rising'
+    ? (declining ? 'OBV rising, price down — accumulation' : 'OBV rising')
+    : trend === 'falling' ? 'OBV falling' : 'OBV flat';
+  return { label: 'OBV', score: s, max: 1.0, detail };
+}
+
 function smartMoneyComponent(sm) {
   const d = sm?.data ?? null;
-  if (!d) return { label: 'Smart Money', score: 0, max: 1.5, detail: 'n/a' };
+  if (!d) return { label: 'Smart Money', score: 0, max: 1.0, detail: 'n/a' };
   let s = 0;
   const parts = [];
-  if (num(d.mspr3m) !== null && d.mspr3m > 0) { s += 0.75; parts.push('insiders buying'); }
-  if (d.rec && d.rec.buyRatio >= 0.6 && !d.rec.deteriorating) { s += 0.75; parts.push(`${Math.round(d.rec.buyRatio * 100)}% buy`); }
-  return { label: 'Smart Money', score: s, max: 1.5, detail: parts.length ? parts.join(', ') : 'no confirmation' };
+  if (num(d.mspr3m) !== null && d.mspr3m > 0) { s += 0.5; parts.push('insiders buying'); }
+  if (d.rec && d.rec.buyRatio >= 0.6 && !d.rec.deteriorating) { s += 0.5; parts.push(`${Math.round(d.rec.buyRatio * 100)}% buy`); }
+  return { label: 'Smart Money', score: s, max: 1.0, detail: parts.length ? parts.join(', ') : 'no confirmation' };
 }
 
 export function computeDipRadar(list, marketCtx) {
@@ -115,6 +130,7 @@ export function computeDipRadar(list, marketCtx) {
       rsComponent(data.rs),
       valueComponent(gate.peg),
       smartMoneyComponent(data.smartMoney),
+      obvComponent(data.indicators),
     ];
     components.forEach(c => { c.score = Math.round(c.score * 100) / 100; }); // quarter-point tiers
     const score = round1(components.reduce((s, c) => s + c.score, 0));
