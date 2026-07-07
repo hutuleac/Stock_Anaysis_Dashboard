@@ -558,13 +558,13 @@
 <div class="min-h-screen bg-surface-900">
   <!-- Header -->
   <header class="border-b border-border bg-surface-800/50 backdrop-blur-sm sticky top-0 z-30">
-    <div class="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
+    <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-2 gap-x-2">
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <h1 class="text-lg font-bold text-text-primary tracking-tight">
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded">v0.16</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded hidden sm:inline">v0.16</span>
 
         <!-- Stocks | ETFs view toggle -->
         <div class="flex items-center gap-0.5 bg-surface-700/60 rounded-lg p-0.5">
@@ -579,7 +579,7 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         <!-- Market status -->
         <div class="hidden sm:flex items-center gap-1.5 text-xs">
           <span class="w-1.5 h-1.5 rounded-full {marketStatus.isOpen ? 'bg-bull-strong animate-pulse' : 'bg-surface-500'}"></span>
