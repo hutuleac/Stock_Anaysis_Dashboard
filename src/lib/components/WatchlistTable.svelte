@@ -1,4 +1,5 @@
 <script>
+  import { tick } from 'svelte';
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
@@ -13,6 +14,24 @@
   import FundamentalsBar from './FundamentalsBar.svelte';
 
   let { onTickerAdded = () => {} } = $props();
+
+  // Open a ticker and, on phones, scroll its header just under the sticky top
+  // bar so every stock opens the same way and reads top-to-bottom. Tapping the
+  // open stock again collapses it (selectTicker toggles); tapping another
+  // switches. Desktop keeps the table in place (no auto-scroll).
+  async function toggleTicker(symbol) {
+    const opening = getSelectedSymbol() !== symbol;
+    selectTicker(symbol);
+    if (opening && typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches) {
+      await tick();
+      const el = document.getElementById(`wl-m-${symbol}`);
+      if (el) {
+        const headerH = document.querySelector('header')?.offsetHeight ?? 0;
+        const top = el.getBoundingClientRect().top + window.scrollY - headerH - 8;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    }
+  }
 
   let searchQuery = $state('');
   let searchResults = $state([]);
@@ -357,11 +376,12 @@
         {@const scoreZ = computeScoreZScore(ticker.symbol)}
 
         <div
-          class="bg-surface-800 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors {isSelected ? 'border-bull-strong/40 bg-surface-700' : 'border-border hover:bg-surface-750'}"
-          onclick={() => selectTicker(ticker.symbol)}
+          id="wl-m-{ticker.symbol}"
+          class="bg-surface-800 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors scroll-mt-24 {isSelected ? 'border-bull-strong/40 bg-surface-700' : 'border-border hover:bg-surface-750'}"
+          onclick={() => toggleTicker(ticker.symbol)}
           role="button"
           tabindex="0"
-          onkeydown={(e) => e.key === 'Enter' && selectTicker(ticker.symbol)}
+          onkeydown={(e) => e.key === 'Enter' && toggleTicker(ticker.symbol)}
         >
           <!-- Row 1: ticker + badge + earnings badge -->
           <div class="flex items-center justify-between mb-1.5">
@@ -520,7 +540,7 @@
               ondragstart={(e) => handleDragStart(e, i)}
               ondragover={handleDragOver}
               ondrop={(e) => handleDrop(e, i)}
-              onclick={() => selectTicker(ticker.symbol)}
+              onclick={() => toggleTicker(ticker.symbol)}
             >
               <td class="px-2 py-3 text-text-muted cursor-grab hidden sm:table-cell">⠿</td>
               <td class="px-3 py-3">
