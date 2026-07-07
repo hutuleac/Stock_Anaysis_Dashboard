@@ -137,7 +137,7 @@
 </script>
 
 <div class="bg-surface-800/60 border border-border/50 rounded-lg px-4 py-3">
-  <div class="flex flex-wrap gap-x-6 gap-y-2">
+  <div class="grid grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
     {#each metrics as metric}
       {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : null}
       <div class="flex flex-col min-w-[80px] cursor-default" use:tipAction={metricTip ?? undefined}>
