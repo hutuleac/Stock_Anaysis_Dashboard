@@ -7,8 +7,9 @@ function ticker(symbol, o = {}) {
     readiness = 'SOON', setupType = 'pullback', setupScore = 6, etaWeeks = 2,
     rs3m = 5, revGrowth = 20, pe = 20, epsGrowth = 30,
     hasMetrics = true, hasRs = true, hasSetups = true, anchors = undefined,
+    price = 80, adx = null, swingLows = [],
   } = o;
-  const data = {};
+  const data = { quote: { data: { c: price } }, indicators: { adx, swingLows } };
   if (hasSetups) {
     const active = { score: setupScore, readiness, etaWeeks };
     const idle = { score: 0, readiness: 'WAIT', etaWeeks: null };
@@ -77,6 +78,28 @@ describe('computeRadar', () => {
 
   it('returns [] for empty input', () => {
     expect(computeRadar([])).toEqual([]);
+  });
+
+  it('passes through ADX', () => {
+    const out = computeRadar([ticker('AAA', { adx: 28 })]);
+    expect(out[0].adx).toBe(28);
+  });
+
+  it('flags when price has broken the most recent swing-low support', () => {
+    const out = computeRadar([ticker('AAA', { price: 60, swingLows: [{ price: 65, barsAgo: 10 }] })]);
+    expect(out[0].support.belowSupport).toBe(true);
+    expect(out[0].support.nearestSupport).toBe(65);
+  });
+
+  it('does not flag when price holds above the most recent swing low', () => {
+    const out = computeRadar([ticker('AAA', { price: 80, swingLows: [{ price: 65, barsAgo: 10 }] })]);
+    expect(out[0].support.belowSupport).toBe(false);
+  });
+
+  it('degrades gracefully with no swing lows or ADX', () => {
+    const out = computeRadar([ticker('AAA')]);
+    expect(out[0].adx).toBe(null);
+    expect(out[0].support).toEqual({ belowSupport: false, nearestSupport: null });
   });
 
   it('computes whole-watchlist RS rank by rs3m', () => {
