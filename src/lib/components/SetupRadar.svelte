@@ -132,6 +132,29 @@
                       : { value: '—', label: 'growth ≤ 0', color: '#6b7280' },
                   })}
                 >PEG {fmtPeg(h.peg)}</span>
+
+                <!-- Trend strength (ADX) -->
+                {#if h.adx != null}
+                  <span
+                    class="font-mono text-xs w-16 shrink-0 cursor-default"
+                    style="color:{h.adx >= 25 ? '#22c55e' : '#6b7280'}"
+                    use:tipAction={() => ({
+                      ...TIPS.adx,
+                      current: { value: `ADX ${h.adx}`, label: h.adx >= 25 ? 'Real trend in place' : 'No trend yet — signals less reliable', color: h.adx >= 25 ? '#22c55e' : '#6b7280' },
+                    })}
+                  >ADX {h.adx}</span>
+                {/if}
+
+                <!-- Support broken flag -->
+                {#if h.support.belowSupport}
+                  <span
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
+                    use:tipAction={() => ({
+                      ...TIPS.swingLows,
+                      current: { value: `below $${h.support.nearestSupport}`, label: 'Last swing-low support already broken', color: '#ef4444' },
+                    })}
+                  >⚠ support broken</span>
+                {/if}
               </button>
             {/each}
           </div>

@@ -99,7 +99,7 @@ src/lib/
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)
-  dip.js              — Dip Hunter: quality gate + 8-component 0–10 dip score
+  dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
   etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
@@ -164,18 +164,21 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 Watchlist-wide scan for early entries in quality names on sale — display-only, does not feed `computeScore`. Two stages, entry point `computeDipRadar(list, marketCtx)`:
 
 1. **Quality gate** (`gateMetrics`, ALL must pass): EPS growth > 0, revenue growth > 0, net margin > 0, PEG < 3 (via `valuation.js`, skipped if growth ≤ 0), fundamental score ≥ 60. Filters falling knives before any dip scoring happens.
-2. **Dip score**, 0–10 across 8 components, rebalanced whenever a component is added — always keep the maxes summing to 10:
+2. **Dip score**, 0–10 across 9 components, rebalanced whenever a component is added — always keep the maxes summing to 10:
 
 | Component | Max | Signal |
 |---|---|---|
 | Market Fear | 1.5 | F&G in fear zone + SPY below EMA50 |
-| Oversold | 2.0 | RSI tiers + z-score ≤ −1.5 + BB confluence |
+| Oversold | 1.5 | RSI tiers + z-score ≤ −1.5 + BB confluence |
 | Drawdown | 1.0 | 60d/20d ROC decline |
 | 52w Low | 1.0 | proximity to 52-week low (own tiers, not folded into Drawdown) |
 | Turn | 1.0 | MACD histogram just crossed bullish — leading reversal, complements the coincident Oversold reading |
 | Rel. Strength | 1.0 | mild RS underperformance vs SPY (−5% to −15%) reads as overreaction; beyond −15% or positive RS scores 0 — extreme weakness is a flag, not a discount |
 | Value | 1.0 | grades PEG *within* the gate's <3 band — PEG<1 scores higher than PEG 2–3 |
-| Smart Money | 1.5 | insider net-buying (MSPR) + ≥60% analyst buy ratio, not deteriorating |
+| Smart Money | 1.0 | insider net-buying (MSPR) + ≥60% analyst buy ratio, not deteriorating |
+| OBV | 1.0 | OBV rising while price is still declining (60d ROC ≤ −8%) signals accumulation — a more real-time smart-money tell than the 7d-cached insider/analyst data |
+
+**Risk context (not scored, never gates):** a strong-ADX (>35) downtrend that hasn't stalled (60d ROC ≤ −8%) caps readiness at WATCH. A broken most-recent swing-low support level (`data.indicators.swingLows`) is flagged in the UI. Both surface as warnings only — they never add or remove score points.
 
 Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component (never fires in a greedy market) · `SOON` ≥ 5 · `WATCH` ≥ 3 (below 3, excluded entirely). All inputs are already computed elsewhere on the ticker object (`data.indicators`, `data.rs`, `data.smartMoney`, `data.metrics`) — zero new API calls.
 
@@ -213,4 +216,4 @@ npm run build     # production build → dist/
 
 ## What's next (BACKLOG.md)
 
-PR #16 (`feat/dip-hunter-extra-signals`) open at session end — Dip Hunter's Value/52w-Low/Rel.Strength components, awaiting merge. See `BACKLOG.md` for the full queue and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).
+Dip Hunter's scored-component list is intentionally frozen after the OBV addition — any further ideas (Stochastic cross, EMA stack, volume-confirmation) go into `BACKLOG.md` as risk-context candidates, not new score components, unless a future session decides otherwise. See `BACKLOG.md` for the full queue and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).

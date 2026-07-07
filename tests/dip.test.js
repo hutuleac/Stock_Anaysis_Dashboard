@@ -12,7 +12,10 @@ function makeTicker(overrides = {}) {
         peNormalizedAnnual: 10, '52WeekHigh': 120, '52WeekLow': 78,
         '50DayMovingAverage': 90, '200DayMovingAverage': 95,
       } } },
-      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true, macdCrossover: 'bullish_cross' },
+      indicators: {
+        rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' },
+      },
       smartMoney: { data: { rec: { buyRatio: 0.7, deteriorating: false }, mspr3m: 12 } },
       rs: { rs3m: -10 },
       ...overrides,
@@ -81,13 +84,13 @@ describe('dip score components', () => {
     expect(computeDipRadar([t], GREED).length).toBe(0);
   });
 
-  it('scores RSI tiers: <30 → 1.0, <35 → 0.7, <40 → 0.3', () => {
-    for (const [rsi, expected] of [[29, 1.0], [34, 0.7], [39, 0.3], [45, 0]]) {
+  it('scores RSI tiers: <30 → 0.75, <35 → 0.5, <40 → 0.25', () => {
+    for (const [rsi, expected] of [[29, 0.75], [34, 0.5], [39, 0.25], [45, 0]]) {
       const t = makeTicker({
-        indicators: { rsi, rsiZScore: 0, roc20: 0, roc60: 0, oversoldConfluence: false },
+        indicators: { rsi, rsiZScore: 0, roc20: 0, roc60: 0, oversoldConfluence: false, obv: null },
         smartMoney: null,
       });
-      const hits = computeDipRadar([t], FEAR); // fear keeps score ≥ 3 threshold irrelevant here
+      const hits = computeDipRadar([t], FEAR);
       if (hits.length) expect(comp(hits, 'Oversold').score).toBe(expected);
     }
   });
@@ -148,13 +151,79 @@ describe('dip score components', () => {
     }
   });
 
-  it('smart money: insider buying + analyst buys = 1.5; deteriorating recs drop 0.75', () => {
+  it('smart money: insider buying + analyst buys = 1.0; deteriorating recs drop 0.5', () => {
     const hits = computeDipRadar([makeTicker()], FEAR);
-    expect(comp(hits, 'Smart Money').score).toBe(1.5);
+    expect(comp(hits, 'Smart Money').score).toBe(1.0);
     const det = makeTicker({
       smartMoney: { data: { rec: { buyRatio: 0.7, deteriorating: true }, mspr3m: 12 } },
     });
-    expect(comp(computeDipRadar([det], FEAR), 'Smart Money').score).toBe(0.75);
+    expect(comp(computeDipRadar([det], FEAR), 'Smart Money').score).toBe(0.5);
+  });
+
+  it('OBV: rising + declining price = 1.0 (accumulation), rising alone = 0.3, else 0', () => {
+    const accumulating = makeTicker(); // roc60 -18, obv rising by default
+    expect(comp(computeDipRadar([accumulating], FEAR), 'OBV').score).toBe(1.0);
+
+    const risingNoDecline = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -3, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' } },
+    });
+    expect(comp(computeDipRadar([risingNoDecline], FEAR), 'OBV').score).toBe(0.3);
+
+    const falling = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'falling' } },
+    });
+    expect(comp(computeDipRadar([falling], FEAR), 'OBV').score).toBe(0);
+
+    const missing = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: null },
+    });
+    expect(comp(computeDipRadar([missing], FEAR), 'OBV').score).toBe(0);
+    expect(comp(computeDipRadar([missing], FEAR), 'OBV').detail).toBe('n/a');
+  });
+
+  it('caps readiness at WATCH when ADX shows a strong, still-accelerating downtrend', () => {
+    const strongDowntrend = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' }, adx: 40 },
+    });
+    const hits = computeDipRadar([strongDowntrend], FEAR);
+    expect(hits.length).toBe(1);
+    expect(hits[0].readiness).toBe('WATCH');
+    expect(hits[0].risk.strongDowntrend).toBe(true);
+    expect(hits[0].risk.adx).toBe(40);
+  });
+
+  it('does not cap readiness when ADX is high but the decline has stalled', () => {
+    const stalled = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -3, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' }, adx: 40 },
+    });
+    const hits = computeDipRadar([stalled], FEAR);
+    expect(hits[0].risk.strongDowntrend).toBe(false);
+  });
+
+  it('flags when price has broken the most recent swing-low support', () => {
+    const t = makeTicker({ quote: { data: { c: 60 } } }); // below any swing low
+    t.data.indicators.swingLows = [{ price: 65, barsAgo: 10 }, { price: 50, barsAgo: 40 }];
+    const hits = computeDipRadar([t], FEAR);
+    expect(hits[0].support.belowSupport).toBe(true);
+    expect(hits[0].support.nearestSupport).toBe(65);
+  });
+
+  it('does not flag when price is holding above the most recent swing low', () => {
+    const t = makeTicker(); // default price 80
+    t.data.indicators.swingLows = [{ price: 65, barsAgo: 10 }];
+    const hits = computeDipRadar([t], FEAR);
+    expect(hits[0].support.belowSupport).toBe(false);
+    expect(hits[0].support.nearestSupport).toBe(65);
+  });
+
+  it('degrades gracefully with no swing lows', () => {
+    const hits = computeDipRadar([makeTicker()], FEAR); // default fixture has no swingLows
+    expect(hits[0].support).toEqual({ belowSupport: false, nearestSupport: null });
   });
 
   it('sorts by readiness then score', () => {
