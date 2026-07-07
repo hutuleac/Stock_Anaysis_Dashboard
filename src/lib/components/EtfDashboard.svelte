@@ -83,15 +83,15 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="text-[10px] uppercase tracking-wider text-text-muted border-b border-border/40">
-          <th class="text-left px-4 py-2">ETF</th>
+          <th class="text-left px-2 sm:px-4 py-2">ETF</th>
           <th class="text-left px-2 py-2 hidden md:table-cell">Category</th>
-          <th class="text-right px-2 py-2">Proxy · Price</th>
-          <th class="text-right px-2 py-2">RS 1M</th>
-          <th class="text-right px-2 py-2">RS 3M</th>
-          <th class="text-right px-2 py-2">Entry</th>
-          <th class="text-right px-2 py-2">Exit</th>
-          <th class="text-center px-2 py-2">Signal</th>
-          <th class="px-2 py-2"></th>
+          <th class="text-right px-1.5 sm:px-2 py-2">Proxy · Price</th>
+          <th class="text-right px-2 py-2 hidden sm:table-cell">RS 1M</th>
+          <th class="text-right px-1.5 sm:px-2 py-2">RS 3M</th>
+          <th class="text-right px-1.5 sm:px-2 py-2">Entry</th>
+          <th class="text-right px-1.5 sm:px-2 py-2">Exit</th>
+          <th class="text-center px-1.5 sm:px-2 py-2">Signal</th>
+          <th class="px-1.5 sm:px-2 py-2"></th>
         </tr>
       </thead>
       <tbody>
@@ -100,20 +100,20 @@
             class="border-b border-border/20 hover:bg-surface-700/30 cursor-pointer transition-colors"
             onclick={() => expanded = expanded === etf.ucits ? null : etf.ucits}
           >
-            <td class="px-4 py-2">
+            <td class="px-2 sm:px-4 py-2">
               <span class="font-mono font-semibold text-text-primary">{etf.ucits}</span>
               <span class="text-[10px] text-text-muted block">{etf.name}{etf.ter ? ` · TER ${etf.ter}` : ''}</span>
             </td>
             <td class="px-2 py-2 text-xs text-text-secondary hidden md:table-cell">{etf.category}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">
+            <td class="px-1.5 sm:px-2 py-2 text-right whitespace-nowrap">
               <span class="font-mono text-xs text-text-muted">{etf.proxy}</span>
               <span class="font-mono text-text-primary ml-1">{etf.sig ? `$${etf.sig.price.toFixed(2)}` : '—'}</span>
             </td>
-            <td class="px-2 py-2 text-right font-mono text-xs" style="color:{rsColor(etf.sig?.rs?.rs1m ?? 0)}">{fmtRs(etf.sig?.rs?.rs1m)}</td>
-            <td class="px-2 py-2 text-right font-mono text-xs" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}">{fmtRs(etf.sig?.rs?.rs3m)}</td>
-            <td class="px-2 py-2 text-right font-mono" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}">{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</td>
-            <td class="px-2 py-2 text-right font-mono" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}">{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</td>
-            <td class="px-2 py-2 text-center whitespace-nowrap">
+            <td class="px-2 py-2 text-right font-mono text-xs hidden sm:table-cell" style="color:{rsColor(etf.sig?.rs?.rs1m ?? 0)}">{fmtRs(etf.sig?.rs?.rs1m)}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono text-xs" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}">{fmtRs(etf.sig?.rs?.rs3m)}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}">{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}">{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-center whitespace-nowrap">
               {#if etf.sig}
                 {@const isBuy = etf.sig.entry.score >= etf.sig.exit.score}
                 {@const sig = isBuy ? etf.sig.entry : etf.sig.exit}
