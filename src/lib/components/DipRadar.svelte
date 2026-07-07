@@ -125,6 +125,37 @@
                   }}
                 >{comp(h, 'Value').detail}</span>
 
+                <!-- OBV divergence -->
+                <span
+                  class="text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default {comp(h, 'OBV').score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
+                  use:tipAction={() => ({
+                    ...TIPS.obv,
+                    current: { value: comp(h, 'OBV').detail, label: '', color: comp(h, 'OBV').score > 0 ? '#22c55e' : '#6b7280' },
+                  })}
+                >{comp(h, 'OBV').detail}</span>
+
+                <!-- ADX risk flag -->
+                {#if h.risk.strongDowntrend}
+                  <span
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
+                    use:tipAction={() => ({
+                      ...TIPS.adx,
+                      current: { value: `ADX ${h.risk.adx}`, label: 'Strong, still-accelerating downtrend — capped at WATCH', color: '#ef4444' },
+                    })}
+                  >⚠ trend {h.risk.adx}</span>
+                {/if}
+
+                <!-- Support broken flag -->
+                {#if h.support.belowSupport}
+                  <span
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
+                    use:tipAction={() => ({
+                      ...TIPS.swingLows,
+                      current: { value: `below $${h.support.nearestSupport}`, label: 'Last swing-low support already broken', color: '#ef4444' },
+                    })}
+                  >⚠ support broken</span>
+                {/if}
+
                 <!-- Smart money -->
                 <span
                   class="text-[10px] text-text-secondary shrink-0 cursor-default"
@@ -132,8 +163,8 @@
                     ...TIPS.dipSmartMoney,
                     current: {
                       value: comp(h, 'Smart Money').detail,
-                      label: `${comp(h, 'Smart Money').score}/1.5 confirmation`,
-                      color: comp(h, 'Smart Money').score >= 1.5 ? '#22c55e' : comp(h, 'Smart Money').score > 0 ? '#86efac' : '#6b7280',
+                      label: `${comp(h, 'Smart Money').score}/1.0 confirmation`,
+                      color: comp(h, 'Smart Money').score >= 1.0 ? '#22c55e' : comp(h, 'Smart Money').score > 0 ? '#86efac' : '#6b7280',
                     },
                   })}
                 >💰 {comp(h, 'Smart Money').detail}</span>
