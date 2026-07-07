@@ -112,6 +112,16 @@ function smartMoneyComponent(sm) {
   return { label: 'Smart Money', score: s, max: 1.0, detail: parts.length ? parts.join(', ') : 'no confirmation' };
 }
 
+// High ADX + still-declining price = a real, accelerating downtrend, not a
+// mean-reversion setup. Caps readiness rather than excluding — the name can
+// still be quality-gated and worth watching, just not actionable yet.
+function riskFlags(ind) {
+  const adx = num(ind?.adx);
+  const roc60 = num(ind?.roc60);
+  const strongDowntrend = adx !== null && adx > 35 && roc60 !== null && roc60 <= -8;
+  return { strongDowntrend, adx };
+}
+
 export function computeDipRadar(list, marketCtx) {
   if (!Array.isArray(list) || !list.length) return [];
   const hits = [];
@@ -137,13 +147,17 @@ export function computeDipRadar(list, marketCtx) {
     if (score < 3) continue;
 
     const hasFear = components[0].score > 0;
-    const readiness = score >= 7 && hasFear ? 'ACT' : score >= 5 ? 'SOON' : 'WATCH';
+    const risk = riskFlags(data.indicators);
+    const readiness = risk.strongDowntrend ? 'WATCH'
+      : score >= 7 && hasFear ? 'ACT'
+      : score >= 5 ? 'SOON' : 'WATCH';
 
     hits.push({
       symbol: item.symbol,
       score,
       readiness,
       components,
+      risk,
       rsi: num(data.indicators?.rsi),
       roc60: num(data.indicators?.roc60),
       smartMoney: data.smartMoney?.data ?? null,
