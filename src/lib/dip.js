@@ -122,6 +122,17 @@ function riskFlags(ind) {
   return { strongDowntrend, adx };
 }
 
+// Most recent swing-low support (daily pivot lows, computeSwingLows). Not a
+// gate or a score — just tells the trader whether the last line of defence
+// has already broken.
+function supportStatus(data) {
+  const price = num(data?.quote?.data?.c);
+  const swingLows = data?.indicators?.swingLows ?? [];
+  if (price === null || !swingLows.length) return { belowSupport: false, nearestSupport: null };
+  const nearest = swingLows[0].price;
+  return { belowSupport: price < nearest, nearestSupport: nearest };
+}
+
 export function computeDipRadar(list, marketCtx) {
   if (!Array.isArray(list) || !list.length) return [];
   const hits = [];
@@ -158,6 +169,7 @@ export function computeDipRadar(list, marketCtx) {
       readiness,
       components,
       risk,
+      support: supportStatus(data),
       rsi: num(data.indicators?.rsi),
       roc60: num(data.indicators?.roc60),
       smartMoney: data.smartMoney?.data ?? null,
