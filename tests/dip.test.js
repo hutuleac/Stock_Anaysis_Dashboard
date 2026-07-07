@@ -184,6 +184,27 @@ describe('dip score components', () => {
     expect(comp(computeDipRadar([missing], FEAR), 'OBV').detail).toBe('n/a');
   });
 
+  it('caps readiness at WATCH when ADX shows a strong, still-accelerating downtrend', () => {
+    const strongDowntrend = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' }, adx: 40 },
+    });
+    const hits = computeDipRadar([strongDowntrend], FEAR);
+    expect(hits.length).toBe(1);
+    expect(hits[0].readiness).toBe('WATCH');
+    expect(hits[0].risk.strongDowntrend).toBe(true);
+    expect(hits[0].risk.adx).toBe(40);
+  });
+
+  it('does not cap readiness when ADX is high but the decline has stalled', () => {
+    const stalled = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -3, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' }, adx: 40 },
+    });
+    const hits = computeDipRadar([stalled], FEAR);
+    expect(hits[0].risk.strongDowntrend).toBe(false);
+  });
+
   it('sorts by readiness then score', () => {
     const deep = makeTicker();
     const mild = makeTicker({
