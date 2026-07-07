@@ -10,6 +10,16 @@ function isFiniteNum(v) {
   return typeof v === 'number' && Number.isFinite(v);
 }
 
+// Same rule as Dip Hunter's supportStatus (src/lib/dip.js) — most recent
+// swing-low pivot as the support level a Pullback setup is betting on.
+function supportStatus(data) {
+  const price = isFiniteNum(data?.quote?.data?.c) ? data.quote.data.c : null;
+  const swingLows = data?.indicators?.swingLows ?? [];
+  if (price === null || !swingLows.length) return { belowSupport: false, nearestSupport: null };
+  const nearest = swingLows[0].price;
+  return { belowSupport: price < nearest, nearestSupport: nearest };
+}
+
 // Stronger of pullback/momentum whose readiness is WATCH/SOON/ACT, else null.
 function activeSetup(setups) {
   if (!setups) return null;
@@ -86,6 +96,8 @@ export function computeRadar(list) {
       rsTotal,
       revGrowth,
       peg,
+      adx: isFiniteNum(data?.indicators?.adx) ? data.indicators.adx : null,
+      support: supportStatus(data),
     });
   }
 
