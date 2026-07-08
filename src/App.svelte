@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, delay } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
@@ -553,6 +553,14 @@
   }
 
   hydrateStartup();
+
+  // One-time-per-load cleanup: drop cached quotes/candles/fundamentals/news for
+  // symbols no longer in the watchlist or ETF proxy list. Prevents the
+  // "storage full" warning from creeping back as tickers are added/removed
+  // over time (see Settings > Clear API cache for a manual full wipe).
+  try {
+    pruneOrphanedCache([...getSymbols(), ...getUniqueProxies(), 'SPY']);
+  } catch { /* noop — non-critical maintenance */ }
 </script>
 
 <div class="min-h-screen bg-surface-900">
