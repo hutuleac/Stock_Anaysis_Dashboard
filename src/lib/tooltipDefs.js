@@ -510,6 +510,48 @@ export const TIPS = {
     why: 'Insiders buying while price falls is the strongest available tell that a dip is company-value, not company-trouble. It distinguishes a discount from a falling knife.',
   },
 
+  etfEntry: {
+    title: 'ETF Entry Score',
+    subtitle: '0–10 · buy weakness in a quality index',
+    category: 'Signals',
+    levels: [
+      { range: '≥ 7', label: 'ACT',   color: C.green, desc: 'Deep weekly weakness with a rotation discount — the setup this score exists for.' },
+      { range: '≥ 5', label: 'SOON',  color: C.amber, desc: 'Building — stage in or wait for a deeper oversold reading.' },
+      { range: '≥ 3', label: 'WATCH', color: C.muted, desc: 'Early weakness — on the radar, not actionable yet.' },
+      { range: '< 3', label: 'WAIT',  color: C.dim,   desc: 'No meaningful weakness right now.' },
+    ],
+    why: 'Oversold (max 3): weekly RSI tiers + lower Bollinger touch. Rotation (max 3): lag vs SPY and vs the peer group — zeroed below −25% (falling knife, not a discount). Turn (max 2): weekly MACD bull cross or bullish divergence. Drawdown (max 2): distance off the ~52w daily high.',
+  },
+
+  etfExit: {
+    title: 'ETF Exit Score',
+    subtitle: '0–10 · sell strength into exhaustion',
+    category: 'Signals',
+    levels: [
+      { range: '≥ 7', label: 'ACT',   color: C.red,   desc: 'Overbought and extended with rotation loss or climax volume — take profit / trim.' },
+      { range: '≥ 5', label: 'SOON',  color: C.amber, desc: 'Getting stretched — tighten stops, watch for confirmation.' },
+      { range: '≥ 3', label: 'WATCH', color: C.muted, desc: 'Some heat building, not urgent yet.' },
+      { range: '< 3', label: 'WAIT',  color: C.dim,   desc: 'No exhaustion signal right now.' },
+    ],
+    why: 'Overbought (max 3): weekly RSI tiers. Extension (max 3): % above weekly EMA30. Rotation Loss (max 2): 1M underperformance while 3M still leads — capital rotating out. Climax Vol (max 2): a volume spike only counts once RSI is already hot (≥60).',
+  },
+
+  etfSignal: {
+    title: 'Signal',
+    subtitle: 'Which side of the trade is louder right now',
+    category: 'Signals',
+    description: 'Shows whichever of Entry/Exit currently scores higher for this ETF, with its readiness tier. BUY = weakness worth watching for an entry. SELL = strength getting stretched, worth watching for an exit.',
+    why: 'Entry and Exit are independent scores — an ETF can be mid-range on both. This chip is a quick glance at which side has more to say; always check the full breakdown before acting.',
+  },
+
+  etfProxy: {
+    title: 'US Proxy',
+    subtitle: 'Signals run on the US-listed twin, you buy the UCITS ticker',
+    category: 'Data',
+    description: 'Free-tier data has no European-exchange candles, so every UCITS ETF here is mapped to a US-listed ETF tracking the same (or a near-identical) index — e.g. CSPX/VUAA both map to SPY. All price, RSI, MACD and RS math runs on the proxy; the displayed price is the proxy\'s, in USD.',
+    why: 'Zero new APIs, and the proxy tracks the same underlying index closely enough that the technical read-through holds. You still buy the UCITS ticker for the tax/domicile treatment — the proxy is only the data source.',
+  },
+
   radarReadiness: {
     title: 'Entry Readiness',
     subtitle: 'How close the setup is to triggering',
