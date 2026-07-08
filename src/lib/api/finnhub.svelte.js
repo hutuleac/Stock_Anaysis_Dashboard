@@ -65,6 +65,38 @@ function writeCache(key, data) {
   }
 }
 
+// Per-symbol cache key prefixes across Finnhub + TwelveData. Anything after the
+// prefix that isn't one of these tickers is orphaned — left over from a symbol
+// that used to be in the watchlist or ETF proxy list and was later removed.
+const PRUNE_PREFIXES = [
+  'fh_quote_', 'fh_earnings_', 'fh_fundamentals_', 'fh_news_', 'fh_smart_money_', 'fh_candles_',
+  'td_tdquote_', 'td_ts_1day_', 'td_ts_1h_',
+];
+
+// Deletes cached quotes/candles/fundamentals/news for symbols no longer tracked.
+// Called once per app load so localStorage doesn't grow unbounded as tickers get
+// added and removed over time — the actual cause of "storage full" recurring.
+// Never touches macro data (fh_feargreed, fh_btc, fred_*), notes, watchlist,
+// portfolio, score history, or API keys — those aren't prefixed per-symbol here.
+export function pruneOrphanedCache(validSymbols) {
+  const keep = new Set(validSymbols.map(s => s.toUpperCase()));
+  let removed = 0;
+  try {
+    const toDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      const prefix = PRUNE_PREFIXES.find(p => key.startsWith(p));
+      if (!prefix) continue;
+      const symbol = key.slice(prefix.length).match(/^([A-Z0-9.]+)/)?.[1];
+      if (symbol && !keep.has(symbol)) toDelete.push(key);
+    }
+    toDelete.forEach(k => localStorage.removeItem(k));
+    removed = toDelete.length;
+  } catch { /* noop */ }
+  return removed;
+}
+
 export function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
