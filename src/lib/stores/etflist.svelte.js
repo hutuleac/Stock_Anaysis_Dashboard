@@ -10,6 +10,9 @@ const HARDCODED_ETFS = [
   { ucits: 'SMGB', isin: 'IE00BMC38736', name: 'VanEck Semiconductor',        ter: '0.35%', category: 'Semis',        proxy: 'SMH'  },
   { ucits: 'IUES', isin: 'IE00B42Z5J44', name: 'iShares S&P 500 Energy',      ter: '0.15%', category: 'Energy',       proxy: 'XLE'  },
   { ucits: 'INRG', isin: 'IE00B1XNHC34', name: 'iShares Global Clean Energy', ter: '0.65%', category: 'Clean Energy', proxy: 'ICLN' },
+  { ucits: 'IUHC', isin: 'IE00B43HR379', name: 'iShares S&P 500 Health Care',  ter: '0.15%', category: 'Healthcare',   proxy: 'XLV'  },
+  // No UCITS wrapper tracks this index — held directly (US-listed, no ISIN shown).
+  { ucits: 'IGV',  isin: '',             name: 'iShares Expanded Tech-Software', ter: '0.39%', category: 'Software',  proxy: 'IGV'  },
 ];
 
 let etfs = $state([]);
