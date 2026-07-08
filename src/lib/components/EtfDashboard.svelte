@@ -1,6 +1,8 @@
 <script>
   import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies } from '../stores/etflist.svelte.js';
   import { computeEtfSignals } from '../etf.js';
+  import { tooltip as tipAction } from '../actions/tooltip.js';
+  import { TIPS } from '../tooltipDefs.js';
   import PriceChart from './PriceChart.svelte';
 
   let sortBy = $state('rs3m');          // 'rs3m' | 'entry' | 'exit'
@@ -8,6 +10,7 @@
   let showAdd = $state(false);
   let newEtf = $state({ ucits: '', proxy: '', name: '', isin: '', ter: '', category: '' });
   let addError = $state('');
+  let showAddDetails = $state(false);
 
   const signals = $derived.by(() => {
     const list = getUniqueProxies()
@@ -37,6 +40,7 @@
     return 'text-text-muted';
   }
   const fmtRs = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`;
+  const compSummary = (score) => score.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
 
   function handleAdd() {
     addError = '';
@@ -44,6 +48,7 @@
     if (!addEtf(newEtf)) { addError = 'Already in the list'; return; }
     newEtf = { ucits: '', proxy: '', name: '', isin: '', ter: '', category: '' };
     showAdd = false;
+    showAddDetails = false;
   }
 </script>
 
@@ -67,15 +72,27 @@
   </div>
 
   {#if showAdd}
-    <div class="px-4 py-2 border-b border-border/40 flex flex-wrap items-center gap-2">
-      <input class="bg-surface-700 rounded px-2 py-1 text-xs w-20" placeholder="UCITS *" bind:value={newEtf.ucits} />
-      <input class="bg-surface-700 rounded px-2 py-1 text-xs w-20" placeholder="US proxy *" bind:value={newEtf.proxy} />
-      <input class="bg-surface-700 rounded px-2 py-1 text-xs w-40" placeholder="Name" bind:value={newEtf.name} />
-      <input class="bg-surface-700 rounded px-2 py-1 text-xs w-28" placeholder="ISIN" bind:value={newEtf.isin} />
-      <input class="bg-surface-700 rounded px-2 py-1 text-xs w-16" placeholder="TER" bind:value={newEtf.ter} />
-      <input class="bg-surface-700 rounded px-2 py-1 text-xs w-24" placeholder="Category" bind:value={newEtf.category} />
-      <button class="text-xs px-2 py-1 rounded bg-bull-strong/20 text-bull-strong" onclick={handleAdd}>Add</button>
-      {#if addError}<span class="text-xs text-danger">{addError}</span>{/if}
+    <div class="px-4 py-2.5 border-b border-border/40">
+      <div class="flex flex-wrap items-center gap-2">
+        <input class="flex-1 min-w-[110px] bg-surface-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-text-muted focus:outline-none"
+          placeholder="UCITS ticker (e.g. IUHC)" bind:value={newEtf.ucits} onkeydown={(e) => e.key === 'Enter' && handleAdd()} />
+        <input class="flex-1 min-w-[110px] bg-surface-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-text-muted focus:outline-none"
+          placeholder="US proxy (e.g. XLV)" bind:value={newEtf.proxy} onkeydown={(e) => e.key === 'Enter' && handleAdd()} />
+        <input class="flex-[2] min-w-[140px] bg-surface-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-text-muted focus:outline-none"
+          placeholder="Name (optional)" bind:value={newEtf.name} onkeydown={(e) => e.key === 'Enter' && handleAdd()} />
+        <button class="text-xs px-3 py-1.5 rounded-lg bg-bull-strong/20 text-bull-strong hover:bg-bull-strong/30 shrink-0" onclick={handleAdd}>Add</button>
+        <button class="text-[10px] text-text-muted hover:text-text-secondary shrink-0" onclick={() => showAddDetails = !showAddDetails}>
+          {showAddDetails ? '− fewer fields' : '+ ISIN / TER / category'}
+        </button>
+      </div>
+      {#if showAddDetails}
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          <input class="bg-surface-700 rounded-lg px-3 py-1.5 text-xs w-32 placeholder:text-text-muted focus:outline-none" placeholder="ISIN" bind:value={newEtf.isin} />
+          <input class="bg-surface-700 rounded-lg px-3 py-1.5 text-xs w-20 placeholder:text-text-muted focus:outline-none" placeholder="TER" bind:value={newEtf.ter} />
+          <input class="bg-surface-700 rounded-lg px-3 py-1.5 text-xs w-28 placeholder:text-text-muted focus:outline-none" placeholder="Category" bind:value={newEtf.category} />
+        </div>
+      {/if}
+      {#if addError}<p class="text-xs text-danger mt-1.5">{addError}</p>{/if}
     </div>
   {/if}
 
@@ -85,12 +102,12 @@
         <tr class="text-[10px] uppercase tracking-wider text-text-muted border-b border-border/40">
           <th class="text-left px-2 sm:px-4 py-2">ETF</th>
           <th class="text-left px-2 py-2 hidden md:table-cell">Category</th>
-          <th class="text-right px-1.5 sm:px-2 py-2">Proxy · Price</th>
-          <th class="text-right px-2 py-2 hidden sm:table-cell">RS 1M</th>
-          <th class="text-right px-1.5 sm:px-2 py-2">RS 3M</th>
-          <th class="text-right px-1.5 sm:px-2 py-2">Entry</th>
-          <th class="text-right px-1.5 sm:px-2 py-2">Exit</th>
-          <th class="text-center px-1.5 sm:px-2 py-2">Signal</th>
+          <th class="text-right px-1.5 sm:px-2 py-2 cursor-default" use:tipAction={TIPS.etfProxy}>Proxy · Price</th>
+          <th class="text-right px-2 py-2 hidden sm:table-cell cursor-default" use:tipAction={TIPS.relativeStrength}>RS 1M</th>
+          <th class="text-right px-1.5 sm:px-2 py-2 cursor-default" use:tipAction={TIPS.relativeStrength}>RS 3M</th>
+          <th class="text-right px-1.5 sm:px-2 py-2 cursor-default" use:tipAction={TIPS.etfEntry}>Entry</th>
+          <th class="text-right px-1.5 sm:px-2 py-2 cursor-default" use:tipAction={TIPS.etfExit}>Exit</th>
+          <th class="text-center px-1.5 sm:px-2 py-2 cursor-default" use:tipAction={TIPS.etfSignal}>Signal</th>
           <th class="px-1.5 sm:px-2 py-2"></th>
         </tr>
       </thead>
@@ -105,15 +122,27 @@
               <span class="text-[10px] text-text-muted block">{etf.name}{etf.ter ? ` · TER ${etf.ter}` : ''}</span>
             </td>
             <td class="px-2 py-2 text-xs text-text-secondary hidden md:table-cell">{etf.category}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-right whitespace-nowrap">
+            <td class="px-1.5 sm:px-2 py-2 text-right whitespace-nowrap cursor-default"
+              use:tipAction={() => ({ ...TIPS.etfProxy, current: { value: etf.proxy, label: etf.sig ? `$${etf.sig.price.toFixed(2)}` : 'no data', color: '#9ca3af' } })}
+            >
               <span class="font-mono text-xs text-text-muted">{etf.proxy}</span>
               <span class="font-mono text-text-primary ml-1">{etf.sig ? `$${etf.sig.price.toFixed(2)}` : '—'}</span>
             </td>
-            <td class="px-2 py-2 text-right font-mono text-xs hidden sm:table-cell" style="color:{rsColor(etf.sig?.rs?.rs1m ?? 0)}">{fmtRs(etf.sig?.rs?.rs1m)}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-right font-mono text-xs" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}">{fmtRs(etf.sig?.rs?.rs3m)}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-right font-mono" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}">{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-right font-mono" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}">{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-center whitespace-nowrap">
+            <td class="px-2 py-2 text-right font-mono text-xs hidden sm:table-cell cursor-default" style="color:{rsColor(etf.sig?.rs?.rs1m ?? 0)}"
+              use:tipAction={() => ({ ...TIPS.relativeStrength, current: { value: fmtRs(etf.sig?.rs?.rs1m), label: '1M vs SPY', color: rsColor(etf.sig?.rs?.rs1m ?? 0) } })}
+            >{fmtRs(etf.sig?.rs?.rs1m)}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono text-xs cursor-default" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}"
+              use:tipAction={() => ({ ...TIPS.relativeStrength, current: { value: fmtRs(etf.sig?.rs?.rs3m), label: '3M vs SPY', color: rsColor(etf.sig?.rs?.rs3m ?? 0) } })}
+            >{fmtRs(etf.sig?.rs?.rs3m)}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}"
+              use:tipAction={etf.sig ? () => ({ ...TIPS.etfEntry, current: { value: String(etf.sig.entry.score), label: etf.sig.entry.readiness, color: scoreColor(etf.sig.entry.score) }, description: compSummary(etf.sig.entry) }) : undefined}
+            >{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}"
+              use:tipAction={etf.sig ? () => ({ ...TIPS.etfExit, current: { value: String(etf.sig.exit.score), label: etf.sig.exit.readiness, color: scoreColor(etf.sig.exit.score) }, description: compSummary(etf.sig.exit) }) : undefined}
+            >{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</td>
+            <td class="px-1.5 sm:px-2 py-2 text-center whitespace-nowrap cursor-default"
+              use:tipAction={etf.sig ? () => { const isBuy = etf.sig.entry.score >= etf.sig.exit.score; const sig = isBuy ? etf.sig.entry : etf.sig.exit; return { ...TIPS.etfSignal, current: { value: `${isBuy ? 'BUY' : 'SELL'} ${sig.readiness}`, label: '', color: isBuy ? '#22c55e' : '#ef4444' } }; } : undefined}
+            >
               {#if etf.sig}
                 {@const isBuy = etf.sig.entry.score >= etf.sig.exit.score}
                 {@const sig = isBuy ? etf.sig.entry : etf.sig.exit}
