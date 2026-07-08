@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, setApiKey } from '../api/finnhub.svelte.js';
+  import { getApiKey, setApiKey, clearStorageFullFlag } from '../api/finnhub.svelte.js';
   import { getTDApiKey, setTDApiKey } from '../api/twelvedata.svelte.js';
   import { getFredApiKey, setFredApiKey } from '../api/fred.js';
   import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
@@ -358,6 +358,7 @@
               if (!keep.includes(k)) toDelete.push(k);
             }
             toDelete.forEach(k => localStorage.removeItem(k));
+            clearStorageFullFlag();
             saveMessage = `Cleared ${toDelete.length} cached items`;
             setTimeout(() => saveMessage = '', 3000);
           }}
