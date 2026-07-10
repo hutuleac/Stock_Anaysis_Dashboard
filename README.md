@@ -9,7 +9,7 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.15-blue)
+![Version](https://img.shields.io/badge/version-0.17-blue)
 ![Tests](https://img.shields.io/badge/tests-187_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -46,7 +46,7 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 - 🧮 **Transparent scoring** — Technical / Fundamental / Sentiment, regime-aware weights, conviction %, and a thesis you can read.
 - ⚡ **Zero-cost data** — built around the Finnhub free tier; indicators computed from candles, not paid endpoints.
 - 🔒 **Offline-first & private** — localStorage only; opens instantly from cache, refreshes on demand.
-- 🧪 **Tested math** — 163 unit tests over the indicator, scoring, signal, valuation, and chart-anchor engines.
+- 🧪 **Tested math** — 280 unit tests over the indicator, scoring, signal, valuation, dip, ETF, and chart-anchor engines.
 
 ---
 
@@ -149,7 +149,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-163 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, and `src/lib/chartAnchors.js`:
+280 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, and `src/lib/chartAnchors.js`:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -220,7 +220,8 @@ npm run test:watch  # watch mode (dev)
 
 ## Changelog
 
-### v0.17 (in progress) — ETF refinement round
+### v0.17 (2026-07-10) — ETF refinement round
+- **UCITS catalog search** — searchable curated catalog (55 funds pre-mapped to US proxies) in the ETF add bar: one-click add, already-added entries disabled, manual entry stays as fallback.
 - **Tooltip viewport clamp** — tooltips measure their real height, flip above the cursor near the bottom edge, clamp to the viewport, and close on scroll. No more clipped hover info.
 - **Setup Radar weekly RSI** — each radar row shows the raw weekly RSI value (display-only, not part of either setup score).
 - **ETF decision indicators** — the ETF expanded row gains trend state (weekly close vs EMA10/EMA30), weekly RSI, 52-week range position, and 13-week momentum — all computed from candles already fetched, none feed any score.
