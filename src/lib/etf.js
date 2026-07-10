@@ -214,7 +214,7 @@ export function generateEtfThesis(sig) {
   let first;
   if (!firing.length) {
     first = entryLed
-      ? 'No entry signals firing — nothing to buy into here yet.'
+      ? 'No entry signals firing — setup absent for now.'
       : 'No exit signals firing — no exhaustion pressure visible.';
   } else {
     const parts = firing.map(c => `${c.label.toLowerCase()} (${c.detail})`).join(', ');
