@@ -544,6 +544,46 @@ export const TIPS = {
     why: 'Entry and Exit are independent scores — an ETF can be mid-range on both. This chip is a quick glance at which side has more to say; always check the full breakdown before acting.',
   },
 
+  etfTrendState: {
+    title: 'Trend State',
+    subtitle: 'Weekly close vs EMA10 / EMA30',
+    category: 'ETF · Context',
+    description: 'Locates price against the two weekly EMAs to answer the entry score\'s key context question: is current weakness a dip in an uptrend, or a falling knife?',
+    levels: [
+      { range: 'UPTREND',   label: 'Healthy',   color: C.green, desc: 'Above both EMAs, fast above slow — weakness here is usually a buyable dip.' },
+      { range: 'PULLBACK',  label: 'Dip zone',  color: C.amber, desc: 'Below EMA10 but holding EMA30 — the classic add-on-weakness spot.' },
+      { range: 'BASING',    label: 'Undecided', color: C.dim,   desc: 'EMAs entangled — no established trend either way.' },
+      { range: 'DOWNTREND', label: 'Knife',     color: C.red,   desc: 'Below both EMAs — high entry scores need extra confirmation (Turn).' },
+    ],
+    why: 'The same entry score means different things in different trends. Display-only — it does not feed the score.',
+  },
+
+  etfRangePos: {
+    title: '52-Week Range Position',
+    subtitle: '0% = at the low · 100% = at the high',
+    category: 'ETF · Context',
+    description: 'Where the proxy trades inside its 52-week range. Complements Drawdown, which only measures distance off the high.',
+    levels: [
+      { range: '< 25%',  label: 'Near lows',  color: C.amber, desc: 'Deep discount — check trend state before assuming it\'s cheap.' },
+      { range: '25–75%', label: 'Mid range',  color: C.dim,   desc: 'No positional edge either way.' },
+      { range: '> 75%',  label: 'Near highs', color: C.green, desc: 'Strength — breakouts start here, but so do exhaustion tops.' },
+    ],
+    why: 'Anchors the entry/exit scores to where price actually sits in its yearly journey.',
+  },
+
+  etfRoc13w: {
+    title: 'Momentum (ROC 13w)',
+    subtitle: '13-week rate of change',
+    category: 'ETF · Momentum',
+    description: 'Quarterly price momentum — the standard lens for a months-to-a-year holding horizon.',
+    levels: [
+      { range: '> +10%', label: 'Strong',   color: C.green, desc: 'Established quarterly momentum.' },
+      { range: '0–10%',  label: 'Mild',     color: C.dim,   desc: 'Drifting up — no strong signal.' },
+      { range: '< 0%',   label: 'Negative', color: C.red,   desc: 'Falling quarter — value-trap risk if buying only on "cheap".' },
+    ],
+    why: 'A high entry score with deeply negative quarterly momentum deserves patience; with recovering momentum it deserves attention.',
+  },
+
   etfProxy: {
     title: 'US Proxy',
     subtitle: 'Signals run on the US-listed twin, you buy the UCITS ticker',
