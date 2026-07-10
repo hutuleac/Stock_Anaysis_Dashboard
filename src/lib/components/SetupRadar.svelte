@@ -80,6 +80,23 @@
                   })}
                 >{h.etaWeeks != null ? `~${h.etaWeeks}w` : ''}</span>
 
+                <!-- Weekly RSI (display-only, not scored) -->
+                {#if h.wRsi != null}
+                  <span
+                    class="font-mono text-xs w-16 shrink-0 cursor-default text-text-secondary"
+                    use:tipAction={() => ({
+                      ...TIPS.rsi,
+                      title: 'Weekly RSI(14)',
+                      subtitle: 'Informational — not part of the setup score',
+                      current: {
+                        value: String(h.wRsi),
+                        label: h.wRsi < 30 ? 'Oversold' : h.wRsi > 70 ? 'Overbought' : 'Neutral',
+                        color: h.wRsi < 30 ? '#22c55e' : h.wRsi > 70 ? '#ef4444' : '#9ca3af',
+                      },
+                    })}
+                  >wRSI {h.wRsi}</span>
+                {/if}
+
                 <!-- RS rank -->
                 <span
                   class="text-xs text-text-secondary w-16 shrink-0 cursor-default"

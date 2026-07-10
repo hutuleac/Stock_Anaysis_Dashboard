@@ -139,3 +139,33 @@ describe('radar anchor readiness nudge', () => {
     expect(computeRadar([ticker('AAA', { readiness: 'WATCH' })])[0].readiness).toBe('WATCH');
   });
 });
+
+describe('radar wRsi passthrough', () => {
+  it('passes meta.wRsi from setups through to hits', () => {
+    const data = {
+      setups: {
+        pullback: { score: 6, readiness: 'SOON', etaWeeks: 2 },
+        momentum: { score: 2, readiness: 'WAIT', etaWeeks: null },
+        meta: { wRsi: 41 },
+      },
+      metrics: { data: { metric: { revenueGrowthTTMYoy: 12, peNormalizedAnnual: 20, epsGrowthTTMYoy: 15 } } },
+      rs: { rs3m: 4 },
+      quote: { data: { c: 100 } },
+      indicators: { adx: 20, swingLows: [] },
+    };
+    const hits = computeRadar([{ symbol: 'TEST', data }]);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].wRsi).toBe(41);
+  });
+
+  it('wRsi is null when setups carry no meta (older cache shape)', () => {
+    const data = {
+      setups: { pullback: { score: 6, readiness: 'SOON', etaWeeks: 2 }, momentum: null },
+      metrics: { data: { metric: { revenueGrowthTTMYoy: 12, peNormalizedAnnual: 20, epsGrowthTTMYoy: 15 } } },
+      rs: { rs3m: 4 },
+      quote: { data: { c: 100 } },
+      indicators: {},
+    };
+    expect(computeRadar([{ symbol: 'TEST', data }])[0].wRsi).toBeNull();
+  });
+});

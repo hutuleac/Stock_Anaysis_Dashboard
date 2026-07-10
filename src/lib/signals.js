@@ -344,5 +344,8 @@ export function computeSetupSignals(weeklyRaw) {
   const pullback = scorePullbackSetup({ divergence, structure, volume, rangePos });
   const momentum = scoreMomentumSetup({ squeeze, structure, volume, emaReclaim });
 
-  return { pullback, momentum };
+  // Display-only: raw weekly RSI for the radar UI — not consumed by either setup score.
+  const wRsi = computeRSI(closes);
+
+  return { pullback, momentum, meta: { wRsi: wRsi == null ? null : Math.round(wRsi) } };
 }

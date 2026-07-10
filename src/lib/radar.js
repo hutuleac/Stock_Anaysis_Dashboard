@@ -97,6 +97,7 @@ export function computeRadar(list) {
       revGrowth,
       peg,
       adx: isFiniteNum(data?.indicators?.adx) ? data.indicators.adx : null,
+      wRsi: data?.setups?.meta?.wRsi ?? null,
       support: supportStatus(data),
     });
   }

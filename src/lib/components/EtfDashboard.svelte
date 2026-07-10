@@ -33,6 +33,7 @@
 
   const scoreColor = (s) => s >= 7 ? '#22c55e' : s >= 5 ? '#f59e0b' : '#6b7280';
   const rsColor = (v) => v > 0 ? '#22c55e' : v < 0 ? '#ef4444' : '#6b7280';
+  const trendColor = (t) => t === 'UPTREND' ? '#22c55e' : t === 'PULLBACK' ? '#f59e0b' : t === 'DOWNTREND' ? '#ef4444' : '#6b7280';
   function readinessClass(r) {
     if (r === 'ACT')  return 'bg-bull-strong/20 text-bull-strong';
     if (r === 'SOON') return 'bg-uncertain/20 text-uncertain';
@@ -162,6 +163,41 @@
             <tr class="border-b border-border/20 bg-surface-900/40">
               <td colspan="9" class="px-4 py-4">
                 {#if etf.sig}
+                  {#if etf.sig.indicators}
+                    {@const ind = etf.sig.indicators}
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-xs">
+                      {#if ind.trendState}
+                        <span class="px-1.5 py-0.5 rounded font-semibold text-[10px] cursor-default
+                          {ind.trendState === 'UPTREND' ? 'bg-bull-strong/20 text-bull-strong'
+                            : ind.trendState === 'PULLBACK' ? 'bg-uncertain/20 text-uncertain'
+                            : ind.trendState === 'DOWNTREND' ? 'bg-bear-strong/20 text-bear-strong'
+                            : 'bg-surface-600 text-text-secondary'}"
+                          use:tipAction={() => ({ ...TIPS.etfTrendState, current: { value: ind.trendState, label: '', color: trendColor(ind.trendState) } })}
+                        >{ind.trendState}</span>
+                      {/if}
+                      {#if ind.wRsi != null}
+                        <span class="font-mono text-text-secondary cursor-default"
+                          use:tipAction={() => ({ ...TIPS.rsi, title: 'Weekly RSI(14)', current: { value: String(ind.wRsi), label: ind.wRsi < 30 ? 'Oversold' : ind.wRsi > 70 ? 'Overbought' : 'Neutral', color: ind.wRsi < 30 ? '#22c55e' : ind.wRsi > 70 ? '#ef4444' : '#9ca3af' } })}
+                        >wRSI {ind.wRsi}</span>
+                      {/if}
+                      {#if ind.rangePos52w != null}
+                        <span class="flex items-center gap-1.5 cursor-default"
+                          use:tipAction={() => ({ ...TIPS.etfRangePos, current: { value: `${ind.rangePos52w}%`, label: 'of 52w range', color: '#9ca3af' } })}
+                        >
+                          <span class="text-text-muted">52w</span>
+                          <span class="relative w-16 h-1.5 rounded bg-surface-600 overflow-hidden">
+                            <span class="absolute inset-y-0 left-0 rounded bg-text-secondary" style="width:{ind.rangePos52w}%"></span>
+                          </span>
+                          <span class="font-mono text-text-secondary">{ind.rangePos52w}%</span>
+                        </span>
+                      {/if}
+                      {#if ind.roc13w != null}
+                        <span class="font-mono cursor-default" style="color:{ind.roc13w > 0 ? '#22c55e' : '#ef4444'}"
+                          use:tipAction={() => ({ ...TIPS.etfRoc13w, current: { value: `${ind.roc13w > 0 ? '+' : ''}${ind.roc13w}%`, label: '13-week change', color: ind.roc13w > 0 ? '#22c55e' : '#ef4444' } })}
+                        >13w {ind.roc13w > 0 ? '+' : ''}{ind.roc13w}%</span>
+                      {/if}
+                    </div>
+                  {/if}
                   <div class="grid md:grid-cols-2 gap-4 mb-4 text-xs">
                     <div>
                       <div class="text-text-muted uppercase tracking-wider mb-1.5">Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
