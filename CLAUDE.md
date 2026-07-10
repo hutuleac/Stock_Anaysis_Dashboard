@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.16
+# Project State — Stock Analysis Dashboard v0.17
 
 ## What this is
 
@@ -113,7 +113,8 @@ src/lib/
     PaperTradePanel.svelte  — paper trade entry + tracking
     PortfolioStats.svelte   — P&L, edge analysis, sector exposure
     DipRadar.svelte         — Dip Hunter card, collapsible watchlist-scan panel
-    EtfDashboard.svelte     — UCITS ETF table (Stocks|ETFs header toggle)
+    EtfDashboard.svelte     — UCITS ETF table (Stocks|ETFs header toggle) + catalog search add bar
+    HighlightsStrip.svelte  — cross-view "Today" ACT/SOON digest + in-browser notifications
   stores/
     watchlist.svelte.js     — ticker list, fetch orchestration
     portfolio.svelte.js     — trade log, FIFO P&L
@@ -126,7 +127,9 @@ tests/
   signals.test.js     — 32 unit tests for signals.js
   valuation.test.js   — 3 unit tests for valuation.js
   dip.test.js         — 20 unit tests for dip.js
-  etf.test.js         — 19 unit tests for etf.js  (246 total)
+  etf.test.js         — 27 unit tests for etf.js (incl. indicators + thesis)
+  highlights.test.js  — 7 unit tests for highlights.js
+  etfCatalog.test.js  — 6 unit tests for etfCatalog.js  (280 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -194,6 +197,8 @@ Entry point `computeEtfSignals(list, spyCloses)` — per proxy `{ price, rs, gro
 
 Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, localStorage key `etfList`, user-editable (add needs UCITS ticker + US proxy). Proxy candles fetched in `handleRefresh` per unique proxy (SPY/QQQ usually cache hits) and hydrated on startup from `td_ts_1day_<proxy>_1day_250`.
 
+**v0.17 additions (all display-only, zero new API calls):** per-proxy `indicators { trendState, wRsi, rangePos52w, roc13w }` + `generateEtfThesis()` in `etf.js` (expanded row); `meta.wRsi` on `computeSetupSignals` shown in Setup Radar; `highlights.js` (`computeHighlights` ACT/SOON digest + `computeNotifications` diff, localStorage `notifySeen`, opt-in toggle `notifyEnabled` in Settings) rendered by `HighlightsStrip.svelte`; curated ~55-fund UCITS catalog with client-side search in `etfCatalog.js` (search bar in the ETF add panel); tooltip overlay clamps to viewport using measured height and closes on scroll.
+
 ## Known conventions / gotchas
 
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
@@ -210,7 +215,7 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 246 unit tests, ~250ms
+npm test          # 280 unit tests, ~250ms
 npm run build     # production build → dist/
 ```
 

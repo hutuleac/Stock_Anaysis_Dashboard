@@ -14,9 +14,13 @@
       .map(proxy => ({ proxy, ...(getEtfProxyData(proxy) ?? {}) }))
       .filter(p => p.weeklyRaw && p.dailyCloses);
     const signals = computeEtfSignals(proxyList, getEtfSpyCloses());
+    const dipCtx = {
+      fearGreedValue: marketData?.fearGreed?.data?.score ?? null,
+      spyBelowEma50:  marketData?.spyBelowEma50 ?? null,
+    };
     return computeHighlights({
       radarHits: computeRadar(stockList),
-      dipHits: computeDipRadar(stockList, marketData),
+      dipHits: computeDipRadar(stockList, dipCtx),
       etfRows: getEtfs().map(e => ({ ucits: e.ucits, sig: signals[e.proxy] ?? null })),
     });
   });
@@ -34,7 +38,12 @@
     for (const it of newItems.slice(0, 5)) {
       new Notification(`${it.readiness}: ${it.label}`, { body: 'Stock Analysis Dashboard' });
     }
-    try { localStorage.setItem('notifySeen', JSON.stringify(keys)); } catch { /* noop */ }
+    const currentIds = new Set(items.map(it => `${it.kind}:${it.symbol}`));
+    const carried = prevKeys.filter(k => {
+      const [kind, symbol] = k.split(':');
+      return !currentIds.has(`${kind}:${symbol}`);
+    });
+    try { localStorage.setItem('notifySeen', JSON.stringify([...keys, ...carried])); } catch { /* noop */ }
   });
 
   function chipClass(it) {
