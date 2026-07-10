@@ -154,3 +154,33 @@ describe('computeEtfSignals', () => {
     expect(comp(out.QQQ.entry, 'Rotation').score).toBe(0);
   });
 });
+
+describe('computeEtfSignals display indicators (v0.17)', () => {
+  const spy = ramp(100, 100, 252);
+
+  it('uptrending ETF: UPTREND, high range position, positive roc13w, wRsi > 50', () => {
+    const out = computeEtfSignals(
+      [{ proxy: 'QQQ', weeklyRaw: makeWeekly(ramp(100, 150, 52)), dailyCloses: ramp(100, 150, 252) }], spy);
+    const ind = out.QQQ.indicators;
+    expect(ind.trendState).toBe('UPTREND');
+    expect(ind.rangePos52w).toBeGreaterThan(90);
+    expect(ind.roc13w).toBeGreaterThan(0);
+    expect(ind.wRsi).toBeGreaterThan(50);
+  });
+
+  it('downtrending ETF: DOWNTREND near its 52w low with negative roc13w', () => {
+    const out = computeEtfSignals(
+      [{ proxy: 'XLE', weeklyRaw: makeWeekly(ramp(100, 70, 52)), dailyCloses: ramp(100, 70, 252) }], spy);
+    const ind = out.XLE.indicators;
+    expect(ind.trendState).toBe('DOWNTREND');
+    expect(ind.rangePos52w).toBeLessThan(10);
+    expect(ind.roc13w).toBeLessThan(0);
+  });
+
+  it('flat series: no 52w range → rangePos52w null, trendState BASING', () => {
+    const out = computeEtfSignals(
+      [{ proxy: 'SPY', weeklyRaw: makeWeekly(ramp(100, 100, 52)), dailyCloses: ramp(100, 100, 252) }], spy);
+    expect(out.SPY.indicators.rangePos52w).toBeNull();
+    expect(out.SPY.indicators.trendState).toBe('BASING');
+  });
+});

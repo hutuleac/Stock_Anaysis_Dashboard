@@ -151,11 +151,37 @@ export function computeEtfSignals(list, spyCloses) {
       if (avg > 0) volumeRatio = wv[wv.length - 1] / avg;
     }
 
+    // ── Display-only indicators (v0.17) — rendered in the expanded row, never scored
+    const ema10arrW = emaArray(wc, 10);
+    const ema10 = ema10arrW.length ? ema10arrW[ema10arrW.length - 1] : null;
+    const wClose = wc[wc.length - 1];
+    let trendState = null;
+    if (ema10 != null && ema30 != null) {
+      if (wClose > ema10 && wClose > ema30 && ema10 > ema30) trendState = 'UPTREND';
+      else if (wClose < ema10 && wClose < ema30) trendState = 'DOWNTREND';
+      else if (wClose < ema10 && wClose >= ema30) trendState = 'PULLBACK';
+      else trendState = 'BASING';
+    }
+
+    const win52 = dailyCloses.slice(-252);
+    const lo52 = Math.min(...win52);
+    const rangePos52w = hi52 > lo52 ? Math.round(((price - lo52) / (hi52 - lo52)) * 100) : null;
+
+    const roc13w = wc.length >= 14 && wc[wc.length - 14] > 0
+      ? round1((wClose / wc[wc.length - 14] - 1) * 100)
+      : null;
+
     const rs = rsMap[proxy];
     out[proxy] = {
       price,
       rs,
       groupMedianRs3m,
+      indicators: {
+        trendState,
+        wRsi: rsiW == null ? null : Math.round(rsiW),
+        rangePos52w,
+        roc13w,
+      },
       entry: scoreEtfEntry({
         rsiW, belowLowerBB, rs3m: rs.rs3m, groupMedianRs3m,
         macdCross: macd?.crossover ?? null, divergence, drawdownPct,
