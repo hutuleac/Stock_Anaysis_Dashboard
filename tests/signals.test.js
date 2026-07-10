@@ -9,6 +9,7 @@ import {
   scoreMomentumSetup,
   computeSetupSignals,
 } from '../src/lib/signals.js';
+import { computeRSI } from '../src/lib/indicators.js';
 
 describe('findSwingPivots', () => {
   it('returns [] for arrays shorter than 2*pivotBars+1', () => {
@@ -286,5 +287,15 @@ describe('computeSetupSignals', () => {
     const r = computeSetupSignals(raw);
     expect(r).not.toBeNull();
     expect(r.momentum).toHaveProperty('score');
+  });
+});
+
+describe('computeSetupSignals meta (display-only weekly RSI)', () => {
+  it('exposes rounded weekly RSI as meta.wRsi', () => {
+    const closes = Array.from({ length: 40 }, (_, i) => 100 + i); // steady rise → high RSI
+    const raw = { s: 'ok', c: closes, h: [...closes], l: [...closes], v: closes.map(() => 1000) };
+    const out = computeSetupSignals(raw);
+    expect(out.meta.wRsi).toBe(Math.round(computeRSI(closes)));
+    expect(out.meta.wRsi).toBeGreaterThan(60);
   });
 });
