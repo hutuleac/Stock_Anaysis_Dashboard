@@ -193,3 +193,39 @@ export function computeEtfSignals(list, spyCloses) {
   }
   return out;
 }
+
+// Plain-English explanation of the entry/exit picture — display-only,
+// built strictly from component scores already computed above.
+const TREND_PHRASE = {
+  UPTREND: 'uptrend intact',
+  PULLBACK: 'pulling back within an uptrend',
+  BASING: 'basing — no established trend',
+  DOWNTREND: 'in a weekly downtrend',
+};
+
+export function generateEtfThesis(sig) {
+  if (!sig?.entry || !sig?.exit) return null;
+  const { entry, exit } = sig;
+  const ind = sig.indicators ?? {};
+  const entryLed = entry.score >= exit.score;
+  const lead = entryLed ? entry : exit;
+  const firing = lead.components.filter(c => c.score > 0);
+
+  let first;
+  if (!firing.length) {
+    first = entryLed
+      ? 'No entry signals firing — nothing to buy into here yet.'
+      : 'No exit signals firing — no exhaustion pressure visible.';
+  } else {
+    const parts = firing.map(c => `${c.label.toLowerCase()} (${c.detail})`).join(', ');
+    first = `${entryLed ? 'Entry' : 'Exit'} case ${lead.score}/10 (${lead.readiness}): ${parts}.`;
+  }
+
+  const trendPhrase = TREND_PHRASE[ind.trendState] ?? null;
+  let second = trendPhrase ? `Trend: ${trendPhrase}.` : '';
+  if (entryLed && entry.score >= 3) {
+    const turn = entry.components.find(c => c.label === 'Turn');
+    if (turn && turn.score === 0) second += ` No reversal confirmation yet — MACD hasn't turned.`;
+  }
+  return second ? `${first} ${second}` : first;
+}
