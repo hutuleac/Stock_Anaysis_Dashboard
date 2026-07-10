@@ -224,6 +224,7 @@ npm run test:watch  # watch mode (dev)
 - **Tooltip viewport clamp** — tooltips measure their real height, flip above the cursor near the bottom edge, clamp to the viewport, and close on scroll. No more clipped hover info.
 - **Setup Radar weekly RSI** — each radar row shows the raw weekly RSI value (display-only, not part of either setup score).
 - **ETF decision indicators** — the ETF expanded row gains trend state (weekly close vs EMA10/EMA30), weekly RSI, 52-week range position, and 13-week momentum — all computed from candles already fetched, none feed any score.
+- **ETF thesis + highlights + notifications** — plain-English thesis sentence per ETF, a cross-view "Today" highlights strip (ACT/SOON digest with click-through), and opt-in in-browser notifications for newly arrived signals.
 
 ### v0.16 (2026-07-02) — Dip Hunter
 - **Dip Hunter card** — finds early entries when quality stocks go on sale. A strict quality gate must pass first (EPS growth > 0, revenue growth > 0, profitability, PEG < 3, fundamental score ≥ 60); survivors are scored 0–10 on **Market Fear** (F&G zone + SPY below EMA50), **Oversold** (RSI tiers, RSI z-score, BB confluence), **Drawdown** (60d/20d decline, lower half of 52w range), and **Smart Money** (insider net buying + analyst buy ratio). ACT requires an active fear component — the card never says ACT in a greedy market. Display-only; the composite score is untouched.
