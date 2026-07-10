@@ -1,6 +1,7 @@
 <script>
   import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies, getEtfExpandRequest, clearEtfExpandRequest } from '../stores/etflist.svelte.js';
   import { computeEtfSignals, generateEtfThesis } from '../etf.js';
+  import { searchCatalog } from '../etfCatalog.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import PriceChart from './PriceChart.svelte';
@@ -11,6 +12,8 @@
   let newEtf = $state({ ucits: '', proxy: '', name: '', isin: '', ter: '', category: '' });
   let addError = $state('');
   let showAddDetails = $state(false);
+  let catalogQuery = $state('');
+  const catalogResults = $derived(searchCatalog(catalogQuery, getEtfs().map(e => e.ucits)));
 
   const signals = $derived.by(() => {
     const list = getUniqueProxies()
@@ -56,6 +59,13 @@
     showAdd = false;
     showAddDetails = false;
   }
+
+  function addFromCatalog(entry) {
+    if (addEtf(entry)) {
+      catalogQuery = '';
+      showAdd = false;
+    }
+  }
 </script>
 
 <div class="border border-border/60 rounded-lg overflow-hidden bg-surface-800/60">
@@ -79,6 +89,32 @@
 
   {#if showAdd}
     <div class="px-4 py-2.5 border-b border-border/40">
+      <div class="mb-2">
+        <input
+          class="w-full bg-surface-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-text-muted focus:outline-none"
+          placeholder="Search catalog — name, ticker, or theme (e.g. 'world', 'defense', 'semis')…"
+          bind:value={catalogQuery}
+        />
+        {#if catalogResults.length}
+          <div class="mt-1.5 space-y-0.5 max-h-56 overflow-y-auto">
+            {#each catalogResults as r (r.ucits)}
+              <button
+                class="w-full flex items-center justify-between gap-2 text-left px-2 py-1.5 rounded hover:bg-surface-700/40 disabled:opacity-40 disabled:cursor-default"
+                disabled={r.added}
+                onclick={() => addFromCatalog(r)}
+              >
+                <span class="min-w-0 truncate">
+                  <span class="font-mono font-semibold text-xs text-text-primary">{r.ucits}</span>
+                  <span class="text-xs text-text-muted ml-1.5">{r.name}</span>
+                </span>
+                <span class="text-[10px] text-text-muted shrink-0">{r.category} · proxy {r.proxy}{r.added ? ' · added' : ''}</span>
+              </button>
+            {/each}
+          </div>
+        {:else if catalogQuery.trim()}
+          <p class="text-xs text-text-muted mt-1.5">Not in catalog — add manually below with its US proxy.</p>
+        {/if}
+      </div>
       <div class="flex flex-wrap items-center gap-2">
         <input class="flex-1 min-w-[110px] bg-surface-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-text-muted focus:outline-none"
           placeholder="UCITS ticker (e.g. IUHC)" bind:value={newEtf.ucits} onkeydown={(e) => e.key === 'Enter' && handleAdd()} />
