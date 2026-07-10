@@ -47,12 +47,23 @@
   let portfolioValueInput = $state(getPortfolioValue() > 0 ? String(getPortfolioValue()) : '');
   let saveMessage = $state('');
   let autoRefreshInterval = $state(parseInt(localStorage.getItem('autoRefreshInterval') || '0'));
+  let notifyEnabled = $state(localStorage.getItem('notifyEnabled') === 'true');
 
   function saveAutoRefresh(val) {
     autoRefreshInterval = val;
     localStorage.setItem('autoRefreshInterval', String(val));
     saveMessage = val === 0 ? 'Auto-refresh off' : `Auto-refresh set to ${val} min`;
     setTimeout(() => saveMessage = '', 2000);
+  }
+
+  async function toggleNotify() {
+    if (!notifyEnabled) {
+      if (typeof Notification === 'undefined') return;
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+    }
+    notifyEnabled = !notifyEnabled;
+    localStorage.setItem('notifyEnabled', String(notifyEnabled));
   }
 
   // Initialize portfolio text from current positions
@@ -329,6 +340,18 @@
           {/each}
         </div>
         <p class="text-xs text-text-muted">Only triggers when market is open (Mon–Fri 9:30–16:00 ET).</p>
+      </div>
+
+      <!-- Browser notifications -->
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-sm text-text-primary">Browser notifications</p>
+          <p class="text-xs text-text-muted">New ACT/SOON signals after a refresh — fires only while a dashboard tab is open.</p>
+        </div>
+        <button
+          class="text-xs px-3 py-1.5 rounded-lg shrink-0 {notifyEnabled ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-secondary'}"
+          onclick={toggleNotify}
+        >{notifyEnabled ? 'On' : 'Off'}</button>
       </div>
 
       <!-- Save feedback -->
