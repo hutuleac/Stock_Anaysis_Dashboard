@@ -6,18 +6,28 @@
   const OFFSET_Y = 12;
 
   const tip = $derived(getTooltip());
+  let tipHeight = $state(0); // measured height of the desktop popover
 
-  // Desktop: viewport-aware anchored popover — flip left/up near an edge.
+  // Desktop: viewport-aware anchored popover — flip and clamp using the
+  // measured height (content varies), never a hardcoded estimate.
   const pos = $derived(() => {
     if (!tip.visible || typeof window === 'undefined') return { x: 0, y: 0 };
-    const raw_x = tip.x + OFFSET_X;
-    const raw_y = tip.y + OFFSET_Y;
     const safeWidth = Math.min(TOOLTIP_WIDTH, window.innerWidth - 16);
-    const max_x = window.innerWidth - safeWidth - 8;
-    const x = raw_x > max_x ? tip.x - safeWidth - OFFSET_X : raw_x;
-    const max_y = window.innerHeight - 420;
-    const y = raw_y > max_y ? tip.y - 320 : raw_y;
+    const h = tipHeight || 320; // pre-measurement fallback for the first frame
+    let x = tip.x + OFFSET_X;
+    if (x + safeWidth > window.innerWidth - 8) x = tip.x - safeWidth - OFFSET_X;
+    let y = tip.y + OFFSET_Y;
+    if (y + h > window.innerHeight - 8) y = tip.y - h - OFFSET_Y; // flip above cursor
     return { x: Math.max(8, x), y: Math.max(8, y) };
+  });
+
+  // Scrolling invalidates a cursor-anchored position — just close.
+  // Capture phase also catches scrolls inside nested overflow containers.
+  $effect(() => {
+    if (!tip.visible || typeof window === 'undefined') return;
+    if (window.matchMedia('(max-width: 639px)').matches) return; // bottom sheet handles itself
+    window.addEventListener('scroll', hideTooltip, { capture: true, passive: true });
+    return () => window.removeEventListener('scroll', hideTooltip, { capture: true });
   });
 
   // On phones the tooltip is a bottom sheet; lock the page behind it so a
@@ -98,8 +108,9 @@
   <div
     class="hidden sm:block fixed z-[9999] pointer-events-none"
     style="left:{p.x}px; top:{p.y}px; width:min({TOOLTIP_WIDTH}px, calc(100vw - 16px));"
+    bind:clientHeight={tipHeight}
   >
-    <div class="bg-surface-800 border border-border/70 rounded-xl shadow-2xl overflow-hidden text-xs">
+    <div class="bg-surface-800 border border-border/70 rounded-xl shadow-2xl overflow-hidden text-xs max-h-[calc(100vh-16px)]">
       {@render body(c)}
     </div>
   </div>
