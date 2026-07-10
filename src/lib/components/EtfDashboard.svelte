@@ -1,6 +1,6 @@
 <script>
   import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies } from '../stores/etflist.svelte.js';
-  import { computeEtfSignals } from '../etf.js';
+  import { computeEtfSignals, generateEtfThesis } from '../etf.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import PriceChart from './PriceChart.svelte';
@@ -163,6 +163,10 @@
             <tr class="border-b border-border/20 bg-surface-900/40">
               <td colspan="9" class="px-4 py-4">
                 {#if etf.sig}
+                  {@const thesis = generateEtfThesis(etf.sig)}
+                  {#if thesis}
+                    <p class="text-xs text-text-secondary leading-relaxed mb-3 max-w-3xl">{thesis}</p>
+                  {/if}
                   {#if etf.sig.indicators}
                     {@const ind = etf.sig.indicators}
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-xs">
