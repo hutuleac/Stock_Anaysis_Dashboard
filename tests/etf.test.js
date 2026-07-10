@@ -224,4 +224,15 @@ describe('generateEtfThesis', () => {
     expect(generateEtfThesis(null)).toBeNull();
     expect(generateEtfThesis({})).toBeNull();
   });
+
+  it('no double spaces when trendState is unknown but the turn caveat fires', () => {
+    const sig = {
+      entry: scoreEtfEntry({ ...ENTRY_MAX, macdCross: null, divergence: null }),
+      exit: scoreEtfExit({ rsiW: 28, extensionPct: -5, rs1m: 1, rs3m: -12, volumeRatio: 1 }),
+      indicators: { trendState: null, wRsi: 28, rangePos52w: 5, roc13w: -12 },
+    };
+    const t = generateEtfThesis(sig);
+    expect(t).toContain("MACD hasn't turned");
+    expect(t).not.toMatch(/  /);
+  });
 });

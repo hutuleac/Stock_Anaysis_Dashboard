@@ -222,10 +222,11 @@ export function generateEtfThesis(sig) {
   }
 
   const trendPhrase = TREND_PHRASE[ind.trendState] ?? null;
-  let second = trendPhrase ? `Trend: ${trendPhrase}.` : '';
+  const rest = [];
+  if (trendPhrase) rest.push(`Trend: ${trendPhrase}.`);
   if (entryLed && entry.score >= 3) {
     const turn = entry.components.find(c => c.label === 'Turn');
-    if (turn && turn.score === 0) second += ` No reversal confirmation yet — MACD hasn't turned.`;
+    if (turn && turn.score === 0) rest.push(`No reversal confirmation yet — MACD hasn't turned.`);
   }
-  return second ? `${first} ${second}` : first;
+  return rest.length ? `${first} ${rest.join(' ')}` : first;
 }
