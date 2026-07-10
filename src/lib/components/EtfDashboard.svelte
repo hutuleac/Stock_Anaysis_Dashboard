@@ -1,5 +1,5 @@
 <script>
-  import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies } from '../stores/etflist.svelte.js';
+  import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies, getEtfExpandRequest, clearEtfExpandRequest } from '../stores/etflist.svelte.js';
   import { computeEtfSignals, generateEtfThesis } from '../etf.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
@@ -42,6 +42,11 @@
   }
   const fmtRs = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`;
   const compSummary = (score) => score.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
+
+  $effect(() => {
+    const req = getEtfExpandRequest();
+    if (req) { expanded = req; clearEtfExpandRequest(); }
+  });
 
   function handleAdd() {
     addError = '';
