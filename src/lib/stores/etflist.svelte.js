@@ -63,3 +63,9 @@ export function getEtfProxyData(proxy) { return proxyData[proxy] ?? null; }
 
 export function setEtfSpyCloses(closes) { spyCloses = closes; }
 export function getEtfSpyCloses() { return spyCloses; }
+
+// One-shot expand request from outside the ETF view (e.g. highlights strip).
+let expandRequest = $state(null);
+export function requestEtfExpand(ucits) { expandRequest = ucits; }
+export function getEtfExpandRequest() { return expandRequest; }
+export function clearEtfExpandRequest() { expandRequest = null; }

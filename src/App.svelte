@@ -17,13 +17,20 @@
   import SetupRadar from './lib/components/SetupRadar.svelte';
   import DipRadar from './lib/components/DipRadar.svelte';
   import EtfDashboard from './lib/components/EtfDashboard.svelte';
-  import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses } from './lib/stores/etflist.svelte.js';
+  import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses, requestEtfExpand } from './lib/stores/etflist.svelte.js';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
+  import HighlightsStrip from './lib/components/HighlightsStrip.svelte';
 
   // Svelte action: auto-dismiss triggered alert banner after 15s
   function autoDismiss(node, id) {
     const t = setTimeout(() => dismissTriggered(id), 15000);
     return { destroy() { clearTimeout(t); } };
+  }
+
+  function handleHighlightNav(item) {
+    activeView = item.view;
+    if (item.view === 'stocks') selectTicker(item.symbol);
+    else requestEtfExpand(item.symbol);
   }
 
   let settingsOpen = $state(false);
@@ -697,6 +704,8 @@
 
   <!-- Main content -->
   <main class="max-w-[1800px] mx-auto px-4 py-6">
+
+    <HighlightsStrip marketData={marketContextData} onNavigate={handleHighlightNav} />
 
     {#if activeView === 'stocks'}
       <SetupRadar />

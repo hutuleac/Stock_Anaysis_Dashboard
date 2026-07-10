@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreEtfEntry, scoreEtfExit, computeEtfSignals } from '../src/lib/etf.js';
+import { scoreEtfEntry, scoreEtfExit, computeEtfSignals, generateEtfThesis } from '../src/lib/etf.js';
 
 const comp = (res, label) => res.components.find(c => c.label === label);
 
@@ -182,5 +182,57 @@ describe('computeEtfSignals display indicators (v0.17)', () => {
       [{ proxy: 'SPY', weeklyRaw: makeWeekly(ramp(100, 100, 52)), dailyCloses: ramp(100, 100, 252) }], spy);
     expect(out.SPY.indicators.rangePos52w).toBeNull();
     expect(out.SPY.indicators.trendState).toBe('BASING');
+  });
+});
+
+describe('generateEtfThesis', () => {
+  it('entry-led: names firing components, adds trend context and missing-turn caveat', () => {
+    const sig = {
+      entry: scoreEtfEntry({ ...ENTRY_MAX, macdCross: null, divergence: null }), // Turn = 0
+      exit: scoreEtfExit({ rsiW: 28, extensionPct: -5, rs1m: 1, rs3m: -12, volumeRatio: 1 }),
+      indicators: { trendState: 'DOWNTREND', wRsi: 28, rangePos52w: 5, roc13w: -12 },
+    };
+    const t = generateEtfThesis(sig);
+    expect(t).toMatch(/^Entry case/);
+    expect(t.toLowerCase()).toContain('oversold');
+    expect(t).toContain('weekly downtrend');
+    expect(t).toContain("MACD hasn't turned");
+    expect(t).not.toContain('no turn yet'); // zero-scoring component detail omitted
+  });
+
+  it('exit-led: leads with the exit case', () => {
+    const sig = {
+      entry: scoreEtfEntry({ rsiW: 55, belowLowerBB: false, rs3m: 10, groupMedianRs3m: 2, macdCross: null, divergence: null, drawdownPct: 1 }),
+      exit: scoreEtfExit(EXIT_MAX),
+      indicators: { trendState: 'UPTREND', wRsi: 76, rangePos52w: 99, roc13w: 30 },
+    };
+    const t = generateEtfThesis(sig);
+    expect(t).toMatch(/^Exit case/);
+    expect(t.toLowerCase()).toContain('overbought');
+  });
+
+  it('quiet ETF: says nothing is firing', () => {
+    const sig = {
+      entry: scoreEtfEntry({ rsiW: 50, belowLowerBB: false, rs3m: 2, groupMedianRs3m: 1, macdCross: null, divergence: null, drawdownPct: 1 }),
+      exit: scoreEtfExit({ rsiW: 50, extensionPct: 3, rs1m: 1, rs3m: 2, volumeRatio: 1 }),
+      indicators: { trendState: 'BASING', wRsi: 50, rangePos52w: 50, roc13w: 1 },
+    };
+    expect(generateEtfThesis(sig)).toContain('No entry signals firing');
+  });
+
+  it('null-safe', () => {
+    expect(generateEtfThesis(null)).toBeNull();
+    expect(generateEtfThesis({})).toBeNull();
+  });
+
+  it('no double spaces when trendState is unknown but the turn caveat fires', () => {
+    const sig = {
+      entry: scoreEtfEntry({ ...ENTRY_MAX, macdCross: null, divergence: null }),
+      exit: scoreEtfExit({ rsiW: 28, extensionPct: -5, rs1m: 1, rs3m: -12, volumeRatio: 1 }),
+      indicators: { trendState: null, wRsi: 28, rangePos52w: 5, roc13w: -12 },
+    };
+    const t = generateEtfThesis(sig);
+    expect(t).toContain("MACD hasn't turned");
+    expect(t).not.toMatch(/  /);
   });
 });
