@@ -380,7 +380,7 @@
     {#if anchors?.avwap}
       {@const av = anchors.avwap}
       {@const avColor = av.reclaimed ? 'text-bull-strong' : 'text-bear-strong'}
-      <div class="flex flex-col min-w-[95px] cursor-default" title="Price vs anchored VWAP (swing-low cost basis)">
+      <div class="flex flex-col min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.avwap, current: { value: (av.pctFromPrice >= 0 ? '+' : '') + av.pctFromPrice.toFixed(1) + '%', label: av.reclaimed ? 'Reclaimed' : 'Below', color: av.reclaimed ? '#22c55e' : '#ef4444' } })}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">AVWAP</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold {avColor}">{(av.pctFromPrice >= 0 ? '+' : '') + av.pctFromPrice.toFixed(1)}%</span>
@@ -393,7 +393,7 @@
     {#if anchors?.poc}
       {@const pc = anchors.poc}
       {@const vaLabel = pc.position === 'above' ? 'upper VA' : pc.position === 'below' ? 'lower VA' : 'in VA'}
-      <div class="flex flex-col min-w-[95px] cursor-default" title="Point of Control + value area position">
+      <div class="flex flex-col min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.poc, current: { value: `$${pc.pocPrice.toFixed(2)}`, label: vaLabel, color: pc.position === 'above' ? '#f59e0b' : pc.position === 'below' ? '#22c55e' : '#9ca3af' } })}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">POC</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-sm font-mono font-semibold text-text-secondary">${pc.pocPrice.toFixed(2)}</span>
@@ -518,7 +518,8 @@
 
     <!-- 52-week range bar -->
     {#if pos52w() !== null}
-      <div class="flex flex-col min-w-[120px]">
+      {@const p52 = pos52w()}
+      <div class="flex flex-col min-w-[120px] cursor-default" use:tipAction={() => ({ ...TIPS.range52w, current: { value: p52.toFixed(0) + '%', label: p52 > 80 ? 'Near high' : p52 < 20 ? 'Near low' : 'Mid-range', color: p52 > 80 ? '#22c55e' : p52 < 20 ? '#ef4444' : '#9ca3af' } })}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
         <div class="flex items-center gap-1.5 mt-1.5">
           <span class="text-[13px] text-text-muted font-mono">${m['52WeekLow']?.toFixed(0)}</span>
@@ -529,7 +530,7 @@
         </div>
       </div>
     {:else}
-      <div class="flex flex-col min-w-[120px]">
+      <div class="flex flex-col min-w-[120px] cursor-default" use:tipAction={TIPS.range52w}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
         <div class="flex items-center gap-1.5 mt-1.5">
           <span class="text-[13px] text-text-muted font-mono">—</span>
