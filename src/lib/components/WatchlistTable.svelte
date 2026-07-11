@@ -789,6 +789,11 @@
                       </div>
                     {/if}
                   </div>
+                  <!-- Click outside to close dropdown -->
+                  {#if copyMenuSymbol === ticker.symbol}
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
+                  {/if}
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
                       <PriceChart symbol={ticker.symbol} />
                       <NewsPanel symbol={ticker.symbol} />
