@@ -12,6 +12,8 @@ import {
   computeEmaStack,
   computeOversoldConfluence,
   proximityTo52wHigh,
+  pct52wRange,
+  computeRSISeries,
   computeOBV,
   computeVolumeConfirmation,
   computeSwingLows,
@@ -21,7 +23,7 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Constant prices → zero change, RSI undefined (avgLoss=0=avgGain)
+// Constant prices → zero change, no momentum → RSI 50 (avgLoss=0=avgGain)
 const flat = n => Array(n).fill(100);
 
 // Rising prices by step
@@ -91,6 +93,11 @@ describe('computeRSI', () => {
 
   it('returns 0 when all candles are losses (avgGain=0)', () => {
     expect(computeRSI(falling(20))).toBe(0);
+  });
+
+  it('returns neutral 50 for a perfectly flat / halted series (no momentum)', () => {
+    // avgGain === avgLoss === 0 — must NOT return 100 ("Overbought") or NaN.
+    expect(computeRSI(flat(20))).toBe(50);
   });
 
   it('is in [0, 100] for any realistic series', () => {
@@ -464,6 +471,40 @@ describe('proximityTo52wHigh', () => {
     const r = proximityTo52wHigh(105, 100);
     expect(r.pctFromHigh).toBeLessThan(0);
     expect(r.near).toBe(true);
+  });
+});
+
+// ─── pct52wRange ──────────────────────────────────────────────────────────────
+describe('pct52wRange', () => {
+  it('returns null on missing or degenerate inputs (high <= low)', () => {
+    expect(pct52wRange(null, 50, 100)).toBeNull();
+    expect(pct52wRange(75, 0, 100)).toBeNull();       // low falsy
+    expect(pct52wRange(75, 100, 100)).toBeNull();     // high == low
+    expect(pct52wRange(75, 120, 100)).toBeNull();     // high < low
+  });
+
+  it('maps price linearly to 0–100 within the band', () => {
+    expect(pct52wRange(75, 50, 100)).toBe(50);
+    expect(pct52wRange(60, 40, 120)).toBe(25);
+    expect(pct52wRange(100, 50, 150)).toBe(50);
+  });
+
+  it('clamps to 100 when live price exceeds the lagging 52w high (fresh breakout)', () => {
+    expect(pct52wRange(120, 50, 100)).toBe(100);
+  });
+
+  it('clamps to 0 when price prints below the lagging 52w low', () => {
+    expect(pct52wRange(40, 50, 100)).toBe(0);
+  });
+});
+
+// ─── computeRSISeries flat-series handling ────────────────────────────────────
+describe('computeRSISeries', () => {
+  it('emits neutral 50 (not 100) for a flat / halted series', () => {
+    const candles = flat(20).map((close, i) => ({ time: i, close }));
+    const series = computeRSISeries(candles);
+    expect(series).not.toBeNull();
+    expect(series.every(p => p.value === 50)).toBe(true);
   });
 });
 

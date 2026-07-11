@@ -2,6 +2,7 @@
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeScore, computeScoreZScore } from '../scoring.js';
   import { computePEG } from '../valuation.js';
+  import { pct52wRange } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
 
@@ -26,11 +27,7 @@
   }
 
   // 52-week position bar width %
-  const pos52w = $derived(() => {
-    const h = m['52WeekHigh'], l = m['52WeekLow'];
-    if (!h || !l || !price || h <= l) return null;
-    return Math.round(((price - l) / (h - l)) * 100);
-  });
+  const pos52w = $derived(() => pct52wRange(price, m['52WeekLow'], m['52WeekHigh']));
 
   const tdQuote  = $derived(data?.tdQuote ?? null);
   const weekly   = $derived(data?.weekly ?? null);

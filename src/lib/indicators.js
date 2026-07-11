@@ -33,7 +33,10 @@ export function computeRSI(closes, period = 14) {
     avgLoss = (avgLoss * (period - 1) + Math.max(-diff, 0)) / period;
   }
 
-  if (avgLoss === 0) return 100;
+  // avgLoss 0 with gains → 100 (all-up). Both 0 → perfectly flat / halted series,
+  // which is no momentum, not an extreme: return neutral 50 (avoids mislabeling a
+  // frozen ticker as "Overbought" and mis-scoring it in the technical engine).
+  if (avgLoss === 0) return avgGain === 0 ? 50 : 100;
   return 100 - 100 / (1 + avgGain / avgLoss);
 }
 
@@ -285,6 +288,16 @@ export function proximityTo52wHigh(price, high52w, threshold = 3) {
   return { pctFromHigh: Math.round(pct * 10) / 10, near: pct <= threshold };
 }
 
+// Position of price within the 52-week low→high band, as an integer 0–100.
+// Clamped: live price can exceed the (7-day cached) 52w high on a fresh breakout,
+// which would otherwise push the range marker past 100% and overflow the bar.
+// Returns null on missing/degenerate inputs (high <= low).
+export function pct52wRange(price, low52w, high52w) {
+  if (!price || !low52w || !high52w || high52w <= low52w) return null;
+  const raw = Math.round(((price - low52w) / (high52w - low52w)) * 100);
+  return Math.max(0, Math.min(100, raw));
+}
+
 // ── Swing-low support levels ──────────────────────────────────────────────────
 // Finds up to `maxLevels` significant pivot lows in the daily lows array.
 // A pivot low at index i requires lows[i] to be the minimum across the
@@ -527,13 +540,13 @@ export function computeRSISeries(candles, period = 14) {
   }
   avgGain /= period;
   avgLoss /= period;
-  result.push({ time: candles[period].time, value: avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss) });
+  result.push({ time: candles[period].time, value: avgLoss === 0 ? (avgGain === 0 ? 50 : 100) : 100 - 100 / (1 + avgGain / avgLoss) });
 
   for (let i = period + 1; i < closes.length; i++) {
     const diff = closes[i] - closes[i - 1];
     avgGain = (avgGain * (period - 1) + Math.max(diff, 0)) / period;
     avgLoss = (avgLoss * (period - 1) + Math.max(-diff, 0)) / period;
-    result.push({ time: candles[i].time, value: avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss) });
+    result.push({ time: candles[i].time, value: avgLoss === 0 ? (avgGain === 0 ? 50 : 100) : 100 - 100 / (1 + avgGain / avgLoss) });
   }
 
   return result;
