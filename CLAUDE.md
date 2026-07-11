@@ -122,14 +122,15 @@ src/lib/
     alerts.svelte.js        — price alert state
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
 tests/
-  indicators.test.js  — 59 unit tests for indicators.js
+  indicators.test.js  — 65 unit tests for indicators.js (incl. flat-RSI + pct52wRange)
   scoring.test.js     — 42 unit tests for scoring.js
   signals.test.js     — 32 unit tests for signals.js
   valuation.test.js   — 3 unit tests for valuation.js
   dip.test.js         — 20 unit tests for dip.js
   etf.test.js         — 27 unit tests for etf.js (incl. indicators + thesis)
   highlights.test.js  — 7 unit tests for highlights.js
-  etfCatalog.test.js  — 6 unit tests for etfCatalog.js  (280 total)
+  etfCatalog.test.js  — 6 unit tests for etfCatalog.js
+  cache.test.js       — 7 unit tests for cache prune + quota self-heal  (294 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -210,12 +211,26 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 - **Valuation metric keys (Finnhub):** `revenueGrowthTTMYoy`, `psTTM`/`psAnnual`. PEG is computed client-side from existing pe + epsGrowth (`valuation.js`), null when growth ≤ 0 or P/E ≤ 0. All four (RS, Rev growth, P/S, PEG) are **display-only** — they do NOT feed `computeScore` or the setups (deliberate, to keep the calibrated engine stable).
 - All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>`. Trade log: `tradeLog`. Paper trades: `paperTrades`.
 
+## v0.17 patch round (post-release fixes)
+
+Small correctness + robustness fixes landed after the v0.17 feature round. All display-only or infra; zero new API calls.
+
+- **Version badge is now derived, not hardcoded.** `package.json` `version` (bumped to `0.17.0`) is the single source of truth. App.svelte imports `{ version }` (named import, tree-shaken) and renders `v{major.minor}` → "v0.17". Bump the minor for a new feature round; patch bumps don't change the badge. Don't reintroduce a hardcoded version string.
+- **Chart anchors gate lowered:** `chartAnchors.js` `MIN_BARS` is **30** (was 60), aligned with `computeIndicatorsFromCandles`' floor so AVWAP/POC/Fib/FVG never silently vanish while RSI/MACD still render (they share the daily candle set). Don't raise it back to 60 without re-introducing that divergence.
+- **RSI flat/halted series returns 50, not 100.** `computeRSI` + `computeRSISeries`: `avgLoss===0 && avgGain===0` (perfectly flat / halted ticker) → neutral **50** (no momentum). The genuine all-gains case (`avgLoss===0, avgGain>0`) still returns 100. Prevents mislabeling a frozen ticker "Overbought" and mis-scoring it 0.25 in the technical engine.
+- **`pct52wRange(price, low, high)`** in `indicators.js` — clamped 0–100 (null on `high<=low` or falsy inputs). Live price can exceed the 7-day-cached 52w high on a breakout; this keeps the 52W-range marker inside the bar. FundamentalsBar's `pos52w` uses it. `low52w` of 0 is treated as invalid (`!low52w`), same as the original guard.
+- **Cache self-heals under quota pressure.** `writeCache` in **both** `finnhub.svelte.js` and `twelvedata.svelte.js` catches `QuotaExceededError`, calls the shared **`evictStaleCache()`** (exported from finnhub; deletes TTL-expired + junk entries via the `EVICT_TTL` prefix table), and retries the write once before raising the storage-full banner. Inert on the happy path. TD imports the evictor from finnhub (one-way dependency; no cycle). Eviction is expired-only, not LRU — won't reclaim space if everything is fresh (a genuinely oversized watchlist).
+- **`pruneOrphanedCache` now also prunes `sv_` score history** for removed symbols (its 7-day self-trim only runs on write, which stops at removal). `sv_` is written only by `scoring.js`; no collision. Still never touches macro/notes/watchlist/portfolio/API keys.
+- **RSI label/color single-sourced** in FundamentalsBar: one `rsiLabel` const matching the 5 color bands (Oversold <30 / Mild OS 30–40 / Neutral 40–60 / Extended 60–70 / Overbought >70), used in both the inline text and the tooltip `current`. The `TIPS.rsi` levels table was reconciled to match. Score-Z label also single-sourced.
+- **Hover coverage complete:** every FundamentalsBar indicator uses the rich `tipAction` card. AVWAP, POC (were native `title=`) and 52W Range (had none) now have `TIPS.avwap` / `TIPS.poc` / `TIPS.range52w` defs with live `current` values.
+- **Known maintenance smell (not a bug):** the TD→synthetic-candle mapping block is duplicated verbatim ×4 in App.svelte (~lines 248/331/474/511). A future date-parse/NaN fix must touch all four. Extract to a `tdValuesToCandles(vals)` helper if you're in there.
+
 ## Running locally
 
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 280 unit tests, ~250ms
+npm test          # 294 unit tests, ~250ms
 npm run build     # production build → dist/
 ```
 
