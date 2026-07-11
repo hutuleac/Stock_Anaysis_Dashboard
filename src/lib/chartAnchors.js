@@ -4,7 +4,9 @@
 import { findSwingPivots } from './signals.js';
 
 const FIB_RATIOS = [0.382, 0.5, 0.618];
-const MIN_BARS = 60;
+// Aligned with computeIndicatorsFromCandles' 30-bar floor so AVWAP/POC never
+// silently vanish while RSI/MACD still render (they share the daily candle set).
+const MIN_BARS = 30;
 
 // Anchored VWAP from the most significant (lowest-priced) confirmed swing low.
 export function computeAVWAP(highs, lows, closes, volumes, pivotBars = 2) {

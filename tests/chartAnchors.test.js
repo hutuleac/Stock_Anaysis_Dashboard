@@ -105,8 +105,12 @@ describe('computeChartAnchors', () => {
   };
 
   it('returns null below the minimum bar count', () => {
-    expect(computeChartAnchors(mkRaw(59))).toBeNull();
+    expect(computeChartAnchors(mkRaw(29))).toBeNull();
     expect(computeChartAnchors({ s: 'no_data', c: [] })).toBeNull();
+  });
+
+  it('computes at the 30-bar floor (aligned with the indicator minimum)', () => {
+    expect(computeChartAnchors(mkRaw(30))).not.toBeNull();
   });
 
   it('returns the four sub-objects on a healthy series', () => {
