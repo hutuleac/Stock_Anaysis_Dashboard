@@ -2,6 +2,8 @@
 // Indicators are computed locally from candles (see indicators.js).
 // Free tier: 8 credits/min, 800/day.
 
+import { evictStaleCache } from './finnhub.svelte.js';
+
 const BASE = 'https://api.twelvedata.com';
 
 const CACHE_TTL = {
@@ -39,9 +41,17 @@ function readCache(key, ttl) {
 }
 
 function writeCache(key, data) {
+  // The td_ts_* series are the largest cache entries, so a quota failure here is
+  // the likeliest. Self-heal via the shared eviction and retry once (the banner
+  // is owned by the Finnhub module, which will also trip if space is truly gone).
+  const payload = JSON.stringify({ data, ts: Date.now() });
   try {
-    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-  } catch { /* quota — non-critical */ }
+    localStorage.setItem(key, payload);
+  } catch (e) {
+    if (e?.name === 'QuotaExceededError' && evictStaleCache() > 0) {
+      try { localStorage.setItem(key, payload); } catch { /* still full */ }
+    }
+  }
 }
 
 // ── Rate limiter: sliding-window, max 8 calls per 60 s ───────────────────────
