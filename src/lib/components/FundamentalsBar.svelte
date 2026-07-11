@@ -158,7 +158,7 @@
       {@const rsiZ = data.indicators.rsiZScore}
       {@const rsiColor = rsi < 30 ? 'text-bull-strong' : rsi < 40 ? 'text-uncertain' : rsi > 70 ? 'text-danger' : rsi > 60 ? 'text-warning' : 'text-text-primary'}
       {@const rsiCssColor = rsi < 30 ? '#22c55e' : rsi < 40 ? '#f59e0b' : rsi > 70 ? '#ef4444' : rsi > 60 ? '#f59e0b' : '#9ca3af'}
-      {@const rsiLabel = rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild Weak' : rsi > 70 ? 'Overbought' : rsi > 55 ? 'Healthy' : 'Neutral'}
+      {@const rsiLabel = rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}
       <div class="flex flex-col min-w-[70px] cursor-default" use:tipAction={() => ({ ...TIPS.rsi, current: { value: rsi.toFixed(1), label: rsiLabel, color: rsiCssColor } })}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
         <div class="flex items-baseline gap-1 mt-0.5">
@@ -166,7 +166,7 @@
           <span class="text-[13px] text-text-muted">{rsiDir === 'rising' ? '↑' : rsiDir === 'falling' ? '↓' : '→'}</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="text-[12px] {rsiColor}">{rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}</span>
+          <span class="text-[12px] {rsiColor}">{rsiLabel}</span>
           {#if rsiZ != null}
             {@const rsiZCssColor = rsiZ > 2 ? '#ef4444' : rsiZ < -2 ? '#22c55e' : rsiZ > 1 ? '#f59e0b' : rsiZ < -1 ? '#f59e0b' : '#6b7280'}
             {@const rsiZLabel = rsiZ > 2 ? 'Unusually High' : rsiZ < -2 ? 'Deeply Depressed' : rsiZ > 1 ? 'Above baseline' : rsiZ < -1 ? 'Below baseline' : 'Normal'}
@@ -300,7 +300,7 @@
       <div class="flex flex-col min-w-[60px] cursor-default" use:tipAction={() => ({ ...TIPS.scoreZ, current: { value: (scoreZ >= 0 ? '+' : '') + scoreZ.toFixed(1), label: szLabel, color: szCssColor } })}>
         <span class="text-[13px] text-text-muted uppercase tracking-wider">Score Z</span>
         <span class="text-sm font-mono font-semibold mt-0.5 {szColor}">{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
-        <span class="text-[12px] {szColor}">{scoreZ > 2 ? 'Extended' : scoreZ < -2 ? 'Depressed' : scoreZ > 1 ? 'Above avg' : scoreZ < -1 ? 'Below avg' : 'In range'}</span>
+        <span class="text-[12px] {szColor}">{szLabel}</span>
       </div>
     {/if}
 
