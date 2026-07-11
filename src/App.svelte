@@ -20,6 +20,10 @@
   import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses, requestEtfExpand } from './lib/stores/etflist.svelte.js';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
   import HighlightsStrip from './lib/components/HighlightsStrip.svelte';
+  import { version as pkgVersion } from '../package.json';
+
+  // Badge shows the feature-round (major.minor); in-round patch bumps don't change it.
+  const appVersion = `v${pkgVersion.split('.').slice(0, 2).join('.')}`;
 
   // Svelte action: auto-dismiss triggered alert banner after 15s
   function autoDismiss(node, id) {
@@ -579,7 +583,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded hidden sm:inline">v0.17</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded hidden sm:inline">{appVersion}</span>
 
         <!-- Stocks | ETFs view toggle -->
         <div class="flex items-center gap-0.5 bg-surface-700/60 rounded-lg p-0.5">
