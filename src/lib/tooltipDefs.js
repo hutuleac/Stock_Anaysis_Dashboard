@@ -21,9 +21,9 @@ export const TIPS = {
     description: 'Compares average gains to average losses over 14 periods. Measures the speed and magnitude of price changes — showing whether a stock is being overbought or oversold.',
     levels: [
       { range: '< 30',  label: 'Oversold',   color: C.green,  desc: 'Selling exhausted — potential reversal zone. Wait for confirmation candle before entering.' },
-      { range: '30–45', label: 'Mild Weak',  color: C.amber,  desc: 'Below-average momentum. Caution zone, no strong directional edge.' },
-      { range: '45–55', label: 'Neutral',    color: C.dim,    desc: 'Balanced momentum — neither bulls nor bears dominate.' },
-      { range: '55–70', label: 'Healthy',    color: C.green,  desc: 'Above-average momentum, uptrend likely intact. Good zone to stay long.' },
+      { range: '30–40', label: 'Mild OS',    color: C.amber,  desc: 'Below-average momentum. Caution zone, no strong directional edge.' },
+      { range: '40–60', label: 'Neutral',    color: C.dim,    desc: 'Balanced momentum — neither bulls nor bears dominate.' },
+      { range: '60–70', label: 'Extended',   color: C.amber,  desc: 'Above-average momentum, uptrend intact but stretching. Fine to hold, poor to chase.' },
       { range: '> 70',  label: 'Overbought', color: C.red,    desc: 'Buying pressure extended — risk of pullback. Tighten stop, avoid chasing.' },
     ],
     why: 'One of the most reliable momentum gauges. Best as a mean-reversion signal at extremes (<30/>70), and as a trend health check in the 40–60 range.',
@@ -42,6 +42,44 @@ export const TIPS = {
       { range: '< 0',          label: 'Bearish',       color: C.red,    desc: 'Below zero — downside momentum in control. Avoid new longs.' },
     ],
     why: 'Captures both trend direction and momentum velocity. Crossovers near zero are most reliable. MACD divergences (price up, MACD down) can signal reversals early.',
+  },
+
+  avwap: {
+    title: 'AVWAP',
+    subtitle: 'Anchored VWAP (swing-low)',
+    category: 'Price Structure',
+    description: 'Volume-weighted average price anchored at the most significant swing low — the average cost basis of everyone who has bought since the bottom. Shown as the % distance of current price from that line.',
+    levels: [
+      { range: 'Above',  label: 'Reclaimed', color: C.green, desc: 'Price above the anchored VWAP — buyers since the swing low are in profit, the level tends to act as support.' },
+      { range: 'Below',  label: 'Below',     color: C.red,   desc: 'Price under the anchored VWAP — the average buyer since the low is underwater, the level acts as overhead resistance.' },
+    ],
+    why: 'The swing-low AVWAP is the cost basis of the current move. Reclaiming it flips it from resistance to support; losing it warns the bounce is failing.',
+  },
+
+  poc: {
+    title: 'POC',
+    subtitle: 'Point of Control + Value Area',
+    category: 'Price Structure',
+    description: 'The price level with the most traded volume over the window — a fair-value magnet — plus whether price is sitting in the upper, middle, or lower portion of the value area around it.',
+    levels: [
+      { range: 'Upper VA', label: 'Above value', color: C.amber, desc: 'Price above the high-volume node — extended, prone to mean-revert back toward POC.' },
+      { range: 'In VA',    label: 'Fair value',  color: C.dim,   desc: 'Price inside the value area around POC — balanced, no edge from volume structure.' },
+      { range: 'Lower VA', label: 'Below value', color: C.green, desc: 'Price below the high-volume node — discount to fair value, watch for reversion up to POC.' },
+    ],
+    why: 'Price tends to revert toward the most-traded level. The value-area position tells you whether the stock is rich or cheap relative to where volume actually changed hands.',
+  },
+
+  range52w: {
+    title: '52-Week Range',
+    subtitle: 'Position within the yearly range',
+    category: 'Price Structure',
+    description: 'Where the current price sits between the 52-week low and high. Near the high signals momentum and strength; near the low signals distress or potential value.',
+    levels: [
+      { range: '> 80%',   label: 'Near high', color: C.green, desc: 'Top of the yearly range — strong momentum, but limited room before all-time resistance.' },
+      { range: '20–80%',  label: 'Mid-range', color: C.dim,   desc: 'Middle of the range — no strong positional edge either way.' },
+      { range: '< 20%',   label: 'Near low',  color: C.red,   desc: 'Near the 52-week low — either deep value or a falling knife. Confirm with fundamentals before buying weakness.' },
+    ],
+    why: 'Positional context. Breakouts from near the 52w high carry momentum tailwinds; names near the low need a catalyst and quality confirmation to avoid catching a falling knife.',
   },
 
   adx: {
