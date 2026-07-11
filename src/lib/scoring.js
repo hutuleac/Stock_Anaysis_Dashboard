@@ -10,6 +10,8 @@ let _marketContext = null;
 
 export function setMarketContext(ctx) { _marketContext = ctx; }
 
+export function getMarketContext() { return _marketContext; }
+
 // ─── NEWS SENTIMENT ────────────────────────────────────────────────────────────
 
 const BULLISH_WORDS = ['beat', 'beats', 'raised', 'upgrade', 'upgraded', 'buy', 'strong', 'record', 'growth', 'profit', 'surge', 'rally', 'bullish', 'outperform', 'exceed', 'exceeded', 'positive', 'boost'];
