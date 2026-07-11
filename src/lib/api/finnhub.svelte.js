@@ -13,6 +13,22 @@ const CACHE_TTL = {
   btc: 900,                // BTC risk-appetite proxy (Binance public API) — 15 min
 };
 
+// Prefix → max age (seconds) used ONLY to reclaim space under quota pressure.
+// Mirrors the read TTLs; quote gets a 1h grace so genuinely old quotes are freed
+// without churning the ones hydrateFromCache relies on at startup.
+const EVICT_TTL = {
+  'fh_quote_':        3600,
+  'fh_earnings_':     CACHE_TTL.earnings,
+  'fh_fundamentals_': CACHE_TTL.fundamentals,
+  'fh_profile_':      CACHE_TTL.profile,
+  'fh_news_':         CACHE_TTL.news,
+  'fh_smart_money_':  CACHE_TTL.smart_money,
+  'fh_candles_':      CACHE_TTL.candles,
+  'td_tdquote_':      60,
+  'td_ts_1day_':      86400,
+  'td_ts_1h_':        900,
+};
+
 const CALL_DELAY_MS = 100;
 const FH_MIN_INTERVAL = 1100; // Finnhub free: 60 calls/min → enforce 1.1s between live calls
 let _fhLastCall = 0;
@@ -57,27 +73,64 @@ export function isStorageFull() { return storageFullFlag; }
 export function clearStorageFullFlag() { storageFullFlag = false; }
 
 function writeCache(key, data) {
+  const payload = JSON.stringify({ data, ts: Date.now() });
   try {
-    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+    localStorage.setItem(key, payload);
   } catch (e) {
-    if (e.name === 'QuotaExceededError') storageFullFlag = true;
-    else console.warn('localStorage write failed:', e);
+    if (e?.name === 'QuotaExceededError') {
+      // Self-heal: drop expired entries and retry once before warning the user.
+      if (evictStaleCache() > 0) {
+        try { localStorage.setItem(key, payload); return; }
+        catch { /* still full even after eviction */ }
+      }
+      storageFullFlag = true;
+    } else {
+      console.warn('localStorage write failed:', e);
+    }
   }
 }
 
-// Per-symbol cache key prefixes across Finnhub + TwelveData. Anything after the
-// prefix that isn't one of these tickers is orphaned — left over from a symbol
-// that used to be in the watchlist or ETF proxy list and was later removed.
+// Reclaims space by deleting cache entries already past their TTL. Called on
+// QuotaExceededError before surfacing the storage-full banner, so a full store
+// self-heals instead of silently dropping fresh writes. Shared by the TwelveData
+// module's writeCache too. Entries that are unparseable or lack a numeric ts are
+// treated as junk and removed. Returns the number of keys freed.
+export function evictStaleCache() {
+  const now = Date.now();
+  const prefixes = Object.keys(EVICT_TTL);
+  const toDelete = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      const prefix = prefixes.find(p => key.startsWith(p));
+      if (!prefix) continue;
+      let ts;
+      try { ts = JSON.parse(localStorage.getItem(key))?.ts; }
+      catch { toDelete.push(key); continue; }
+      if (typeof ts !== 'number' || now - ts >= EVICT_TTL[prefix] * 1000) toDelete.push(key);
+    }
+    toDelete.forEach(k => localStorage.removeItem(k));
+  } catch { /* noop */ }
+  return toDelete.length;
+}
+
+// Per-symbol cache key prefixes across Finnhub + TwelveData + score history.
+// Anything after the prefix that isn't one of these tickers is orphaned — left
+// over from a symbol that used to be in the watchlist or ETF proxy list and was
+// later removed. 'sv_' (score-velocity history) is included because its 7-day
+// self-trim only runs on write, which stops the moment a ticker is removed —
+// leaving the entry to linger forever otherwise.
 const PRUNE_PREFIXES = [
   'fh_quote_', 'fh_earnings_', 'fh_fundamentals_', 'fh_news_', 'fh_smart_money_', 'fh_candles_',
-  'td_tdquote_', 'td_ts_1day_', 'td_ts_1h_',
+  'td_tdquote_', 'td_ts_1day_', 'td_ts_1h_', 'sv_',
 ];
 
-// Deletes cached quotes/candles/fundamentals/news for symbols no longer tracked.
-// Called once per app load so localStorage doesn't grow unbounded as tickers get
-// added and removed over time — the actual cause of "storage full" recurring.
-// Never touches macro data (fh_feargreed, fh_btc, fred_*), notes, watchlist,
-// portfolio, score history, or API keys — those aren't prefixed per-symbol here.
+// Deletes cached quotes/candles/fundamentals/news + frozen score history for
+// symbols no longer tracked. Called once per app load so localStorage doesn't
+// grow unbounded as tickers get added and removed over time — the actual cause
+// of "storage full" recurring. Never touches macro data (fh_feargreed, fh_btc,
+// fred_*), notes, watchlist, portfolio, or API keys — those aren't per-symbol.
 export function pruneOrphanedCache(validSymbols) {
   const keep = new Set(validSymbols.map(s => s.toUpperCase()));
   let removed = 0;
