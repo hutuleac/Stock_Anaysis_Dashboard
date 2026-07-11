@@ -2,12 +2,14 @@
   import { tick } from 'svelte';
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory } from '../scoring.js';
+  import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory, getMarketContext } from '../scoring.js';
   import { proximityTo52wHigh } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
   import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
+  import { buildStockSnapshot, buildPrompt } from '../export.js';
+  import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
   import NewsPanel from './NewsPanel.svelte';
@@ -47,6 +49,35 @@
   let bulkText = $state('');
   let bulkAdding = $state(false);
   let bulkStatus = $state('');
+  let copyState = $state(null);      // symbol that just copied ('ok') or failed ('fail')
+  let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
+
+  async function copyForAI(ticker, templateId) {
+    const tpl = getTemplate(templateId ?? getDefaultId());
+    if (!tpl) return;
+    const d = getTickerData(ticker.symbol);
+    const snapshot = buildStockSnapshot(ticker, d, getMarketContext());
+    const text = buildPrompt(tpl.body, snapshot, ticker.symbol);
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for non-secure contexts / older browsers
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        ta.remove();
+      } catch { ok = false; }
+    }
+    copyState = { symbol: ticker.symbol, ok };
+    copyMenuSymbol = null;
+    setTimeout(() => { copyState = null; }, 1500);
+  }
 
   async function handleBulkAdd() {
     const symbols = bulkText.toUpperCase().split(/[\s,;\n]+/).map(s => s.trim()).filter(s => /^[A-Z]{1,5}$/.test(s));
@@ -736,6 +767,28 @@
               <tr>
                 <td colspan="9" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
+                  <!-- AI export toolbar -->
+                  <div class="flex items-center justify-end gap-1 mb-3 relative">
+                    <button
+                      class="text-xs px-3 py-1.5 rounded-lg bg-surface-700 border border-border text-text-secondary hover:text-text-primary transition-colors"
+                      onclick={() => copyForAI(ticker)}
+                    >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
+                    <button
+                      class="text-xs px-2 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
+                      title="Choose prompt template"
+                      onclick={() => { copyMenuSymbol = copyMenuSymbol === ticker.symbol ? null : ticker.symbol; }}
+                    >▾</button>
+                    {#if copyMenuSymbol === ticker.symbol}
+                      <div class="absolute right-0 top-full mt-1 z-30 bg-surface-700 border border-border rounded-lg shadow-lg py-1 min-w-44">
+                        {#each getTemplates() as tpl (tpl.id)}
+                          <button
+                            class="block w-full text-left text-xs px-3 py-1.5 hover:bg-surface-600 transition-colors {tpl.id === getDefaultId() ? 'text-text-primary font-semibold' : 'text-text-secondary'}"
+                            onclick={() => copyForAI(ticker, tpl.id)}
+                          >{tpl.name}{tpl.id === getDefaultId() ? ' ·' : ''}</button>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
                       <PriceChart symbol={ticker.symbol} />
                       <NewsPanel symbol={ticker.symbol} />
