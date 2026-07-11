@@ -579,7 +579,7 @@
           <span class="hidden sm:inline">Stock Dashboard</span>
           <span class="sm:hidden">StockDash</span>
         </h1>
-        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded hidden sm:inline">v0.16</span>
+        <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded hidden sm:inline">v0.17</span>
 
         <!-- Stocks | ETFs view toggle -->
         <div class="flex items-center gap-0.5 bg-surface-700/60 rounded-lg p-0.5">
