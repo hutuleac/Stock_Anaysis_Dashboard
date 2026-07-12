@@ -393,6 +393,144 @@
     <div class="fixed inset-0 z-40" onclick={() => { searchOpen = false; searchResults = []; }}></div>
   {/if}
 
+  {#snippet expandedPanel(ticker, data, score, variant)}
+    {@const quote = data?.quote?.data}
+    {@const scoreHistory = getScoreHistory(ticker.symbol)}
+    <!-- AI export toolbar -->
+    <div class="flex items-center justify-end gap-1 mb-3 relative">
+      <button
+        class="text-xs px-3 py-1.5 rounded-lg bg-surface-700 border border-border text-text-secondary hover:text-text-primary transition-colors"
+        onclick={() => copyForAI(ticker)}
+      >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
+      <button
+        class="text-xs px-2 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
+        title="Choose prompt template"
+        onclick={() => { copyMenuSymbol = copyMenuSymbol === ticker.symbol ? null : ticker.symbol; }}
+      >▾</button>
+      {#if copyMenuSymbol === ticker.symbol}
+        <div class="absolute right-0 top-full mt-1 z-30 bg-surface-700 border border-border rounded-lg shadow-lg py-1 min-w-44">
+          {#each getTemplates() as tpl (tpl.id)}
+            <button
+              class="block w-full text-left text-xs px-3 py-1.5 hover:bg-surface-600 transition-colors {tpl.id === getDefaultId() ? 'text-text-primary font-semibold' : 'text-text-secondary'}"
+              onclick={() => copyForAI(ticker, tpl.id)}
+            >{tpl.name}{tpl.id === getDefaultId() ? ' ·' : ''}</button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+    <!-- Click outside to close dropdown -->
+    {#if copyMenuSymbol === ticker.symbol}
+      <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+      <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
+    {/if}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
+        <PriceChart symbol={ticker.symbol} />
+        <NewsPanel symbol={ticker.symbol} />
+      </div>
+      <div class="mb-4">
+        <FundamentalsBar symbol={ticker.symbol} />
+      </div>
+      <!-- Score History Chart -->
+      {#if scoreHistory.length >= 2}
+        {@const SH = 48} {@const SW = 600}
+        {@const minH = Math.min(...scoreHistory.map(h => h.score))}
+        {@const maxH = Math.max(...scoreHistory.map(h => h.score))}
+        {@const rangeH = Math.max(maxH - minH, 15)}
+        {@const hPts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * SW},${SH - ((h.score - minH) / rangeH) * (SH - 8) - 4}`).join(' ')}
+        {@const lastScore = scoreHistory[scoreHistory.length - 1]?.score}
+        {@const firstScore = scoreHistory[0]?.score}
+        {@const scoreDelta = lastScore - firstScore}
+        {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
+        {@const lastPt = hPts.split(' ').pop()}
+        {@const lastPtCoords = lastPt ? lastPt.split(',').map(Number) : null}
+        <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.scoreHistory}>Score History</p>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="text-text-muted font-mono">{firstScore} → {lastScore}</span>
+              <span class="font-mono font-semibold {scoreDelta > 0 ? 'text-bull-strong' : scoreDelta < 0 ? 'text-bear-strong' : 'text-text-muted'}">
+                {scoreDelta > 0 ? '↑ +' : scoreDelta < 0 ? '↓ ' : '→ '}{scoreDelta}
+              </span>
+              <span class="text-text-muted">{scoreHistory.length} snapshots</span>
+            </div>
+          </div>
+          <svg viewBox="0 0 {SW} {SH}" class="w-full" style="height: {SH}px" preserveAspectRatio="none">
+            <!-- 50-point reference line -->
+            {#if refY > 0 && refY < SH}
+              <line x1="0" y1={refY} x2={SW} y2={refY} stroke="#ffffff18" stroke-width="1" stroke-dasharray="4,4"/>
+            {/if}
+            <!-- Fill area -->
+            <polygon
+              points="{hPts} {SW},{SH} 0,{SH}"
+              fill={scoreDelta >= 0 ? '#22c55e18' : '#ef444418'}
+            />
+            <!-- Line -->
+            <polyline
+              points={hPts}
+              fill="none"
+              stroke={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <!-- Latest dot -->
+            {#if lastPtCoords}
+              <circle cx={lastPtCoords[0]} cy={lastPtCoords[1]} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
+            {/if}
+          </svg>
+        </div>
+      {/if}
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <EntryPanel symbol={ticker.symbol} />
+      </div>
+
+      <!-- Per-ticker notes -->
+      <div class="mt-4 border-t border-border/30 pt-4">
+        <label class="block">
+          <span class="text-[13px] text-text-muted uppercase tracking-wider mb-1.5 block">
+            Notes — {ticker.symbol}
+          </span>
+          <textarea
+            class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-uncertain/50 resize-none font-mono leading-relaxed"
+            rows="3"
+            placeholder="Thesis, key levels, catalysts, reminders…"
+            value={getNotes(ticker.symbol)}
+            oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
+          ></textarea>
+        </label>
+      </div>
+    {#if variant === 'mobile'}
+      <!-- Alerts — mobile has no 🔔 column; give it inline management -->
+      <div class="mt-4 border-t border-border/30 pt-3">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-text-muted uppercase tracking-wider">Alerts</span>
+          {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
+            {@const distPct = quote?.c ? ((alert.targetPrice - quote.c) / quote.c * 100) : null}
+            <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
+              {alert.direction} ${alert.targetPrice.toFixed(2)}
+              {#if distPct !== null}<span class="font-mono">({distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%)</span>{/if}
+              <button class="hover:text-danger ml-1 p-1" onclick={() => removeAlert(alert.id)}>✕</button>
+            </span>
+          {/each}
+          <select class="text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary" bind:value={alertDir}>
+            <option value="above">above</option>
+            <option value="below">below</option>
+          </select>
+          <input type="number" step="0.01" placeholder="price"
+            class="w-20 text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary font-mono"
+            bind:value={alertPrice} />
+          <button class="text-xs px-3 py-1.5 bg-warning/20 text-warning rounded"
+            onclick={() => { if (alertPrice) { addAlert(ticker.symbol, alertPrice, alertDir); alertPrice = ''; } }}
+          >Set</button>
+        </div>
+      </div>
+      <button class="mt-3 text-xs text-text-muted hover:text-danger"
+        onclick={() => removeTicker(ticker.symbol)}
+      >✕ Remove {ticker.symbol} from watchlist</button>
+    {/if}
+  {/snippet}
+
   <!-- ── Mobile card layout (< sm) ─────────────────────────────────────────── -->
   {#if getTickers().length > 0}
     <div class="block sm:hidden space-y-2 mb-4">
@@ -496,20 +634,7 @@
         <!-- Mobile expansion (same detail panel) -->
         {#if isSelected}
           <div class="bg-surface-800 border border-border/50 rounded-lg px-4 py-4 -mt-1">
-            <PriceChart symbol={ticker.symbol} />
-            <div class="mt-4"><FundamentalsBar symbol={ticker.symbol} /></div>
-            <div class="mt-4">
-              <EntryPanel symbol={ticker.symbol} />
-            </div>
-            <div class="mt-3 border-t border-border/30 pt-3">
-              <textarea
-                class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none resize-none font-mono"
-                rows="2"
-                placeholder="Notes…"
-                value={getNotes(ticker.symbol)}
-                oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
-              ></textarea>
-            </div>
+            {@render expandedPanel(ticker, data, score, 'mobile')}
           </div>
         {/if}
       {/each}
@@ -767,110 +892,7 @@
               <tr>
                 <td colspan="9" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
-                  <!-- AI export toolbar -->
-                  <div class="flex items-center justify-end gap-1 mb-3 relative">
-                    <button
-                      class="text-xs px-3 py-1.5 rounded-lg bg-surface-700 border border-border text-text-secondary hover:text-text-primary transition-colors"
-                      onclick={() => copyForAI(ticker)}
-                    >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
-                    <button
-                      class="text-xs px-2 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
-                      title="Choose prompt template"
-                      onclick={() => { copyMenuSymbol = copyMenuSymbol === ticker.symbol ? null : ticker.symbol; }}
-                    >▾</button>
-                    {#if copyMenuSymbol === ticker.symbol}
-                      <div class="absolute right-0 top-full mt-1 z-30 bg-surface-700 border border-border rounded-lg shadow-lg py-1 min-w-44">
-                        {#each getTemplates() as tpl (tpl.id)}
-                          <button
-                            class="block w-full text-left text-xs px-3 py-1.5 hover:bg-surface-600 transition-colors {tpl.id === getDefaultId() ? 'text-text-primary font-semibold' : 'text-text-secondary'}"
-                            onclick={() => copyForAI(ticker, tpl.id)}
-                          >{tpl.name}{tpl.id === getDefaultId() ? ' ·' : ''}</button>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
-                  <!-- Click outside to close dropdown -->
-                  {#if copyMenuSymbol === ticker.symbol}
-                    <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-                    <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
-                  {/if}
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
-                      <PriceChart symbol={ticker.symbol} />
-                      <NewsPanel symbol={ticker.symbol} />
-                    </div>
-                    <div class="mb-4">
-                      <FundamentalsBar symbol={ticker.symbol} />
-                    </div>
-                    <!-- Score History Chart -->
-                    {#if scoreHistory.length >= 2}
-                      {@const SH = 48} {@const SW = 600}
-                      {@const minH = Math.min(...scoreHistory.map(h => h.score))}
-                      {@const maxH = Math.max(...scoreHistory.map(h => h.score))}
-                      {@const rangeH = Math.max(maxH - minH, 15)}
-                      {@const hPts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * SW},${SH - ((h.score - minH) / rangeH) * (SH - 8) - 4}`).join(' ')}
-                      {@const lastScore = scoreHistory[scoreHistory.length - 1]?.score}
-                      {@const firstScore = scoreHistory[0]?.score}
-                      {@const scoreDelta = lastScore - firstScore}
-                      {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
-                      {@const lastPt = hPts.split(' ').pop()}
-                      {@const lastPtCoords = lastPt ? lastPt.split(',').map(Number) : null}
-                      <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
-                        <div class="flex items-center justify-between mb-2">
-                          <p class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.scoreHistory}>Score History</p>
-                          <div class="flex items-center gap-3 text-xs">
-                            <span class="text-text-muted font-mono">{firstScore} → {lastScore}</span>
-                            <span class="font-mono font-semibold {scoreDelta > 0 ? 'text-bull-strong' : scoreDelta < 0 ? 'text-bear-strong' : 'text-text-muted'}">
-                              {scoreDelta > 0 ? '↑ +' : scoreDelta < 0 ? '↓ ' : '→ '}{scoreDelta}
-                            </span>
-                            <span class="text-text-muted">{scoreHistory.length} snapshots</span>
-                          </div>
-                        </div>
-                        <svg viewBox="0 0 {SW} {SH}" class="w-full" style="height: {SH}px" preserveAspectRatio="none">
-                          <!-- 50-point reference line -->
-                          {#if refY > 0 && refY < SH}
-                            <line x1="0" y1={refY} x2={SW} y2={refY} stroke="#ffffff18" stroke-width="1" stroke-dasharray="4,4"/>
-                          {/if}
-                          <!-- Fill area -->
-                          <polygon
-                            points="{hPts} {SW},{SH} 0,{SH}"
-                            fill={scoreDelta >= 0 ? '#22c55e18' : '#ef444418'}
-                          />
-                          <!-- Line -->
-                          <polyline
-                            points={hPts}
-                            fill="none"
-                            stroke={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                          <!-- Latest dot -->
-                          {#if lastPtCoords}
-                            <circle cx={lastPtCoords[0]} cy={lastPtCoords[1]} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
-                          {/if}
-                        </svg>
-                      </div>
-                    {/if}
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <EntryPanel symbol={ticker.symbol} />
-                    </div>
-
-                    <!-- Per-ticker notes -->
-                    <div class="mt-4 border-t border-border/30 pt-4">
-                      <label class="block">
-                        <span class="text-[13px] text-text-muted uppercase tracking-wider mb-1.5 block">
-                          Notes — {ticker.symbol}
-                        </span>
-                        <textarea
-                          class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-uncertain/50 resize-none font-mono leading-relaxed"
-                          rows="3"
-                          placeholder="Thesis, key levels, catalysts, reminders…"
-                          value={getNotes(ticker.symbol)}
-                          oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
-                        ></textarea>
-                      </label>
-                    </div>
+                    {@render expandedPanel(ticker, data, score, 'desktop')}
                   </div>
                 </td>
               </tr>
