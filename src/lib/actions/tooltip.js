@@ -4,6 +4,8 @@
 
 import { getTooltip, showTooltip, moveTooltip, hideTooltip } from '../stores/tooltip.svelte.js';
 
+let openedBy = null;
+
 export function tooltip(node, getDef) {
   function resolve() {
     return typeof getDef === 'function' ? getDef() : getDef;
@@ -29,9 +31,9 @@ export function tooltip(node, getDef) {
   function onTap(e) {
     if (typeof matchMedia === 'undefined' || !matchMedia('(hover: none)').matches) return;
     e.stopPropagation();
-    if (getTooltip().visible) { hideTooltip(); return; }
+    if (getTooltip().visible && openedBy === node) { hideTooltip(); openedBy = null; return; }
     const content = resolve();
-    if (content) showTooltip(content, e.clientX, e.clientY);
+    if (content) { showTooltip(content, e.clientX, e.clientY); openedBy = node; }
   }
 
   node.addEventListener('mouseenter', onEnter);
@@ -46,6 +48,7 @@ export function tooltip(node, getDef) {
       node.removeEventListener('mousemove', onMove);
       node.removeEventListener('mouseleave', onLeave);
       node.removeEventListener('click', onTap);
+      if (openedBy === node) openedBy = null;
       hideTooltip();
     },
   };
