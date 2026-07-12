@@ -84,4 +84,25 @@ describe('tooltip action — touch', () => {
     expect(node.has('click')).toBe(false);
     expect(getTooltip().visible).toBe(false);
   });
+
+  it('tapping a second element replaces the open tooltip in one tap (no dead tap)', () => {
+    const nodeA = makeNode();
+    const nodeB = makeNode();
+    tooltip(nodeA, { title: 'A' });
+    tooltip(nodeB, { title: 'B' });
+    nodeA.fire('click', tapEvent());
+    nodeB.fire('click', tapEvent());
+    const tip = getTooltip();
+    expect(tip.visible).toBe(true);
+    expect(tip.content).toEqual({ title: 'B' });
+  });
+
+  it('reopens after an external close without a stale openedBy blocking it', () => {
+    const node = makeNode();
+    tooltip(node, DEF);
+    node.fire('click', tapEvent());
+    hideTooltip();
+    node.fire('click', tapEvent());
+    expect(getTooltip().visible).toBe(true);
+  });
 });
