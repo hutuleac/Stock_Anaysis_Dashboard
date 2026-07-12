@@ -52,6 +52,10 @@
   let copyState = $state(null);      // symbol that just copied ('ok') or failed ('fail')
   let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
 
+  // Mobile expansion sections — per-session; state carries across ticker opens.
+  let openSections = $state({ chart: true, indicators: true, entry: false, news: false, notes: false });
+  function toggleSection(k) { openSections[k] = !openSections[k]; }
+
   async function copyForAI(ticker, templateId) {
     const tpl = getTemplate(templateId ?? getDefaultId());
     if (!tpl) return;
@@ -429,37 +433,110 @@
     {/if}
   {/snippet}
 
+  {#snippet sectionHeader(key, label)}
+    <button
+      class="w-full flex items-center justify-between py-2.5 text-left text-xs font-semibold text-text-muted uppercase tracking-wider"
+      onclick={() => toggleSection(key)}
+    >{label}<span class="text-text-muted">{openSections[key] ? '▾' : '▸'}</span></button>
+  {/snippet}
+
+  {#snippet scoreHistoryBlock(scoreHistory)}
+    {@const SH = 48} {@const SW = 600}
+    {@const minH = Math.min(...scoreHistory.map(h => h.score))}
+    {@const maxH = Math.max(...scoreHistory.map(h => h.score))}
+    {@const rangeH = Math.max(maxH - minH, 15)}
+    {@const hPts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * SW},${SH - ((h.score - minH) / rangeH) * (SH - 8) - 4}`).join(' ')}
+    {@const lastScore = scoreHistory[scoreHistory.length - 1]?.score}
+    {@const firstScore = scoreHistory[0]?.score}
+    {@const scoreDelta = lastScore - firstScore}
+    {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
+    {@const lastPt = hPts.split(' ').pop()}
+    {@const lastPtCoords = lastPt ? lastPt.split(',').map(Number) : null}
+    <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.scoreHistory}>Score History</p>
+        <div class="flex items-center gap-3 text-xs">
+          <span class="text-text-muted font-mono">{firstScore} → {lastScore}</span>
+          <span class="font-mono font-semibold {scoreDelta > 0 ? 'text-bull-strong' : scoreDelta < 0 ? 'text-bear-strong' : 'text-text-muted'}">
+            {scoreDelta > 0 ? '↑ +' : scoreDelta < 0 ? '↓ ' : '→ '}{scoreDelta}
+          </span>
+          <span class="text-text-muted">{scoreHistory.length} snapshots</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 {SW} {SH}" class="w-full" style="height: {SH}px" preserveAspectRatio="none">
+        <!-- 50-point reference line -->
+        {#if refY > 0 && refY < SH}
+          <line x1="0" y1={refY} x2={SW} y2={refY} stroke="#ffffff18" stroke-width="1" stroke-dasharray="4,4"/>
+        {/if}
+        <!-- Fill area -->
+        <polygon
+          points="{hPts} {SW},{SH} 0,{SH}"
+          fill={scoreDelta >= 0 ? '#22c55e18' : '#ef444418'}
+        />
+        <!-- Line -->
+        <polyline
+          points={hPts}
+          fill="none"
+          stroke={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <!-- Latest dot -->
+        {#if lastPtCoords}
+          <circle cx={lastPtCoords[0]} cy={lastPtCoords[1]} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
+        {/if}
+      </svg>
+    </div>
+  {/snippet}
+
+  {#snippet notesBlock(ticker)}
+    <label class="block">
+      <span class="text-[13px] text-text-muted uppercase tracking-wider mb-1.5 block">
+        Notes — {ticker.symbol}
+      </span>
+      <textarea
+        class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-uncertain/50 resize-none font-mono leading-relaxed"
+        rows="3"
+        placeholder="Thesis, key levels, catalysts, reminders…"
+        value={getNotes(ticker.symbol)}
+        oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
+      ></textarea>
+    </label>
+  {/snippet}
+
   {#snippet expandedPanel(ticker, data, score, variant)}
     {@const quote = data?.quote?.data}
     {@const scoreHistory = getScoreHistory(ticker.symbol)}
-    <!-- AI export toolbar -->
-    <div class="flex items-center justify-end gap-1 mb-3 relative">
-      <button
-        class="text-xs px-3 py-1.5 rounded-lg bg-surface-700 border border-border text-text-secondary hover:text-text-primary transition-colors"
-        onclick={() => copyForAI(ticker)}
-      >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
-      <button
-        class="text-xs px-2 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
-        title="Choose prompt template"
-        onclick={() => { copyMenuSymbol = copyMenuSymbol === ticker.symbol ? null : ticker.symbol; }}
-      >▾</button>
+    {#if variant === 'desktop'}
+      <!-- AI export toolbar -->
+      <div class="flex items-center justify-end gap-1 mb-3 relative">
+        <button
+          class="text-xs px-3 py-1.5 rounded-lg bg-surface-700 border border-border text-text-secondary hover:text-text-primary transition-colors"
+          onclick={() => copyForAI(ticker)}
+        >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
+        <button
+          class="text-xs px-2 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
+          title="Choose prompt template"
+          onclick={() => { copyMenuSymbol = copyMenuSymbol === ticker.symbol ? null : ticker.symbol; }}
+        >▾</button>
+        {#if copyMenuSymbol === ticker.symbol}
+          <div class="absolute right-0 top-full mt-1 z-30 bg-surface-700 border border-border rounded-lg shadow-lg py-1 min-w-44">
+            {#each getTemplates() as tpl (tpl.id)}
+              <button
+                class="block w-full text-left text-xs px-3 py-1.5 hover:bg-surface-600 transition-colors {tpl.id === getDefaultId() ? 'text-text-primary font-semibold' : 'text-text-secondary'}"
+                onclick={() => copyForAI(ticker, tpl.id)}
+              >{tpl.name}{tpl.id === getDefaultId() ? ' ·' : ''}</button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <!-- Click outside to close dropdown -->
       {#if copyMenuSymbol === ticker.symbol}
-        <div class="absolute right-0 top-full mt-1 z-30 bg-surface-700 border border-border rounded-lg shadow-lg py-1 min-w-44">
-          {#each getTemplates() as tpl (tpl.id)}
-            <button
-              class="block w-full text-left text-xs px-3 py-1.5 hover:bg-surface-600 transition-colors {tpl.id === getDefaultId() ? 'text-text-primary font-semibold' : 'text-text-secondary'}"
-              onclick={() => copyForAI(ticker, tpl.id)}
-            >{tpl.name}{tpl.id === getDefaultId() ? ' ·' : ''}</button>
-          {/each}
-        </div>
+        <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+        <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
       {/if}
-    </div>
-    <!-- Click outside to close dropdown -->
-    {#if copyMenuSymbol === ticker.symbol}
-      <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-      <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
-    {/if}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
         <PriceChart symbol={ticker.symbol} />
         <NewsPanel symbol={ticker.symbol} />
       </div>
@@ -468,53 +545,7 @@
       </div>
       <!-- Score History Chart -->
       {#if scoreHistory.length >= 2}
-        {@const SH = 48} {@const SW = 600}
-        {@const minH = Math.min(...scoreHistory.map(h => h.score))}
-        {@const maxH = Math.max(...scoreHistory.map(h => h.score))}
-        {@const rangeH = Math.max(maxH - minH, 15)}
-        {@const hPts = scoreHistory.map((h, i) => `${(i / (scoreHistory.length - 1)) * SW},${SH - ((h.score - minH) / rangeH) * (SH - 8) - 4}`).join(' ')}
-        {@const lastScore = scoreHistory[scoreHistory.length - 1]?.score}
-        {@const firstScore = scoreHistory[0]?.score}
-        {@const scoreDelta = lastScore - firstScore}
-        {@const refY = SH - ((50 - minH) / rangeH) * (SH - 8) - 4}
-        {@const lastPt = hPts.split(' ').pop()}
-        {@const lastPtCoords = lastPt ? lastPt.split(',').map(Number) : null}
-        <div class="mb-4 bg-surface-700/50 rounded-lg px-4 py-3 border border-border/40">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.scoreHistory}>Score History</p>
-            <div class="flex items-center gap-3 text-xs">
-              <span class="text-text-muted font-mono">{firstScore} → {lastScore}</span>
-              <span class="font-mono font-semibold {scoreDelta > 0 ? 'text-bull-strong' : scoreDelta < 0 ? 'text-bear-strong' : 'text-text-muted'}">
-                {scoreDelta > 0 ? '↑ +' : scoreDelta < 0 ? '↓ ' : '→ '}{scoreDelta}
-              </span>
-              <span class="text-text-muted">{scoreHistory.length} snapshots</span>
-            </div>
-          </div>
-          <svg viewBox="0 0 {SW} {SH}" class="w-full" style="height: {SH}px" preserveAspectRatio="none">
-            <!-- 50-point reference line -->
-            {#if refY > 0 && refY < SH}
-              <line x1="0" y1={refY} x2={SW} y2={refY} stroke="#ffffff18" stroke-width="1" stroke-dasharray="4,4"/>
-            {/if}
-            <!-- Fill area -->
-            <polygon
-              points="{hPts} {SW},{SH} 0,{SH}"
-              fill={scoreDelta >= 0 ? '#22c55e18' : '#ef444418'}
-            />
-            <!-- Line -->
-            <polyline
-              points={hPts}
-              fill="none"
-              stroke={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <!-- Latest dot -->
-            {#if lastPtCoords}
-              <circle cx={lastPtCoords[0]} cy={lastPtCoords[1]} r="3" fill={scoreDelta >= 0 ? '#22c55e' : '#ef4444'}/>
-            {/if}
-          </svg>
-        </div>
+        {@render scoreHistoryBlock(scoreHistory)}
       {/if}
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -523,47 +554,91 @@
 
       <!-- Per-ticker notes -->
       <div class="mt-4 border-t border-border/30 pt-4">
-        <label class="block">
-          <span class="text-[13px] text-text-muted uppercase tracking-wider mb-1.5 block">
-            Notes — {ticker.symbol}
-          </span>
-          <textarea
-            class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-uncertain/50 resize-none font-mono leading-relaxed"
-            rows="3"
-            placeholder="Thesis, key levels, catalysts, reminders…"
-            value={getNotes(ticker.symbol)}
-            oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
-          ></textarea>
-        </label>
+        {@render notesBlock(ticker)}
       </div>
-    {#if variant === 'mobile'}
-      <!-- Alerts — mobile has no 🔔 column; give it inline management -->
-      <div class="mt-4 border-t border-border/30 pt-3">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs text-text-muted uppercase tracking-wider">Alerts</span>
-          {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
-            {@const distPct = quote?.c ? ((alert.targetPrice - quote.c) / quote.c * 100) : null}
-            <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
-              {alert.direction} ${alert.targetPrice.toFixed(2)}
-              {#if distPct !== null}<span class="font-mono">({distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%)</span>{/if}
-              <button class="hover:text-danger ml-1 p-1" onclick={() => removeAlert(alert.id)}>✕</button>
-            </span>
-          {/each}
-          <select class="text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary" bind:value={alertDir}>
-            <option value="above">above</option>
-            <option value="below">below</option>
-          </select>
-          <input type="number" step="0.01" placeholder="price"
-            class="w-20 text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary font-mono"
-            bind:value={alertPrice} />
-          <button class="text-xs px-3 py-1.5 bg-warning/20 text-warning rounded"
-            onclick={() => { if (alertPrice) { addAlert(ticker.symbol, alertPrice, alertDir); alertPrice = ''; } }}
-          >Set</button>
-        </div>
+    {:else}
+      <!-- Mobile: score-history always on top, then collapsible sections -->
+      {#if scoreHistory.length >= 2}
+        {@render scoreHistoryBlock(scoreHistory)}
+      {/if}
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('chart', 'Chart')}
+        {#if openSections.chart}
+          <div class="pb-3"><PriceChart symbol={ticker.symbol} /></div>
+        {/if}
       </div>
-      <button class="mt-3 text-xs text-text-muted hover:text-danger"
-        onclick={() => removeTicker(ticker.symbol)}
-      >✕ Remove {ticker.symbol} from watchlist</button>
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('indicators', 'Indicators')}
+        {#if openSections.indicators}
+          <div class="pb-3"><FundamentalsBar symbol={ticker.symbol} /></div>
+        {/if}
+      </div>
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('entry', 'Entry Plan')}
+        {#if openSections.entry}
+          <div class="pb-3"><EntryPanel symbol={ticker.symbol} /></div>
+        {/if}
+      </div>
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('news', 'News')}
+        {#if openSections.news}
+          <div class="pb-3"><NewsPanel symbol={ticker.symbol} /></div>
+        {/if}
+      </div>
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('notes', 'Notes')}
+        {#if openSections.notes}
+          <div class="pb-3 space-y-3">
+            {@render notesBlock(ticker)}
+            <!-- Alerts — mobile has no 🔔 column; give it inline management -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs text-text-muted uppercase tracking-wider">Alerts</span>
+              {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
+                {@const distPct = quote?.c ? ((alert.targetPrice - quote.c) / quote.c * 100) : null}
+                <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
+                  {alert.direction} ${alert.targetPrice.toFixed(2)}
+                  {#if distPct !== null}<span class="font-mono">({distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%)</span>{/if}
+                  <button class="hover:text-danger ml-1 p-1" onclick={() => removeAlert(alert.id)}>✕</button>
+                </span>
+              {/each}
+              {#if alertSymbol === ticker.symbol}
+                <select class="text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary" bind:value={alertDir}>
+                  <option value="above">above</option>
+                  <option value="below">below</option>
+                </select>
+                <input type="number" step="0.01" placeholder="price"
+                  class="w-20 text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary font-mono"
+                  bind:value={alertPrice} />
+                <button class="text-xs px-3 py-1.5 bg-warning/20 text-warning rounded"
+                  onclick={() => { if (alertPrice) { addAlert(ticker.symbol, alertPrice, alertDir); alertPrice = ''; alertSymbol = null; } }}
+                >Set</button>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Sticky action bar -->
+      <div class="sticky bottom-0 -mx-4 -mb-4 mt-4 px-4 py-2.5 bg-surface-800 border-t border-border flex items-center gap-2">
+        <button class="flex-1 text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-secondary"
+          onclick={() => copyForAI(ticker)}
+        >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
+        <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-warning"
+          onclick={() => {
+            const opening = alertSymbol !== ticker.symbol;
+            alertSymbol = opening ? ticker.symbol : null;
+            if (opening) { alertPrice = ''; alertDir = 'above'; openSections.notes = true; }
+          }}
+        >🔔 Alert</button>
+        <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-danger"
+          onclick={() => removeTicker(ticker.symbol)}
+        >✕</button>
+      </div>
     {/if}
   {/snippet}
 
@@ -598,13 +673,19 @@
               {#if data?.quote?.stale}
                 <span class="text-warning text-xs" title="Stale data">⚠</span>
               {/if}
-              {@render tickerChips(data, 'sm')}
             </div>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
           </div>
 
-          <!-- Row 2: price + change + score -->
-          <div class="flex items-center justify-between">
+          <!-- Row 1.5: scrollable chip rail -->
+          {#if topSetup(data?.setups) || rsChip(data?.rs) || emaStackChip(data?.indicators) || high52wChip(data)}
+            <div class="flex gap-1.5 overflow-x-auto whitespace-nowrap -mx-1 px-1 pb-0.5 mt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {@render tickerChips(data, 'sm')}
+            </div>
+          {/if}
+
+          <!-- Row 2: price + change left; score anchor right -->
+          <div class="flex items-center justify-between mt-1.5">
             <div class="flex items-center gap-2">
               <span class="font-mono text-sm text-text-primary">{formatPrice(quote?.c)}</span>
               <span class="text-xs font-mono {(quote?.dp ?? 0) >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">{formatPct(quote?.dp)}</span>
@@ -612,18 +693,20 @@
             {#if score.score !== null}
               {@const ss = scoreStyle(score.score)}
               <div class="flex items-center gap-1.5 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: ss.label, color: ss.color } })}>
-                <span class="font-mono font-semibold text-sm">{score.score}</span>
-                {#if velocity}
-                  <span class="text-xs {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
-                    {velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}
-                  </span>
-                {/if}
-                {#if score.convictionLabel}
-                  <span class="text-[13px] text-text-muted">{score.convictionLabel}</span>
-                {/if}
-                {#if scoreZ != null}
-                  <span class="text-[12px] font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
-                {/if}
+                <span class="font-mono font-bold text-lg" style="color:{ss.color}">{score.score}</span>
+                <div class="flex flex-col items-start leading-tight text-[11px]">
+                  {#if velocity}
+                    <span class="{velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
+                      {velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}
+                    </span>
+                  {/if}
+                  {#if score.convictionLabel}
+                    <span class="text-text-muted">{score.convictionLabel}</span>
+                  {/if}
+                  {#if scoreZ != null}
+                    <span class="font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
+                  {/if}
+                </div>
               </div>
             {/if}
           </div>
@@ -726,7 +809,7 @@
                   {#if hasNotes(ticker.symbol)}
                     <span class="text-[13px] text-uncertain" title="Has notes">📝</span>
                   {/if}
-                  <span class="hidden md:inline">{@render tickerChips(data, 'xs')}</span>
+                  <span class="hidden md:inline-flex items-center gap-2">{@render tickerChips(data, 'xs')}</span>
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
               </td>
