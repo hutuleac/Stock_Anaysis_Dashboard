@@ -1,20 +1,21 @@
 // AI prompt templates — user-editable, seeded from DEFAULT_TEMPLATES.
 import { DEFAULT_TEMPLATES } from '../export.js';
 
-let templates = $state([]);
+function loadTemplates() {
+  try {
+    const saved = localStorage.getItem('promptTemplates');
+    const parsed = saved ? JSON.parse(saved) : null;
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch { /* noop */ }
+  return DEFAULT_TEMPLATES.map(t => ({ ...t }));
+}
+const loaded = loadTemplates();
+let templates = $state(loaded);
 let defaultId = $state(DEFAULT_TEMPLATES[0].id);
 
 try {
-  const saved = localStorage.getItem('promptTemplates');
-  const parsed = saved ? JSON.parse(saved) : null;
-  templates = Array.isArray(parsed) && parsed.length
-    ? parsed
-    : DEFAULT_TEMPLATES.map(t => ({ ...t }));
-} catch { templates = DEFAULT_TEMPLATES.map(t => ({ ...t })); }
-
-try {
   const savedDefault = localStorage.getItem('promptDefault');
-  if (savedDefault && templates.some(t => t.id === savedDefault)) defaultId = savedDefault;
+  if (savedDefault && loaded.some(t => t.id === savedDefault)) defaultId = savedDefault;
 } catch { /* noop */ }
 
 function persist() {
