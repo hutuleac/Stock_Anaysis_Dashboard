@@ -5,6 +5,7 @@
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
+  import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
   import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
@@ -245,15 +246,7 @@
             if (candleRes?.data?.length) {
               // Convert to Finnhub-style raw object for computeIndicatorsFromCandles
               const vals = candleRes.data;
-              const synthetic = {
-                s: 'ok',
-                t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
-                o: vals.map(v => parseFloat(v.open)),
-                h: vals.map(v => parseFloat(v.high)),
-                l: vals.map(v => parseFloat(v.low)),
-                c: vals.map(v => parseFloat(v.close)),
-                v: vals.map(v => parseInt(v.volume, 10)),
-              };
+              const synthetic = tdValuesToCandles(vals);
               const localInd = computeIndicatorsFromCandles(synthetic);
               if (localInd) {
                 results[ticker.symbol].indicators = localInd;
@@ -328,15 +321,7 @@
             const r = await fetchTimeSeries(proxy, '1day', 250);
             if (r?.data?.length) {
               const vals = r.data;
-              synthetic = {
-                s: 'ok',
-                t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
-                o: vals.map(v => parseFloat(v.open)),
-                h: vals.map(v => parseFloat(v.high)),
-                l: vals.map(v => parseFloat(v.low)),
-                c: vals.map(v => parseFloat(v.close)),
-                v: vals.map(v => parseInt(v.volume, 10)),
-              };
+              synthetic = tdValuesToCandles(vals);
             }
           } else {
             const r = await fetchCandles(proxy, 'D', fromTs, toTs);
@@ -471,15 +456,7 @@
             const td = JSON.parse(tdRaw);
             if (td?.data?.length >= 30) {
               const vals = td.data;
-              const synthetic = {
-                s: 'ok',
-                t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
-                o: vals.map(v => parseFloat(v.open)),
-                h: vals.map(v => parseFloat(v.high)),
-                l: vals.map(v => parseFloat(v.low)),
-                c: vals.map(v => parseFloat(v.close)),
-                v: vals.map(v => parseInt(v.volume, 10)),
-              };
+              const synthetic = tdValuesToCandles(vals);
               const ind = computeIndicatorsFromCandles(synthetic);
               if (ind) {
                 data.indicators = ind;
@@ -508,15 +485,7 @@
         if (!tdRaw) continue;
         const vals = JSON.parse(tdRaw)?.data;
         if (!vals?.length) continue;
-        const synthetic = {
-          s: 'ok',
-          t: vals.map(v => Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000)),
-          o: vals.map(v => parseFloat(v.open)),
-          h: vals.map(v => parseFloat(v.high)),
-          l: vals.map(v => parseFloat(v.low)),
-          c: vals.map(v => parseFloat(v.close)),
-          v: vals.map(v => parseInt(v.volume, 10)),
-        };
+        const synthetic = tdValuesToCandles(vals);
         setEtfProxyData(proxy, { weeklyRaw: resampleWeekly(synthetic), dailyCloses: synthetic.c });
         if (proxy === 'SPY') setEtfSpyCloses(synthetic.c);
       } catch { /* noop */ }
