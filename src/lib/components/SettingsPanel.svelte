@@ -359,8 +359,8 @@
       </div>
 
       <!-- AI Prompts -->
-      <div class="mt-6">
-        <h3 class="text-sm font-semibold text-text-primary mb-1">AI Prompts</h3>
+      <div>
+        <h3 class="text-sm font-medium text-text-secondary mb-1">AI Prompts</h3>
         <p class="text-xs text-text-muted mb-3">
           Templates for the "Copy for AI" button. Placeholders: <code>{'{{DATA}}'}</code> (snapshot), <code>{'{{TICKER}}'}</code>, <code>{'{{DATE}}'}</code>.
         </p>
@@ -384,6 +384,7 @@
               <textarea
                 class="w-full mt-2 text-xs bg-surface-800 border border-border rounded p-2 text-text-primary font-mono"
                 rows="10"
+                aria-label="Prompt template body"
                 bind:value={promptDraft}
                 onblur={() => updateTemplate(tpl.id, promptDraft)}
               ></textarea>

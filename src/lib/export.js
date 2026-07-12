@@ -46,7 +46,7 @@ export function buildStockSnapshot(ticker, d, marketCtx) {
   const rangePos = pct52wRange(price, num(m['52WeekLow']), num(m['52WeekHigh']));
   const rsi = num(ind.rsi);
   const macdLine = ind.macdCrossover
-    ? `${ind.macdCrossover}${num(ind.macd?.histogram) !== null ? `, hist ${ind.macd.histogram > 0 ? '+' : ''}${ind.macd.histogram}` : ''}`
+    ? `${ind.macdCrossover.replaceAll('_', ' ')}${num(ind.macd?.histogram) !== null ? `, hist ${ind.macd.histogram > 0 ? '+' : ''}${ind.macd.histogram}` : ''}`
     : NA;
   const bbLine = num(ind.bb?.upper) !== null && price !== null
     ? (price > ind.bb.upper ? 'above upper band' : num(ind.bb?.lower) !== null && price < ind.bb.lower ? 'below lower band' : 'inside bands')
