@@ -4,8 +4,12 @@
   import { getFredApiKey, setFredApiKey } from '../api/fred.js';
   import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
   import { getDefaultTickers, addDefaultTicker, removeDefaultTicker, resetDefaultTickers, addTicker } from '../stores/watchlist.svelte.js';
+  import { getTemplates, getDefaultId, setDefaultId, updateTemplate, resetTemplate } from '../stores/prompts.svelte.js';
 
   let { open = $bindable(false) } = $props();
+
+  let editingPromptId = $state(null);
+  let promptDraft = $state('');
 
   let apiKeyInput = $state(getApiKey());
   let tdApiKeyInput = $state(getTDApiKey());
@@ -352,6 +356,42 @@
           class="text-xs px-3 py-1.5 rounded-lg shrink-0 {notifyEnabled ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-secondary'}"
           onclick={toggleNotify}
         >{notifyEnabled ? 'On' : 'Off'}</button>
+      </div>
+
+      <!-- AI Prompts -->
+      <div>
+        <h3 class="text-sm font-medium text-text-secondary mb-1">AI Prompts</h3>
+        <p class="text-xs text-text-muted mb-3">
+          Templates for the "Copy for AI" button. Placeholders: <code>{'{{DATA}}'}</code> (snapshot), <code>{'{{TICKER}}'}</code>, <code>{'{{DATE}}'}</code>.
+        </p>
+        {#each getTemplates() as tpl (tpl.id)}
+          <div class="mb-2 bg-surface-700/50 border border-border/40 rounded-lg px-3 py-2">
+            <div class="flex items-center gap-2">
+              <input type="radio" name="promptDefault" checked={tpl.id === getDefaultId()}
+                onchange={() => setDefaultId(tpl.id)} class="accent-current" />
+              <span class="text-xs font-semibold text-text-secondary flex-1">{tpl.name}</span>
+              <button class="text-xs text-text-muted hover:text-text-secondary"
+                onclick={() => {
+                  if (editingPromptId === tpl.id) { editingPromptId = null; }
+                  else { editingPromptId = tpl.id; promptDraft = tpl.body; }
+                }}
+              >{editingPromptId === tpl.id ? 'Close' : 'Edit'}</button>
+              <button class="text-xs text-text-muted hover:text-warning"
+                onclick={() => { resetTemplate(tpl.id); if (editingPromptId === tpl.id) promptDraft = getTemplates().find(t => t.id === tpl.id).body; }}
+              >Reset</button>
+            </div>
+            {#if editingPromptId === tpl.id}
+              <textarea
+                class="w-full mt-2 text-xs bg-surface-800 border border-border rounded p-2 text-text-primary font-mono"
+                rows="10"
+                aria-label="Prompt template body"
+                bind:value={promptDraft}
+                onblur={() => updateTemplate(tpl.id, promptDraft)}
+              ></textarea>
+              <p class="text-[11px] text-text-muted mt-1">Saved automatically when you click away.</p>
+            {/if}
+          </div>
+        {/each}
       </div>
 
       <!-- Save feedback -->
