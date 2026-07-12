@@ -38,6 +38,18 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 - Spec reference: `docs/superpowers/specs/2026-07-11-ai-export-prompt-design.md`.
 - Cost: **1 call per "Analyze" click, opt-in only**.
 
+### 8. EtfDashboard mobile card layout
+- v0.19 mobile round redesigned `WatchlistTable.svelte`'s mobile card (chip rail, collapsible sections, sticky action bar) but explicitly left `EtfDashboard.svelte` untouched — it still renders its desktop table layout on small screens. Give the ETF view the same mobile-card treatment.
+- Cost: **0 calls**, display-only.
+
+### 9. FundamentalsBar tipAction pair dedup
+- `FundamentalsBar.svelte` has near-duplicate `tipAction` card markup for the "with value" and "without value" (n/a) states of each indicator — noted during the v0.19 mobile pass as a cleanup candidate, not tackled to keep that round scoped to layout/touch behavior.
+- Cost: **0 calls**, refactor-only, no behavior change.
+
+### 10. Gate ticker expansion panel to the active breakpoint
+- Both the desktop and mobile layout variants of the expanded ticker row currently mount in the DOM simultaneously whenever a ticker is selected (pre-existing double-mount of `PriceChart` / `NewsPanel`, predates v0.19 but surfaced while building the shared `expandedPanel` snippet). Add a `matchMedia`-based gate so only the active breakpoint's variant mounts — saves a duplicate chart instance and duplicate news fetch/render.
+- Cost: **0 calls**, perf/cleanup, no behavior change.
+
 ---
 
 ## Two-view architecture (the larger arc)

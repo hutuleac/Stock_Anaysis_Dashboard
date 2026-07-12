@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.18
+# Project State — Stock Analysis Dashboard v0.19
 
 ## What this is
 
@@ -102,6 +102,9 @@ src/lib/
   dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
   etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs
   export.js           — AI export: buildStockSnapshot() + buildPrompt() + DEFAULT_TEMPLATES presets
+  candles.js          — tdValuesToCandles(vals): TD → synthetic-candle mapping, shared by all 4 App.svelte call sites
+  actions/
+    tooltip.js         — Svelte action: desktop hover + mobile tap-to-open (matchMedia('(hover: none)')), single open-tooltip tracking
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
@@ -133,7 +136,9 @@ tests/
   highlights.test.js  — 7 unit tests for highlights.js
   etfCatalog.test.js  — 6 unit tests for etfCatalog.js
   cache.test.js       — 7 unit tests for cache prune + quota self-heal
-  export.test.js      — 12 unit tests for export.js (snapshot formatting + prompt substitution)  (306 total)
+  export.test.js      — 12 unit tests for export.js (snapshot formatting + prompt substitution)
+  tooltip.test.js     — 9 unit tests for actions/tooltip.js (tap-to-open, matchMedia gating, toggle behavior)
+  candles.test.js     — 4 unit tests for candles.js (tdValuesToCandles)  (319 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -237,14 +242,23 @@ Small correctness + robustness fixes landed after the v0.17 feature round. All d
 - **`pruneOrphanedCache` now also prunes `sv_` score history** for removed symbols (its 7-day self-trim only runs on write, which stops at removal). `sv_` is written only by `scoring.js`; no collision. Still never touches macro/notes/watchlist/portfolio/API keys.
 - **RSI label/color single-sourced** in FundamentalsBar: one `rsiLabel` const matching the 5 color bands (Oversold <30 / Mild OS 30–40 / Neutral 40–60 / Extended 60–70 / Overbought >70), used in both the inline text and the tooltip `current`. The `TIPS.rsi` levels table was reconciled to match. Score-Z label also single-sourced.
 - **Hover coverage complete:** every FundamentalsBar indicator uses the rich `tipAction` card. AVWAP, POC (were native `title=`) and 52W Range (had none) now have `TIPS.avwap` / `TIPS.poc` / `TIPS.range52w` defs with live `current` values.
-- **Known maintenance smell (not a bug):** the TD→synthetic-candle mapping block is duplicated verbatim ×4 in App.svelte (~lines 248/331/474/511). A future date-parse/NaN fix must touch all four. Extract to a `tdValuesToCandles(vals)` helper if you're in there.
+- **TD→synthetic-candle mapping is centralized.** The block that was duplicated verbatim ×4 in App.svelte is now `tdValuesToCandles(vals)` in `candles.js`, imported at all four former call sites (v0.19 slice 2). A date-parse/NaN fix now touches one place.
+
+## v0.19 mobile pass
+
+Three-slice mobile redesign round, all display-only, zero new API calls. Desktop layout and behavior are unchanged throughout.
+
+- **Slice 1 (PR #31) — touch tooltips.** `actions/tooltip.js` gained a click listener, gated per-event on `matchMedia('(hover: none)')` so desktop hover behavior is untouched; `stopPropagation` on handled taps; a module-level `openedBy` node tracks the single open tooltip (tap the same element to close, tap a different one to replace in one tap — no double-tap needed). Also: one shared `{#snippet expandedPanel(ticker, data, score, variant)}` in `WatchlistTable.svelte` used by both layouts — mobile expansion gained NewsPanel, score history, price-alert management, Copy for AI, and remove-from-watchlist (parity with desktop).
+- **Slice 2 (PR #32) — dedup.** `candles.js` `tdValuesToCandles(vals)` replaced the 4 duplicated synthetic-candle blocks in App.svelte (see the resolved maintenance-smell note above). `WatchlistTable.svelte` also gained a `scoreStyle(s)` helper and a `tickerChips(data, size)` snippet shared by both layouts — desktop keeps its mixed md/lg gates and omits the eta suffix via the `size` param.
+- **Slice 3 (this branch) — mobile card redesign.** Chips render in a horizontally scrollable rail (hidden entirely when there are no chips); score is a colored right-aligned anchor using `scoreStyle`. Mobile expansion is now collapsible sections (Chart + Indicators open by default; Entry Plan / News / Notes collapsed) via a `sectionHeader` snippet + per-session `openSections` `$state`, plus a sticky bottom action bar (Copy for AI · 🔔 Alert — opens both the gated add-form and the Notes section · ✕ remove). Mobile uses the default AI template only (no chevron dropdown); desktop stays flat and unchanged.
+- **Tests:** 306 → 319 (`tooltip.test.js` +9, `candles.test.js` +4).
 
 ## Running locally
 
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 306 unit tests, ~250ms
+npm test          # 319 unit tests, ~250ms
 npm run build     # production build → dist/
 ```
 
