@@ -598,13 +598,19 @@
               {#if data?.quote?.stale}
                 <span class="text-warning text-xs" title="Stale data">⚠</span>
               {/if}
-              {@render tickerChips(data, 'sm')}
             </div>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
           </div>
 
-          <!-- Row 2: price + change + score -->
-          <div class="flex items-center justify-between">
+          <!-- Row 1.5: scrollable chip rail -->
+          {#if topSetup(data?.setups) || rsChip(data?.rs) || emaStackChip(data?.indicators) || high52wChip(data)}
+            <div class="flex gap-1.5 overflow-x-auto whitespace-nowrap -mx-1 px-1 pb-0.5 mt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {@render tickerChips(data, 'sm')}
+            </div>
+          {/if}
+
+          <!-- Row 2: price + change left; score anchor right -->
+          <div class="flex items-center justify-between mt-1.5">
             <div class="flex items-center gap-2">
               <span class="font-mono text-sm text-text-primary">{formatPrice(quote?.c)}</span>
               <span class="text-xs font-mono {(quote?.dp ?? 0) >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">{formatPct(quote?.dp)}</span>
@@ -612,18 +618,20 @@
             {#if score.score !== null}
               {@const ss = scoreStyle(score.score)}
               <div class="flex items-center gap-1.5 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: ss.label, color: ss.color } })}>
-                <span class="font-mono font-semibold text-sm">{score.score}</span>
-                {#if velocity}
-                  <span class="text-xs {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
-                    {velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}
-                  </span>
-                {/if}
-                {#if score.convictionLabel}
-                  <span class="text-[13px] text-text-muted">{score.convictionLabel}</span>
-                {/if}
-                {#if scoreZ != null}
-                  <span class="text-[12px] font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
-                {/if}
+                <span class="font-mono font-bold text-lg" style="color:{ss.color}">{score.score}</span>
+                <div class="flex flex-col items-start leading-tight text-[11px]">
+                  {#if velocity}
+                    <span class="{velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
+                      {velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}
+                    </span>
+                  {/if}
+                  {#if score.convictionLabel}
+                    <span class="text-text-muted">{score.convictionLabel}</span>
+                  {/if}
+                  {#if scoreZ != null}
+                    <span class="font-mono text-text-muted" title="Score z-score vs 90-day history">z{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
+                  {/if}
+                </div>
               </div>
             {/if}
           </div>
