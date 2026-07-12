@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.17
+# Project State — Stock Analysis Dashboard v0.18
 
 ## What this is
 
@@ -101,6 +101,7 @@ src/lib/
   indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)
   dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
   etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs
+  export.js           — AI export: buildStockSnapshot() + buildPrompt() + DEFAULT_TEMPLATES presets
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
@@ -121,6 +122,7 @@ src/lib/
     papertrades.svelte.js   — paper trade state
     alerts.svelte.js        — price alert state
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
+    prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES, default id, CRUD)
 tests/
   indicators.test.js  — 65 unit tests for indicators.js (incl. flat-RSI + pct52wRange)
   scoring.test.js     — 42 unit tests for scoring.js
@@ -130,7 +132,8 @@ tests/
   etf.test.js         — 27 unit tests for etf.js (incl. indicators + thesis)
   highlights.test.js  — 7 unit tests for highlights.js
   etfCatalog.test.js  — 6 unit tests for etfCatalog.js
-  cache.test.js       — 7 unit tests for cache prune + quota self-heal  (294 total)
+  cache.test.js       — 7 unit tests for cache prune + quota self-heal
+  export.test.js      — 12 unit tests for export.js (snapshot formatting + prompt substitution)  (306 total)
 ```
 
 ## Scoring engine (scoring.js)
@@ -200,6 +203,17 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 
 **v0.17 additions (all display-only, zero new API calls):** per-proxy `indicators { trendState, wRsi, rangePos52w, roc13w }` + `generateEtfThesis()` in `etf.js` (expanded row); `meta.wRsi` on `computeSetupSignals` shown in Setup Radar; `highlights.js` (`computeHighlights` ACT/SOON digest + `computeNotifications` diff, localStorage `notifySeen`, opt-in toggle `notifyEnabled` in Settings) rendered by `HighlightsStrip.svelte`; curated ~55-fund UCITS catalog with client-side search in `etfCatalog.js` (search bar in the ETF add panel); tooltip overlay clamps to viewport using measured height and closes on scroll.
 
+## AI export (export.js)
+
+"Copy for AI" — formats the full dashboard reading for a ticker as plain text and merges it into a user-editable prompt template, for pasting into any external LLM chat. Stocks view only; ETF export is a future round. Display-only, zero new API calls.
+
+- `buildStockSnapshot(ticker, d, marketCtx)` — plain-text snapshot: price/52w range, score + badge + conviction, technicals with interpretation labels (RSI/MACD/ADX/etc.), weekly Pullback + Momentum setups, fundamentals, RS vs SPY, smart money, dip score, market context (VIX/F&G/SPY trend), days-to-earnings. Every missing/null field renders `n/a` — never throws, so a thin ticker (few bars, no fundamentals) still produces a usable snapshot.
+- `buildPrompt(body, snapshot, symbol)` — substitutes `{{DATA}}`, `{{TICKER}}`, `{{DATE}}` into a template body. Unknown placeholders are left untouched (no silent data loss if a template typos a token).
+- `DEFAULT_TEMPLATES` — 4 shipped presets: deep-dive, trade-setup, risk-check, news-scan.
+- Templates live in `stores/prompts.svelte.js`: localStorage key `promptTemplates` (seeded from `DEFAULT_TEMPLATES` on first load), `promptDefault` holds the default template id. `updateTemplate` / `resetTemplate` / `setDefaultId` are the only mutators.
+- UI: `WatchlistTable.svelte` expanded row has a "🤖 Copy for AI" button + a ▾ template dropdown (click-outside overlay). Copies the merged prompt via `navigator.clipboard` with a `<textarea>` fallback; flashes "Copied ✓" / "Copy failed". `SettingsPanel` has an "AI Prompts" section to edit (textarea, saves on blur), reset to shipped, and pick the default template.
+- Phase 2 (parked, not built): optional Gemini free-tier API key in Settings + an "Analyze" button that sends the same merged prompt and renders the response inline. See `BACKLOG.md`.
+
 ## Known conventions / gotchas
 
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
@@ -230,7 +244,7 @@ Small correctness + robustness fixes landed after the v0.17 feature round. All d
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 294 unit tests, ~250ms
+npm test          # 306 unit tests, ~250ms
 npm run build     # production build → dist/
 ```
 
