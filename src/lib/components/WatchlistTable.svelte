@@ -52,7 +52,7 @@
   let copyState = $state(null);      // symbol that just copied ('ok') or failed ('fail')
   let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
 
-  // Mobile expansion sections — per-session, reset per ticker open.
+  // Mobile expansion sections — per-session; state carries across ticker opens.
   let openSections = $state({ chart: true, indicators: true, entry: false, news: false, notes: false });
   function toggleSection(k) { openSections[k] = !openSections[k]; }
 
@@ -809,7 +809,7 @@
                   {#if hasNotes(ticker.symbol)}
                     <span class="text-[13px] text-uncertain" title="Has notes">📝</span>
                   {/if}
-                  <span class="hidden md:inline">{@render tickerChips(data, 'xs')}</span>
+                  <span class="hidden md:inline-flex items-center gap-2">{@render tickerChips(data, 'xs')}</span>
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
               </td>
