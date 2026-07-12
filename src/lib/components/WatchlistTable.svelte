@@ -280,6 +280,15 @@
     return sign + val.toFixed(2) + '%';
   }
 
+  // One source for the score chip color/label (was duplicated per layout).
+  function scoreStyle(s) {
+    return s >= 70 ? { color: '#22c55e', label: 'Bullish' }
+      : s >= 58 ? { color: '#f59e0b', label: 'Positive' }
+      : s <= 30 ? { color: '#ef4444', label: 'Bearish' }
+      : s <= 42 ? { color: '#f97316', label: 'Negative' }
+      : { color: '#9ca3af', label: 'Neutral' };
+  }
+
   function handleDragStart(e, index) {
     dragIndex = index;
     e.dataTransfer.effectAllowed = 'move';
@@ -392,6 +401,33 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="fixed inset-0 z-40" onclick={() => { searchOpen = false; searchResults = []; }}></div>
   {/if}
+
+  <!-- Setup/RS/EMA-stack/52w chip row — shared between mobile card and desktop ticker cell.
+       size 'sm' = mobile (11px, always visible, eta suffix shown); 'xs' = desktop (10px,
+       setup chip hidden below md, other chips hidden below lg — matches pre-dedup gates). -->
+  {#snippet tickerChips(data, size)}
+    {@const px = size === 'sm' ? 'text-[11px]' : 'text-[10px]'}
+    {@const setupVis = size === 'sm' ? 'inline-block' : 'hidden md:inline-block'}
+    {@const chipVis = size === 'sm' ? 'inline-block' : 'hidden lg:inline-block'}
+    {#if topSetup(data?.setups)}
+      {@const su = topSetup(data?.setups)}
+      <span class="{setupVis} px-1.5 py-0.5 rounded {px} font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
+        {su.kind} {su.readiness}{size === 'sm' && su.etaWeeks ? ` ~${su.etaWeeks}w` : ''}
+      </span>
+    {/if}
+    {#if rsChip(data?.rs)}
+      {@const chip = rsChip(data?.rs)}
+      <span class="{chipVis} px-1.5 py-0.5 rounded {px} font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+    {/if}
+    {#if emaStackChip(data?.indicators)}
+      {@const chip = emaStackChip(data?.indicators)}
+      <span class="{chipVis} px-1.5 py-0.5 rounded {px} font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+    {/if}
+    {#if high52wChip(data)}
+      {@const chip = high52wChip(data)}
+      <span class="{chipVis} px-1.5 py-0.5 rounded {px} font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
+    {/if}
+  {/snippet}
 
   {#snippet expandedPanel(ticker, data, score, variant)}
     {@const quote = data?.quote?.data}
@@ -562,24 +598,7 @@
               {#if data?.quote?.stale}
                 <span class="text-warning text-xs" title="Stale data">⚠</span>
               {/if}
-              {#if topSetup(data?.setups)}
-                {@const su = topSetup(data?.setups)}
-                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
-                  {su.kind} {su.readiness}{su.etaWeeks ? ` ~${su.etaWeeks}w` : ''}
-                </span>
-              {/if}
-              {#if rsChip(data?.rs)}
-                {@const chip = rsChip(data?.rs)}
-                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
-              {/if}
-              {#if emaStackChip(data?.indicators)}
-                {@const chip = emaStackChip(data?.indicators)}
-                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
-              {/if}
-              {#if high52wChip(data)}
-                {@const chip = high52wChip(data)}
-                <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
-              {/if}
+              {@render tickerChips(data, 'sm')}
             </div>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
           </div>
@@ -591,9 +610,8 @@
               <span class="text-xs font-mono {(quote?.dp ?? 0) >= 0 ? 'text-bull-strong' : 'text-bear-strong'}">{formatPct(quote?.dp)}</span>
             </div>
             {#if score.score !== null}
-              {@const scoreCssColorM = score.score >= 70 ? '#22c55e' : score.score >= 58 ? '#f59e0b' : score.score <= 30 ? '#ef4444' : score.score <= 42 ? '#f97316' : '#9ca3af'}
-              {@const scoreLabelM = score.score >= 70 ? 'Bullish' : score.score >= 58 ? 'Positive' : score.score <= 30 ? 'Bearish' : score.score <= 42 ? 'Negative' : 'Neutral'}
-              <div class="flex items-center gap-1.5 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: scoreLabelM, color: scoreCssColorM } })}>
+              {@const ss = scoreStyle(score.score)}
+              <div class="flex items-center gap-1.5 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: ss.label, color: ss.color } })}>
                 <span class="font-mono font-semibold text-sm">{score.score}</span>
                 {#if velocity}
                   <span class="text-xs {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
@@ -708,24 +726,7 @@
                   {#if hasNotes(ticker.symbol)}
                     <span class="text-[13px] text-uncertain" title="Has notes">📝</span>
                   {/if}
-                  {#if topSetup(data?.setups)}
-                    {@const su = topSetup(data?.setups)}
-                    <span class="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
-                      {su.kind} {su.readiness}
-                    </span>
-                  {/if}
-                  {#if rsChip(data?.rs)}
-                    {@const chip = rsChip(data?.rs)}
-                    <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
-                  {/if}
-                  {#if emaStackChip(data?.indicators)}
-                    {@const chip = emaStackChip(data?.indicators)}
-                    <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
-                  {/if}
-                  {#if high52wChip(data)}
-                    {@const chip = high52wChip(data)}
-                    <span class="hidden lg:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
-                  {/if}
+                  <span class="hidden md:inline">{@render tickerChips(data, 'xs')}</span>
                 </div>
                 <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
               </td>
@@ -740,9 +741,8 @@
               </td>
               <td class="px-3 py-3 text-right">
                 {#if score.score !== null}
-                  {@const scoreCssColor = score.score >= 70 ? '#22c55e' : score.score >= 58 ? '#f59e0b' : score.score <= 30 ? '#ef4444' : score.score <= 42 ? '#f97316' : '#9ca3af'}
-                  {@const scoreLabel = score.score >= 70 ? 'Bullish' : score.score >= 58 ? 'Positive' : score.score <= 30 ? 'Bearish' : score.score <= 42 ? 'Negative' : 'Neutral'}
-                  <div class="flex items-center justify-end gap-2 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: scoreLabel, color: scoreCssColor } })}>
+                  {@const ss = scoreStyle(score.score)}
+                  <div class="flex items-center justify-end gap-2 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: ss.label, color: ss.color } })}>
                     <!-- Score sparkline: flex-shrink-0 prevents compression; padded y-range keeps line off edges -->
                     {#if scoreHistory.length >= 1}
                       {@const W = 32} {@const H = 14} {@const PAD = 2}
