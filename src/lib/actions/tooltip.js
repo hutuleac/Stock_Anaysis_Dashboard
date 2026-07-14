@@ -36,6 +36,16 @@ export function tooltip(node, getDef) {
     if (content) { showTooltip(content, e.clientX, e.clientY); openedBy = node; }
   }
 
+  // iOS Safari only synthesizes a `click` on elements it considers clickable
+  // (naturally-interactive, or anything with cursor:pointer). Our indicator
+  // chips are plain `cursor-default` divs, so a real finger tap never fired
+  // `click` and the tap path silently did nothing on iPhone — touch emulators
+  // synthesize click regardless, which is why this passed emulated QA. Signal
+  // tappability on coarse pointers so the click handler below receives taps.
+  if (typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches) {
+    node.style.cursor = 'pointer';
+  }
+
   node.addEventListener('mouseenter', onEnter);
   node.addEventListener('mousemove', onMove);
   node.addEventListener('mouseleave', onLeave);

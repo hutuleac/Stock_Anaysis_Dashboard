@@ -11,6 +11,7 @@ const { getTooltip, hideTooltip } = await import('../src/lib/stores/tooltip.svel
 function makeNode() {
   const listeners = {};
   return {
+    style: {},
     addEventListener: (type, fn) => { listeners[type] = fn; },
     removeEventListener: (type) => { delete listeners[type]; },
     fire: (type, event) => listeners[type]?.(event),
@@ -75,6 +76,20 @@ describe('tooltip action — touch', () => {
     tooltip(node, DEF);
     node.fire('mouseenter', { clientX: 1, clientY: 2 });
     expect(getTooltip().visible).toBe(true);
+  });
+
+  it('sets cursor:pointer on coarse pointers so iOS synthesizes click on plain divs', () => {
+    coarse = true;
+    const node = makeNode();
+    tooltip(node, DEF);
+    expect(node.style.cursor).toBe('pointer');
+  });
+
+  it('leaves cursor untouched on fine-pointer (hover-capable) devices', () => {
+    coarse = false;
+    const node = makeNode();
+    tooltip(node, DEF);
+    expect(node.style.cursor).toBeUndefined();
   });
 
   it('destroy removes the click listener and hides', () => {
