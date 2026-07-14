@@ -6,7 +6,6 @@
   import { proximityTo52wHigh } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
-  import { hasNotes, getNotes, setNotes } from '../stores/notes.svelte.js';
   import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
@@ -53,7 +52,7 @@
   let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
 
   // Mobile expansion sections — per-session; state carries across ticker opens.
-  let openSections = $state({ chart: true, indicators: true, entry: false, news: false, notes: false });
+  let openSections = $state({ chart: true, indicators: true, entry: false, news: false, alerts: false });
   function toggleSection(k) { openSections[k] = !openSections[k]; }
 
   async function copyForAI(ticker, templateId) {
@@ -490,20 +489,6 @@
     </div>
   {/snippet}
 
-  {#snippet notesBlock(ticker)}
-    <label class="block">
-      <span class="text-[13px] text-text-muted uppercase tracking-wider mb-1.5 block">
-        Notes — {ticker.symbol}
-      </span>
-      <textarea
-        class="w-full bg-surface-700/60 border border-border/40 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-uncertain/50 resize-none font-mono leading-relaxed"
-        rows="3"
-        placeholder="Thesis, key levels, catalysts, reminders…"
-        value={getNotes(ticker.symbol)}
-        oninput={(e) => setNotes(ticker.symbol, e.currentTarget.value)}
-      ></textarea>
-    </label>
-  {/snippet}
 
   {#snippet expandedPanel(ticker, data, score, variant)}
     {@const quote = data?.quote?.data}
@@ -548,14 +533,7 @@
         {@render scoreHistoryBlock(scoreHistory)}
       {/if}
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <EntryPanel symbol={ticker.symbol} />
-      </div>
-
-      <!-- Per-ticker notes -->
-      <div class="mt-4 border-t border-border/30 pt-4">
-        {@render notesBlock(ticker)}
-      </div>
+      <EntryPanel symbol={ticker.symbol} />
     {:else}
       <!-- Mobile: score-history always on top, then collapsible sections -->
       {#if scoreHistory.length >= 2}
@@ -591,10 +569,9 @@
       </div>
 
       <div class="border-t border-border/30">
-        {@render sectionHeader('notes', 'Notes')}
-        {#if openSections.notes}
+        {@render sectionHeader('alerts', 'Alerts')}
+        {#if openSections.alerts}
           <div class="pb-3 space-y-3">
-            {@render notesBlock(ticker)}
             <!-- Alerts — mobile has no 🔔 column; give it inline management -->
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs text-text-muted uppercase tracking-wider">Alerts</span>
@@ -632,7 +609,7 @@
           onclick={() => {
             const opening = alertSymbol !== ticker.symbol;
             alertSymbol = opening ? ticker.symbol : null;
-            if (opening) { alertPrice = ''; alertDir = 'above'; openSections.notes = true; }
+            if (opening) { alertPrice = ''; alertDir = 'above'; openSections.alerts = true; }
           }}
         >🔔 Alert</button>
         <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-danger"
@@ -805,9 +782,6 @@
                   <span class="font-mono font-semibold text-text-primary">{ticker.symbol}</span>
                   {#if isStale}
                     <span class="text-warning text-xs" title="Stale data">⚠</span>
-                  {/if}
-                  {#if hasNotes(ticker.symbol)}
-                    <span class="text-[13px] text-uncertain" title="Has notes">📝</span>
                   {/if}
                   <span class="hidden md:inline-flex items-center gap-2">{@render tickerChips(data, 'xs')}</span>
                 </div>
