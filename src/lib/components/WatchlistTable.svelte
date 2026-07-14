@@ -521,12 +521,12 @@
         <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
         <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
       {/if}
+      <div class="mb-4">
+        <FundamentalsBar symbol={ticker.symbol} />
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
         <PriceChart symbol={ticker.symbol} />
         <NewsPanel symbol={ticker.symbol} />
-      </div>
-      <div class="mb-4">
-        <FundamentalsBar symbol={ticker.symbol} />
       </div>
       <!-- Score History Chart -->
       {#if scoreHistory.length >= 2}
@@ -541,16 +541,16 @@
       {/if}
 
       <div class="border-t border-border/30">
-        {@render sectionHeader('chart', 'Chart')}
-        {#if openSections.chart}
-          <div class="pb-3"><PriceChart symbol={ticker.symbol} /></div>
+        {@render sectionHeader('indicators', 'Indicators')}
+        {#if openSections.indicators}
+          <div class="pb-3"><FundamentalsBar symbol={ticker.symbol} /></div>
         {/if}
       </div>
 
       <div class="border-t border-border/30">
-        {@render sectionHeader('indicators', 'Indicators')}
-        {#if openSections.indicators}
-          <div class="pb-3"><FundamentalsBar symbol={ticker.symbol} /></div>
+        {@render sectionHeader('chart', 'Chart')}
+        {#if openSections.chart}
+          <div class="pb-3"><PriceChart symbol={ticker.symbol} /></div>
         {/if}
       </div>
 
