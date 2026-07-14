@@ -546,11 +546,11 @@
 <div class="min-h-screen bg-surface-900">
   <!-- Header -->
   <header class="border-b border-border bg-surface-800/50 backdrop-blur-sm sticky top-0 z-30">
-    <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-2 gap-x-2">
+    <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-3 flex flex-nowrap sm:flex-wrap items-center justify-between gap-y-2 gap-x-2">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <h1 class="text-lg font-bold text-text-primary tracking-tight">
           <span class="hidden sm:inline">Stock Dashboard</span>
-          <span class="sm:hidden">StockDash</span>
+          <span class="sm:hidden">StD</span>
         </h1>
         <span class="text-xs text-text-muted bg-surface-700 px-2 py-0.5 rounded hidden sm:inline">{appVersion}</span>
 
@@ -585,11 +585,12 @@
           </div>
         {:else}
           <button
-            class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-text-primary rounded-lg transition-colors disabled:opacity-40"
+            class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-text-primary rounded-lg transition-colors disabled:opacity-40"
             onclick={handleRefresh}
             disabled={!getApiKey() || getTickers().length === 0}
+            title="Refresh"
           >
-            <span>↻</span> Refresh
+            <span>↻</span><span class="hidden sm:inline">Refresh</span>
           </button>
         {/if}
 
@@ -676,7 +677,7 @@
   <MarketContextBar marketData={marketContextData} bind:collapsed={marketBarCollapsed} />
 
   <!-- Main content -->
-  <main class="max-w-[1800px] mx-auto px-4 py-6">
+  <main class="max-w-[1800px] mx-auto px-2 sm:px-4 py-4 sm:py-6">
 
     <HighlightsStrip marketData={marketContextData} onNavigate={handleHighlightNav} />
 
