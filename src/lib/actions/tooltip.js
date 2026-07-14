@@ -1,6 +1,7 @@
 // Svelte action: use:tooltip={def} or use:tooltip={() => def}
-// Attaches mouseenter/mousemove/mouseleave to any element.
-// Accepts a plain object or a getter function (evaluated lazily on hover).
+// Desktop: hover (mouseenter/mousemove/mouseleave).
+// Touch: tap toggles, triggered from touchend.
+// Accepts a plain object or a getter function (evaluated lazily).
 
 import { getTooltip, showTooltip, moveTooltip, hideTooltip } from '../stores/tooltip.svelte.js';
 
@@ -11,45 +12,42 @@ export function tooltip(node, getDef) {
     return typeof getDef === 'function' ? getDef() : getDef;
   }
 
+  // ---- Desktop: hover ----
   function onEnter(e) {
     const content = resolve();
     if (content) showTooltip(content, e.clientX, e.clientY);
   }
+  function onMove(e) { moveTooltip(e.clientX, e.clientY); }
+  function onLeave() { hideTooltip(); }
 
-  function onMove(e) {
-    moveTooltip(e.clientX, e.clientY);
+  // ---- Touch: tap toggles ----
+  // iOS Safari does NOT synthesize `click` on plain (cursor-default) divs, so a
+  // real finger tap never reached a click handler — which is why click AND the
+  // synthesized hover both did nothing on iPhone. `touchend` fires on every
+  // element regardless of "clickability", so we trigger from it directly.
+  // A small movement guard distinguishes a tap from a scroll; preventDefault
+  // suppresses the ghost mouse/click sequence that would otherwise re-fire and
+  // toggle the tooltip shut the same instant it opened.
+  let startX = 0, startY = 0;
+  function onTouchStart(e) {
+    const t = e.changedTouches[0];
+    startX = t.clientX; startY = t.clientY;
   }
-
-  function onLeave() {
-    hideTooltip();
-  }
-
-  // Touch devices get no mouseenter (or an unreliable synthesized one).
-  // A tap toggles the tooltip; stopPropagation keeps a chip inside a
-  // clickable card from also toggling the card. Hover-capable devices
-  // are untouched — checked per-event so responsive-mode changes apply.
-  function onTap(e) {
-    if (typeof matchMedia === 'undefined' || !matchMedia('(hover: none)').matches) return;
+  function onTouchEnd(e) {
+    const t = e.changedTouches[0];
+    if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) return; // scrolled — not a tap
+    e.preventDefault();
     e.stopPropagation();
     if (getTooltip().visible && openedBy === node) { hideTooltip(); openedBy = null; return; }
     const content = resolve();
-    if (content) { showTooltip(content, e.clientX, e.clientY); openedBy = node; }
-  }
-
-  // iOS Safari only synthesizes a `click` on elements it considers clickable
-  // (naturally-interactive, or anything with cursor:pointer). Our indicator
-  // chips are plain `cursor-default` divs, so a real finger tap never fired
-  // `click` and the tap path silently did nothing on iPhone — touch emulators
-  // synthesize click regardless, which is why this passed emulated QA. Signal
-  // tappability on coarse pointers so the click handler below receives taps.
-  if (typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches) {
-    node.style.cursor = 'pointer';
+    if (content) { showTooltip(content, t.clientX, t.clientY); openedBy = node; }
   }
 
   node.addEventListener('mouseenter', onEnter);
   node.addEventListener('mousemove', onMove);
   node.addEventListener('mouseleave', onLeave);
-  node.addEventListener('click', onTap);
+  node.addEventListener('touchstart', onTouchStart, { passive: true });
+  node.addEventListener('touchend', onTouchEnd, { passive: false });
 
   return {
     update(newDef) { getDef = newDef; },
@@ -57,7 +55,8 @@ export function tooltip(node, getDef) {
       node.removeEventListener('mouseenter', onEnter);
       node.removeEventListener('mousemove', onMove);
       node.removeEventListener('mouseleave', onLeave);
-      node.removeEventListener('click', onTap);
+      node.removeEventListener('touchstart', onTouchStart);
+      node.removeEventListener('touchend', onTouchEnd);
       if (openedBy === node) openedBy = null;
       hideTooltip();
     },
