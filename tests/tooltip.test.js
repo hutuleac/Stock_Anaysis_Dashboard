@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Node env: stub matchMedia BEFORE importing the action (cache.test.js convention).
-let coarse = true;
-vi.stubGlobal('matchMedia', (q) => ({ matches: q === '(hover: none)' ? coarse : false }));
-
 const { tooltip } = await import('../src/lib/actions/tooltip.js');
 const { getTooltip, hideTooltip } = await import('../src/lib/stores/tooltip.svelte.js');
 
@@ -19,55 +15,59 @@ function makeNode() {
   };
 }
 const DEF = { title: 'RSI', body: 'momentum' };
-function tapEvent() {
-  return { clientX: 10, clientY: 20, stopPropagation: vi.fn() };
+function touch(x = 10, y = 20) {
+  return { changedTouches: [{ clientX: x, clientY: y }], preventDefault: vi.fn(), stopPropagation: vi.fn() };
+}
+function tap(node, x = 10, y = 20) {
+  node.fire('touchstart', touch(x, y));
+  const end = touch(x, y);
+  node.fire('touchend', end);
+  return end;
 }
 
-beforeEach(() => { hideTooltip(); coarse = true; });
+beforeEach(() => { hideTooltip(); });
 
 describe('tooltip action — touch', () => {
-  it('tap on coarse pointer shows the tooltip at tap coords and stops propagation', () => {
+  it('tap shows the tooltip at tap coords, prevents the ghost click, stops propagation', () => {
     const node = makeNode();
     tooltip(node, DEF);
-    const e = tapEvent();
-    node.fire('click', e);
+    const e = tap(node);
     const tip = getTooltip();
     expect(tip.visible).toBe(true);
     expect(tip.content).toEqual(DEF);
     expect(tip.x).toBe(10);
     expect(tip.y).toBe(20);
+    expect(e.preventDefault).toHaveBeenCalled();
     expect(e.stopPropagation).toHaveBeenCalled();
   });
 
   it('second tap toggles the tooltip closed', () => {
     const node = makeNode();
     tooltip(node, DEF);
-    node.fire('click', tapEvent());
-    node.fire('click', tapEvent());
+    tap(node);
+    tap(node);
     expect(getTooltip().visible).toBe(false);
   });
 
-  it('tap does nothing on fine-pointer (hover-capable) devices', () => {
-    coarse = false;
+  it('a scroll (touch moved past threshold) does not open the tooltip', () => {
     const node = makeNode();
     tooltip(node, DEF);
-    const e = tapEvent();
-    node.fire('click', e);
+    node.fire('touchstart', touch(10, 20));
+    node.fire('touchend', touch(10, 200)); // moved 180px — a scroll, not a tap
     expect(getTooltip().visible).toBe(false);
-    expect(e.stopPropagation).not.toHaveBeenCalled();
   });
 
   it('resolves getter defs lazily on tap', () => {
     const node = makeNode();
     tooltip(node, () => ({ title: 'lazy' }));
-    node.fire('click', tapEvent());
+    tap(node);
     expect(getTooltip().content).toEqual({ title: 'lazy' });
   });
 
   it('null def is a no-op on tap', () => {
     const node = makeNode();
     tooltip(node, null);
-    node.fire('click', tapEvent());
+    tap(node);
     expect(getTooltip().visible).toBe(false);
   });
 
@@ -78,25 +78,12 @@ describe('tooltip action — touch', () => {
     expect(getTooltip().visible).toBe(true);
   });
 
-  it('sets cursor:pointer on coarse pointers so iOS synthesizes click on plain divs', () => {
-    coarse = true;
-    const node = makeNode();
-    tooltip(node, DEF);
-    expect(node.style.cursor).toBe('pointer');
-  });
-
-  it('leaves cursor untouched on fine-pointer (hover-capable) devices', () => {
-    coarse = false;
-    const node = makeNode();
-    tooltip(node, DEF);
-    expect(node.style.cursor).toBeUndefined();
-  });
-
-  it('destroy removes the click listener and hides', () => {
+  it('destroy removes the touch listeners and hides', () => {
     const node = makeNode();
     const action = tooltip(node, DEF);
     action.destroy();
-    expect(node.has('click')).toBe(false);
+    expect(node.has('touchend')).toBe(false);
+    expect(node.has('touchstart')).toBe(false);
     expect(getTooltip().visible).toBe(false);
   });
 
@@ -105,8 +92,8 @@ describe('tooltip action — touch', () => {
     const nodeB = makeNode();
     tooltip(nodeA, { title: 'A' });
     tooltip(nodeB, { title: 'B' });
-    nodeA.fire('click', tapEvent());
-    nodeB.fire('click', tapEvent());
+    tap(nodeA);
+    tap(nodeB);
     const tip = getTooltip();
     expect(tip.visible).toBe(true);
     expect(tip.content).toEqual({ title: 'B' });
@@ -115,9 +102,9 @@ describe('tooltip action — touch', () => {
   it('reopens after an external close without a stale openedBy blocking it', () => {
     const node = makeNode();
     tooltip(node, DEF);
-    node.fire('click', tapEvent());
+    tap(node);
     hideTooltip();
-    node.fire('click', tapEvent());
+    tap(node);
     expect(getTooltip().visible).toBe(true);
   });
 });
