@@ -92,19 +92,19 @@
 </script>
 
 <div class="relative">
-    <div class="space-y-4">
+    <div class="space-y-3">
       <div class="flex items-center gap-2 mb-1">
         <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Entry Panel</h3>
       </div>
 
       <!-- Thesis Summary -->
-      <div class="bg-surface-700/50 rounded-lg p-3 border border-border/40">
+      <div class="bg-surface-700/50 rounded-lg p-2.5 border border-border/40">
         <ThesisSummary {symbol} />
       </div>
 
       <!-- Trade Window -->
       {#if daysToEarnings !== null}
-        <div class="flex items-center gap-3 px-3 py-2 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+        <div class="flex items-center gap-3 px-2.5 py-1.5 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
           <span class="text-lg">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
           <div>
             <p class="text-xs font-semibold {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
@@ -119,7 +119,7 @@
 
       <!-- High-volatility day warning -->
       {#if dp !== null && Math.abs(dp) >= 5}
-        <div class="flex items-center gap-3 px-3 py-2 rounded-lg border {dp >= 5 ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}">
+        <div class="flex items-center gap-3 px-2.5 py-1.5 rounded-lg border {dp >= 5 ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}">
           <span class="text-lg">🌊</span>
           <div>
             <p class="text-xs font-semibold {dp >= 5 ? 'text-warning' : 'text-danger'}">
@@ -133,24 +133,24 @@
       {/if}
 
       <!-- Two-column trade layout: risk/position/scenarios left, ATR + R:R right -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <!-- Left column -->
-        <div class="space-y-4">
+        <div class="space-y-3">
           <!-- Risk Snapshot -->
-          <div class="grid grid-cols-2 gap-3">
-            <div class="bg-surface-700 rounded-lg p-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-surface-700 rounded-lg p-2.5">
               <p class="text-xs text-text-muted mb-1">Current Price</p>
               <p class="font-mono font-semibold text-text-primary">{formatUSD(currentPrice)}</p>
             </div>
-            <div class="bg-surface-700 rounded-lg p-3">
+            <div class="bg-surface-700 rounded-lg p-2.5">
               <p class="text-xs text-text-muted mb-1">Suggested Stop (2× wk ATR)</p>
               <p class="font-mono font-semibold text-danger">{formatUSD(suggestedStop)}</p>
             </div>
-            <div class="bg-surface-700 rounded-lg p-3">
+            <div class="bg-surface-700 rounded-lg p-2.5">
               <p class="text-xs text-text-muted mb-1">Risk / Share</p>
               <p class="font-mono font-semibold text-bear-weak">{formatUSD(riskPerShare)}</p>
             </div>
-            <div class="bg-surface-700 rounded-lg p-3">
+            <div class="bg-surface-700 rounded-lg p-2.5">
               <p class="text-xs text-text-muted mb-1">Risk %</p>
               <p class="font-mono font-semibold text-bear-weak">
                 {riskPct !== null ? riskPct.toFixed(1) + '%' : '—'}
@@ -159,8 +159,8 @@
           </div>
 
           <!-- Position size recommendation -->
-          <div class="bg-surface-700 rounded-lg p-3 border-l-2 border-uncertain">
-            <div class="flex items-center justify-between mb-2">
+          <div class="bg-surface-700 rounded-lg p-2.5 border-l-2 border-uncertain">
+            <div class="flex items-center justify-between mb-1.5">
               <p class="text-xs text-text-muted">Position Size ({betaAdj.riskPct}% risk rule)</p>
               {#if beta !== null}
                 {@const betaColor = betaAdj.tier === 'high' ? 'text-danger' : betaAdj.tier === 'elevated' ? 'text-uncertain' : betaAdj.tier === 'low' ? 'text-bull-strong' : 'text-text-muted'}
@@ -188,36 +188,36 @@
               <table class="w-full text-sm">
                 <thead>
                   <tr class="text-xs text-text-muted border-b border-border/50">
-                    <th class="px-3 py-2 text-left">Scenario</th>
-                    <th class="px-3 py-2 text-right">Price</th>
-                    <th class="px-3 py-2 text-right">P&L %</th>
-                    <th class="px-3 py-2 text-center">R:R</th>
+                    <th class="px-2.5 py-1.5 text-left">Scenario</th>
+                    <th class="px-2.5 py-1.5 text-right">Price</th>
+                    <th class="px-2.5 py-1.5 text-right">P&L %</th>
+                    <th class="px-2.5 py-1.5 text-center">R:R</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr class="border-b border-border/30">
-                    <td class="px-3 py-2 text-text-secondary">{scenarios.base.label}</td>
-                    <td class="px-3 py-2 text-right font-mono text-bull-strong">{formatUSD(scenarios.base.price)}</td>
-                    <td class="px-3 py-2 text-right font-mono text-bull-strong">
+                    <td class="px-2.5 py-1.5 text-text-secondary">{scenarios.base.label}</td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">{formatUSD(scenarios.base.price)}</td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">
                       +{((scenarios.base.price - currentPrice) / currentPrice * 100).toFixed(1)}%
                     </td>
-                    <td class="px-3 py-2 text-center text-text-muted">{scenarios.base.rr}</td>
+                    <td class="px-2.5 py-1.5 text-center text-text-muted">{scenarios.base.rr}</td>
                   </tr>
                   <tr class="border-b border-border/30">
-                    <td class="px-3 py-2 text-text-secondary">{scenarios.extended.label}</td>
-                    <td class="px-3 py-2 text-right font-mono text-bull-strong">{formatUSD(scenarios.extended.price)}</td>
-                    <td class="px-3 py-2 text-right font-mono text-bull-strong">
+                    <td class="px-2.5 py-1.5 text-text-secondary">{scenarios.extended.label}</td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">{formatUSD(scenarios.extended.price)}</td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">
                       +{((scenarios.extended.price - currentPrice) / currentPrice * 100).toFixed(1)}%
                     </td>
-                    <td class="px-3 py-2 text-center text-text-muted">{scenarios.extended.rr}</td>
+                    <td class="px-2.5 py-1.5 text-center text-text-muted">{scenarios.extended.rr}</td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 text-text-secondary">{scenarios.stopOut.label}</td>
-                    <td class="px-3 py-2 text-right font-mono text-danger">{formatUSD(scenarios.stopOut.price)}</td>
-                    <td class="px-3 py-2 text-right font-mono text-danger">
+                    <td class="px-2.5 py-1.5 text-text-secondary">{scenarios.stopOut.label}</td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-danger">{formatUSD(scenarios.stopOut.price)}</td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-danger">
                       -{riskPct?.toFixed(1)}%
                     </td>
-                    <td class="px-3 py-2 text-center text-text-muted">{scenarios.stopOut.rr}</td>
+                    <td class="px-2.5 py-1.5 text-center text-text-muted">{scenarios.stopOut.rr}</td>
                   </tr>
                 </tbody>
               </table>
@@ -226,11 +226,11 @@
         </div>
 
         <!-- Right column: ATR (upper) + R:R to target -->
-        <div class="space-y-4">
+        <div class="space-y-3">
           <!-- ATR Volatility Band -->
           {#if atr !== null && currentPrice}
             {@const atrPct = (atr / currentPrice) * 100}
-            <div class="rounded-lg p-3 border bg-surface-700/50 border-border/40">
+            <div class="rounded-lg p-2.5 border bg-surface-700/50 border-border/40">
               <div class="flex items-center justify-between mb-1">
                 <p class="text-xs font-semibold text-text-muted">📊 Intraday Volatility (ATR 14)</p>
                 <span class="font-mono text-xs text-text-secondary">{formatUSD(atr)} / {atrPct.toFixed(1)}%</span>
@@ -243,7 +243,7 @@
 
           <!-- R:R to swing-high target -->
           {#if rrToTarget !== null}
-            <div class="bg-surface-700 rounded-lg p-3">
+            <div class="bg-surface-700 rounded-lg p-2.5">
               <p class="text-xs text-text-muted mb-1">R:R to Target (swing high)</p>
               <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
                 1:{rrToTarget.toFixed(1)}

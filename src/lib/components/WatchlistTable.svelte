@@ -11,7 +11,6 @@
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
-  import NewsPanel from './NewsPanel.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
 
   let { onTickerAdded = () => {} } = $props();
@@ -52,7 +51,7 @@
   let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
 
   // Mobile expansion sections — per-session; state carries across ticker opens.
-  let openSections = $state({ chart: true, indicators: true, entry: false, news: false, alerts: false });
+  let openSections = $state({ chart: true, indicators: true, entry: false, alerts: false });
   function toggleSection(k) { openSections[k] = !openSections[k]; }
 
   async function copyForAI(ticker, templateId) {
@@ -524,9 +523,8 @@
       <div class="mb-4">
         <FundamentalsBar symbol={ticker.symbol} />
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
+      <div class="mb-4">
         <PriceChart symbol={ticker.symbol} />
-        <NewsPanel symbol={ticker.symbol} />
       </div>
       <!-- Score History Chart -->
       {#if scoreHistory.length >= 2}
@@ -558,13 +556,6 @@
         {@render sectionHeader('entry', 'Entry Plan')}
         {#if openSections.entry}
           <div class="pb-3"><EntryPanel symbol={ticker.symbol} /></div>
-        {/if}
-      </div>
-
-      <div class="border-t border-border/30">
-        {@render sectionHeader('news', 'News')}
-        {#if openSections.news}
-          <div class="pb-3"><NewsPanel symbol={ticker.symbol} /></div>
         {/if}
       </div>
 
