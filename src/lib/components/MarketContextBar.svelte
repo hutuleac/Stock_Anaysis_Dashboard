@@ -119,6 +119,20 @@
   </div>
 {/snippet}
 
+<!-- Rotation leader/laggard row: arrow + sector name left, % pinned right.
+     Top mover always shows; the runner-up appears only where there's room (md+). -->
+{#snippet rotationRow(arrow, color, sectors)}
+  <div class="flex items-center gap-x-2 min-w-0">
+    {#each sectors as s, i}
+      <span class="flex items-center gap-1 min-w-0 {i > 0 ? 'hidden md:flex' : ''}">
+        <span class="{color} shrink-0">{arrow}</span>
+        <span class="text-text-secondary truncate">{s.name}</span>
+        <span class="{color} shrink-0">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>
+      </span>
+    {/each}
+  </div>
+{/snippet}
+
 <!-- Nudge Banner -->
 {#if nudge && !collapsed}
   <div class="px-4 py-2 text-center text-sm border-b {nudge.type === 'danger' ? 'bg-bear-strong/10 border-bear-strong/30 text-bear-strong' : 'bg-warning/10 border-warning/30 text-warning'}">
@@ -193,15 +207,9 @@
           <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
             use:tipAction={TIPS.sectorLeaders}>
             {@render tileHeader(rotation, 'Rotation')}
-            <div class="flex flex-col text-[12px] font-mono min-w-0 leading-tight">
-              <span class="truncate">
-                <span class="text-bull-strong">▲</span>
-                {#each rotation.leaders as s, i}{#if i > 0}<span class="text-text-muted"> · </span>{/if}<span class="text-text-secondary">{s.name}</span>&nbsp;<span class="text-bull-strong">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>{/each}
-              </span>
-              <span class="truncate">
-                <span class="text-bear-weak">▼</span>
-                {#each rotation.laggards as s, i}{#if i > 0}<span class="text-text-muted"> · </span>{/if}<span class="text-text-secondary">{s.name}</span>&nbsp;<span class="text-bear-weak">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>{/each}
-              </span>
+            <div class="flex flex-col gap-0.5 text-[12px] font-mono min-w-0 leading-tight mt-0.5">
+              {@render rotationRow('▲', 'text-bull-strong', rotation.leaders)}
+              {@render rotationRow('▼', 'text-bear-weak', rotation.laggards)}
             </div>
           </div>
         {/if}
