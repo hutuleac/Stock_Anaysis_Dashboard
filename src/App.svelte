@@ -8,7 +8,6 @@
   import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
-  import { checkAlerts, getTriggered, dismissTriggered } from './lib/stores/alerts.svelte.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
@@ -25,12 +24,6 @@
 
   // Badge shows the feature-round (major.minor); in-round patch bumps don't change it.
   const appVersion = `v${pkgVersion.split('.').slice(0, 2).join('.')}`;
-
-  // Svelte action: auto-dismiss triggered alert banner after 15s
-  function autoDismiss(node, id) {
-    const t = setTimeout(() => dismissTriggered(id), 15000);
-    return { destroy() { clearTimeout(t); } };
-  }
 
   function handleHighlightNav(item) {
     activeView = item.view;
@@ -358,9 +351,6 @@
         }
       }
 
-      // Check price alerts
-      checkAlerts(results);
-
       // Store score snapshots for velocity tracking
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -651,19 +641,6 @@
       <button class="text-xs text-text-muted ml-2 hover:text-text-secondary" onclick={clearStorageFullFlag}>dismiss</button>
     </div>
   {/if}
-
-  <!-- Price alert notifications (auto-dismiss after 15s) -->
-  {#each getTriggered() as alert (alert.id)}
-    <div
-      class="bg-bull-strong/10 border-b border-bull-strong/30 px-4 py-2 flex items-center justify-between"
-      use:autoDismiss={alert.id}
-    >
-      <span class="text-sm text-bull-strong font-semibold">
-        🔔 {alert.symbol} hit ${alert.targetPrice.toFixed(2)} — now ${alert.currentPrice.toFixed(2)} ({alert.direction === 'above' ? '+' : ''}{(((alert.currentPrice - alert.targetPrice) / alert.targetPrice) * 100).toFixed(1)}%)
-      </span>
-      <button class="text-xs text-text-muted hover:text-text-secondary ml-4" onclick={() => dismissTriggered(alert.id)}>dismiss</button>
-    </div>
-  {/each}
 
   <!-- Refresh error -->
   {#if refreshError}

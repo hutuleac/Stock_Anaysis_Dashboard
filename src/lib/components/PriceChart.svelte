@@ -608,7 +608,7 @@
 
       <!-- Drawing toolbar (daily only) -->
       {#if !isIntraday}
-        <div class="flex items-center gap-0.5 border-r border-border pr-2">
+        <div class="flex flex-wrap items-center gap-0.5 border-r border-border pr-2">
           {#each [['hline', '─', 'Horizontal line'], ['trendline', '╱', 'Trend line'], ['rect', '▭', 'Rectangle']] as [mode, icon, label]}
             <button
               class="px-2 py-0.5 text-xs rounded font-mono transition-colors {drawingMode === mode ? 'bg-warning/20 text-warning' : 'text-text-muted hover:text-text-secondary'}"

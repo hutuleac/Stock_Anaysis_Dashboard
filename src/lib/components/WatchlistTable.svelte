@@ -6,7 +6,6 @@
   import { proximityTo52wHigh } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
-  import { getAlerts, addAlert, removeAlert } from '../stores/alerts.svelte.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
@@ -40,9 +39,6 @@
   let searchError = $state(false);
   let sortBy = $state('score');
   let sortDir = $state('desc');
-  let alertSymbol = $state(null);
-  let alertPrice = $state('');
-  let alertDir = $state('above');
   let bulkOpen = $state(false);
   let bulkText = $state('');
   let bulkAdding = $state(false);
@@ -51,7 +47,7 @@
   let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
 
   // Mobile expansion sections — per-session; state carries across ticker opens.
-  let openSections = $state({ chart: true, indicators: true, entry: false, alerts: false });
+  let openSections = $state({ chart: true, indicators: true, entry: false });
   function toggleSection(k) { openSections[k] = !openSections[k]; }
 
   async function copyForAI(ticker, templateId) {
@@ -440,7 +436,6 @@
 
 
   {#snippet expandedPanel(ticker, data, score, variant)}
-    {@const quote = data?.quote?.data}
     {#if variant === 'desktop'}
       <!-- AI export toolbar -->
       <div class="flex items-center justify-end gap-1 mb-3 relative">
@@ -489,7 +484,8 @@
       <div class="border-t border-border/30">
         {@render sectionHeader('chart', 'Chart')}
         {#if openSections.chart}
-          <div class="pb-3"><PriceChart symbol={ticker.symbol} /></div>
+          <!-- Full-bleed: cancel the expansion card's px-4 so the chart uses the lateral space -->
+          <div class="pb-3 -mx-4"><PriceChart symbol={ticker.symbol} /></div>
         {/if}
       </div>
 
@@ -500,50 +496,11 @@
         {/if}
       </div>
 
-      <div class="border-t border-border/30">
-        {@render sectionHeader('alerts', 'Alerts')}
-        {#if openSections.alerts}
-          <div class="pb-3 space-y-3">
-            <!-- Alerts — mobile has no 🔔 column; give it inline management -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-xs text-text-muted uppercase tracking-wider">Alerts</span>
-              {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
-                {@const distPct = quote?.c ? ((alert.targetPrice - quote.c) / quote.c * 100) : null}
-                <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
-                  {alert.direction} ${alert.targetPrice.toFixed(2)}
-                  {#if distPct !== null}<span class="font-mono">({distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%)</span>{/if}
-                  <button class="hover:text-danger ml-1 p-1" onclick={() => removeAlert(alert.id)}>✕</button>
-                </span>
-              {/each}
-              {#if alertSymbol === ticker.symbol}
-                <select class="text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary" bind:value={alertDir}>
-                  <option value="above">above</option>
-                  <option value="below">below</option>
-                </select>
-                <input type="number" step="0.01" placeholder="price"
-                  class="w-20 text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary font-mono"
-                  bind:value={alertPrice} />
-                <button class="text-xs px-3 py-1.5 bg-warning/20 text-warning rounded"
-                  onclick={() => { if (alertPrice) { addAlert(ticker.symbol, alertPrice, alertDir); alertPrice = ''; alertSymbol = null; } }}
-                >Set</button>
-              {/if}
-            </div>
-          </div>
-        {/if}
-      </div>
-
       <!-- Sticky action bar -->
       <div class="sticky bottom-0 -mx-4 -mb-4 mt-4 px-4 py-2.5 bg-surface-800 border-t border-border flex items-center gap-2">
         <button class="flex-1 text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-secondary"
           onclick={() => copyForAI(ticker)}
         >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
-        <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-warning"
-          onclick={() => {
-            const opening = alertSymbol !== ticker.symbol;
-            alertSymbol = opening ? ticker.symbol : null;
-            if (opening) { alertPrice = ''; alertDir = 'above'; openSections.alerts = true; }
-          }}
-        >🔔 Alert</button>
         <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-danger"
           onclick={() => removeTicker(ticker.symbol)}
         >✕</button>
@@ -696,7 +653,6 @@
             {@const quote = data?.quote?.data}
             {@const isStale = data?.quote?.stale}
             {@const velocity = getScoreVelocity(ticker.symbol)}
-            {@const hasAlert = getAlerts().some(a => a.symbol === ticker.symbol)}
             {@const scoreHistory = getScoreHistory(ticker.symbol)}
             {@const scoreZ = computeScoreZScore(ticker.symbol)}
 
@@ -811,70 +767,13 @@
                 {/if}
               </td>
               <td class="px-2 py-3">
-                <div class="flex items-center gap-0.5">
-                  <button
-                    class="p-1 transition-colors {hasAlert ? 'text-warning' : 'text-text-muted hover:text-warning'}"
-                    title="{hasAlert ? 'Alert set' : 'Set price alert'}"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      alertSymbol = alertSymbol === ticker.symbol ? null : ticker.symbol;
-                      alertPrice = '';
-                      alertDir = 'above';
-                    }}
-                  >🔔</button>
-                  <button
-                    class="text-text-muted hover:text-danger transition-colors p-1"
-                    title="Remove"
-                    onclick={(e) => { e.stopPropagation(); removeTicker(ticker.symbol); }}
-                  >✕</button>
-                </div>
+                <button
+                  class="text-text-muted hover:text-danger transition-colors p-1"
+                  title="Remove"
+                  onclick={(e) => { e.stopPropagation(); removeTicker(ticker.symbol); }}
+                >✕</button>
               </td>
             </tr>
-
-            <!-- Alert form row -->
-            {#if alertSymbol === ticker.symbol}
-              <tr onclick={(e) => e.stopPropagation()}>
-                <td colspan="9" class="px-4 py-2 bg-surface-800/80 border-b border-border/30">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs text-text-muted">Alert when {ticker.symbol} goes</span>
-                    <select
-                      class="text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary"
-                      bind:value={alertDir}
-                    >
-                      <option value="above">above</option>
-                      <option value="below">below</option>
-                    </select>
-                    <input
-                      type="number" step="0.01" placeholder="price"
-                      class="w-24 text-xs bg-surface-700 border border-border rounded px-2 py-1 text-text-primary font-mono"
-                      bind:value={alertPrice}
-                    />
-                    <button
-                      class="text-xs px-3 py-1 bg-warning/20 text-warning rounded hover:bg-warning/30 transition-colors"
-                      onclick={() => {
-                        if (alertPrice) { addAlert(ticker.symbol, alertPrice, alertDir); alertSymbol = null; }
-                      }}
-                    >Set Alert</button>
-                    {#each getAlerts().filter(a => a.symbol === ticker.symbol) as alert (alert.id)}
-                      {@const distPct = quote?.c ? ((alert.targetPrice - quote.c) / quote.c * 100) : null}
-                      <span class="text-xs bg-surface-700 rounded px-2 py-1 text-text-muted flex items-center gap-1">
-                        {alert.direction} ${alert.targetPrice.toFixed(2)}
-                        {#if distPct !== null}
-                          <span class="font-mono {Math.abs(distPct) < 3 ? 'text-warning' : 'text-text-muted'}">({distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%)</span>
-                        {/if}
-                        <button class="hover:text-danger ml-1" onclick={() => removeAlert(alert.id)}>✕</button>
-                      </span>
-                    {/each}
-                    {#if typeof Notification !== 'undefined' && Notification.permission === 'default'}
-                      <button
-                        class="text-[13px] px-2 py-1 bg-surface-600 rounded text-text-muted hover:text-text-secondary transition-colors"
-                        onclick={() => Notification.requestPermission()}
-                      >Enable notifications</button>
-                    {/if}
-                  </div>
-                </td>
-              </tr>
-            {/if}
 
             <!-- Inline expansion: Checklist + Entry Panel -->
             {#if isSelected}
