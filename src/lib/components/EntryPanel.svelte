@@ -97,26 +97,6 @@
         <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Entry Panel</h3>
       </div>
 
-      <!-- Thesis Summary -->
-      <div class="bg-surface-700/50 rounded-lg p-2.5 border border-border/40">
-        <ThesisSummary {symbol} />
-      </div>
-
-      <!-- Trade Window -->
-      {#if daysToEarnings !== null}
-        <div class="flex items-center gap-3 px-2.5 py-1.5 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
-          <span class="text-lg">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
-          <div>
-            <p class="text-xs font-semibold {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
-              Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day remaining' : `${daysToEarnings} days remaining`}
-            </p>
-            <p class="text-[10px] text-text-muted">
-              {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into your hold time and position size.' : 'Earnings not imminent — trade window is open.'}
-            </p>
-          </div>
-        </div>
-      {/if}
-
       <!-- High-volatility day warning -->
       {#if dp !== null && Math.abs(dp) >= 5}
         <div class="flex items-center gap-3 px-2.5 py-1.5 rounded-lg border {dp >= 5 ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}">
@@ -225,8 +205,28 @@
           {/if}
         </div>
 
-        <!-- Right column: ATR (upper) + R:R to target -->
-        <div class="space-y-3">
+        <!-- Right column: thesis + trade window + ATR + R:R -->
+        <div class="space-y-2">
+          <!-- Why this score (compact) -->
+          <div class="bg-surface-700/50 rounded-lg p-2 border border-border/40">
+            <ThesisSummary {symbol} />
+          </div>
+
+          <!-- Trade Window (compact) -->
+          {#if daysToEarnings !== null}
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+              <span class="text-base shrink-0">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
+              <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
+                  Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day left' : `${daysToEarnings} days left`}
+                </p>
+                <p class="text-[10px] text-text-muted leading-snug">
+                  {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into hold time and size.' : 'Earnings not imminent — window is open.'}
+                </p>
+              </div>
+            </div>
+          {/if}
+
           <!-- ATR Volatility Band -->
           {#if atr !== null && currentPrice}
             {@const atrPct = (atr / currentPrice) * 100}
