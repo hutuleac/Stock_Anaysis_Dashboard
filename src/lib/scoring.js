@@ -376,7 +376,7 @@ export function getScoreVelocity(symbol) {
 }
 
 // ─── SECTOR MOMENTUM ────────────────────────────────────────────────────────
-// Smoothed replacement for the old single-day sectorTrend boolean. Stores a
+// Smoothed replacement for the old single-day sector-trend boolean. Stores a
 // rolling window of the sector ETF's daily % change (already fetched for the
 // Market Context rotation tile — zero new API calls), same localStorage
 // pattern as the sv_<SYMBOL> score-velocity history above.

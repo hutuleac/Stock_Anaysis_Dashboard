@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
@@ -8,7 +8,7 @@
   import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
-  import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext } from './lib/scoring.js';
+  import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
@@ -197,16 +197,19 @@
         const data = results[ticker.symbol];
         if (!data) continue;
 
-        // Sector trend
+        // Sector momentum — smoothed 10-snapshot rolling average of the sector
+        // ETF's daily % change, replacing the old single-day boolean.
         try {
+          const etf = getSectorETF(ticker.sector);
           const etfQuote = await fetchSectorETFQuote(ticker.sector);
           if (etfQuote.data) {
-            results[ticker.symbol].sectorTrend = etfQuote.data.dp < -1;
+            storeSectorMomentumSnapshot(etf, etfQuote.data.dp);
+            results[ticker.symbol].sectorMomentum = computeSectorMomentum(getSectorMomentumHistory(etf), etfQuote.data.dp);
           } else {
-            results[ticker.symbol].sectorTrend = null;
+            results[ticker.symbol].sectorMomentum = null;
           }
         } catch {
-          results[ticker.symbol].sectorTrend = null;
+          results[ticker.symbol].sectorMomentum = null;
         }
         await delay(100);
 
@@ -400,7 +403,7 @@
             profile:     d.profile     ?? p?.profile     ?? null,
             rs:          d.rs          ?? p?.rs          ?? null,
             smartMoney:  d.smartMoney  ?? p?.smartMoney  ?? null,
-            sectorTrend: d.sectorTrend ?? null,
+            sectorMomentum: d.sectorMomentum ?? null,
           };
         }
         localStorage.setItem('dashboard_supplement', JSON.stringify({
@@ -513,7 +516,7 @@
             if (s.profile     != null) results[sym].profile     = s.profile;
             if (s.rs          != null) results[sym].rs          = s.rs;
             if (s.smartMoney  != null) results[sym].smartMoney  = s.smartMoney;
-            if (s.sectorTrend != null) results[sym].sectorTrend = s.sectorTrend;
+            if (s.sectorMomentum != null) results[sym].sectorMomentum = s.sectorMomentum;
           }
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
