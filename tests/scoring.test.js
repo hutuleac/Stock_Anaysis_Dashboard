@@ -11,6 +11,9 @@ import {
   getScoreHistory,
   getScoreVelocity,
   betaAdjustedRiskPct,
+  storeSectorMomentumSnapshot,
+  getSectorMomentumHistory,
+  computeSectorMomentum,
 } from '../src/lib/scoring.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -30,7 +33,7 @@ function makeTicker({
   stochCross = null,
   high52 = null,
   low52 = null,
-  sectorTrend = null,
+  sectorMomentum = null,
   news = null,
 } = {}) {
   return {
@@ -48,7 +51,7 @@ function makeTicker({
       },
     },
     news: news ?? null,
-    sectorTrend,
+    sectorMomentum,
     indicators: {
       rsi,
       macd: macd ? { histogram: macd.histogram, macd: macd.macd, signal: macd.signal } : null,
@@ -435,6 +438,43 @@ describe('generateThesis', () => {
   });
 });
 
+// ─── sectorMomentum scoring + thesis ──────────────────────────────────────────
+
+describe('computeScore — sectorMomentum signal', () => {
+  it('scores higher sentiment for stronger positive momentum', () => {
+    const strong = makeTicker({ sectorMomentum: 4 });
+    const weak   = makeTicker({ sectorMomentum: -4 });
+    expect(computeScore(strong).sentiment).toBeGreaterThan(computeScore(weak).sentiment);
+  });
+
+  it('treats missing sectorMomentum as neutral (0.5), same as an in-range value of 0', () => {
+    const withNull = makeTicker({ sectorMomentum: null });
+    const neutral  = makeTicker({ sectorMomentum: 0 }); // strictly inside (-1, 1] → maps to 0.5
+    expect(computeScore(withNull).sentiment).toBeCloseTo(computeScore(neutral).sentiment, 5);
+  });
+});
+
+describe('generateThesis — sector momentum bullets', () => {
+  it('adds a bullish bullet with the numeric value for positive momentum', () => {
+    const ticker = makeTicker({ price: 100, sectorMomentum: 2.3 });
+    const thesis = generateThesis(ticker, computeScore(ticker));
+    expect(thesis.bulls.some(b => b.includes('+2.3%'))).toBe(true);
+  });
+
+  it('adds a bearish bullet with the numeric value for negative momentum', () => {
+    const ticker = makeTicker({ price: 100, sectorMomentum: -4.1 });
+    const thesis = generateThesis(ticker, computeScore(ticker));
+    expect(thesis.bears.some(b => b.includes('-4.1%'))).toBe(true);
+  });
+
+  it('adds no sector-momentum bullet when the value is null', () => {
+    const ticker = makeTicker({ price: 100, sectorMomentum: null });
+    const thesis = generateThesis(ticker, computeScore(ticker));
+    expect(thesis.bulls.some(b => b.includes('Sector momentum'))).toBe(false);
+    expect(thesis.bears.some(b => b.includes('Sector momentum'))).toBe(false);
+  });
+});
+
 // ─── betaAdjustedRiskPct ─────────────────────────────────────────────────────
 describe('betaAdjustedRiskPct', () => {
   it('returns 2% and normal tier when beta is null or zero', () => {
@@ -460,5 +500,68 @@ describe('betaAdjustedRiskPct', () => {
   it('returns 1% for high-beta stocks (β > 1.8)', () => {
     expect(betaAdjustedRiskPct(2.0)).toEqual({ riskPct: 1.0, tier: 'high' });
     expect(betaAdjustedRiskPct(3.5)).toEqual({ riskPct: 1.0, tier: 'high' });
+  });
+});
+
+// ─── Sector momentum ──────────────────────────────────────────────────────────
+
+describe('storeSectorMomentumSnapshot / getSectorMomentumHistory', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('stores a snapshot and reads it back', () => {
+    storeSectorMomentumSnapshot('XLK', 1.5);
+    const history = getSectorMomentumHistory('XLK');
+    expect(history).toHaveLength(1);
+    expect(history[0].dp).toBe(1.5);
+    expect(typeof history[0].ts).toBe('number');
+  });
+
+  it('does not add a duplicate within 1 hour', () => {
+    storeSectorMomentumSnapshot('XLK', 1.5);
+    storeSectorMomentumSnapshot('XLK', 2.0);
+    expect(getSectorMomentumHistory('XLK')).toHaveLength(1);
+  });
+
+  it('trims to the trailing 10 entries', () => {
+    for (let i = 0; i < 15; i++) {
+      localStorage.setItem('sm_XLK', JSON.stringify(
+        [...JSON.parse(localStorage.getItem('sm_XLK') || '[]'), { dp: i, ts: Date.now() - (15 - i) * 3600000 * 2 }]
+      ));
+    }
+    storeSectorMomentumSnapshot('XLK', 99);
+    const history = getSectorMomentumHistory('XLK');
+    expect(history.length).toBeLessThanOrEqual(10);
+    expect(history[history.length - 1].dp).toBe(99);
+  });
+
+  it('returns an empty array when nothing is stored', () => {
+    expect(getSectorMomentumHistory('XLF')).toEqual([]);
+  });
+
+  it('ignores non-finite dp values', () => {
+    storeSectorMomentumSnapshot('XLK', NaN);
+    storeSectorMomentumSnapshot('XLK', undefined);
+    expect(getSectorMomentumHistory('XLK')).toEqual([]);
+  });
+});
+
+describe('computeSectorMomentum', () => {
+  it('falls back to today\'s dp when fewer than 3 snapshots exist (cold start)', () => {
+    expect(computeSectorMomentum([], 2.5)).toBe(2.5);
+    expect(computeSectorMomentum([{ dp: 1 }, { dp: 2 }], 2.5)).toBe(2.5);
+  });
+
+  it('returns null when there is no history and no today value', () => {
+    expect(computeSectorMomentum([], null)).toBeNull();
+  });
+
+  it('averages the window once at least 3 snapshots exist', () => {
+    const history = [{ dp: 1 }, { dp: 2 }, { dp: 3 }];
+    expect(computeSectorMomentum(history, 99)).toBe(2); // average of 1,2,3 — ignores todayDp once warm
+  });
+
+  it('filters out non-finite entries before averaging', () => {
+    const history = [{ dp: 1 }, { dp: NaN }, { dp: 2 }, { dp: 3 }];
+    expect(computeSectorMomentum(history, 99)).toBe(2);
   });
 });

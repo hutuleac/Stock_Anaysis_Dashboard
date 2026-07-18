@@ -73,7 +73,7 @@ export function buildStockSnapshot(ticker, d, marketCtx) {
       (s.regimeNote ? ` · note: ${s.regimeNote}` : ''),
     `TECHNICALS (daily): RSI ${rsi !== null ? `${rsi} (${rsiLabel(rsi)}, ${ind.rsiDirection ?? NA})` : NA} · MACD ${macdLine} · ADX ${fmt(ind.adx)} · Stoch %K ${fmt(ind.stochK)} · EMA stack: ${ind.emaStack ?? NA} · Bollinger: ${bbLine} · ATR ${fmt(ind.atr)} (weekly ${fmt(d?.weekly?.atr)})`,
     `SETUPS (weekly): ${setupLine('Pullback', d?.setups?.pullback)} · ${setupLine('Momentum', d?.setups?.momentum)} · weekly RSI ${fmt(d?.setups?.meta?.wRsi)}`,
-    `FUNDAMENTALS: P/E ${fmt(pe)} · PEG ${peg !== null ? Math.round(peg * 10) / 10 : NA} · EPS growth ${fmtSigned(eps)} · Rev growth ${fmtSigned(m.revenueGrowthTTMYoy)} · Net margin ${fmt(m.netProfitMarginTTM, '%')} · P/S ${fmt(m.psTTM)}`,
+    `FUNDAMENTALS: P/E ${fmt(pe)} · PEG ${peg !== null ? Math.round(peg * 10) / 10 : NA} · EPS growth ${fmtSigned(eps)} · Rev growth ${fmtSigned(m.revenueGrowthTTMYoy)} · Net margin ${fmt(m.netProfitMarginTTM, '%')} · P/S ${fmt(m.psTTM)} · Div yield ${fmt(m.dividendYieldIndicatedAnnual, '%')}`,
     `REL. STRENGTH vs SPY: 1M ${fmtSigned(d?.rs?.rs1m)} · 3M ${fmtSigned(d?.rs?.rs3m)}`,
     `SMART MONEY: insider MSPR ${fmtSigned(sm?.mspr3m, '')} · analysts ${fmt(buyPct, '% buy')}${sm?.rec?.deteriorating === true ? ' (deteriorating)' : ''}`,
     `DIP SCORE: ${dipHit ? `${dipHit.score}/10 (${dipHit.readiness})` : 'none (no qualifying dip)'}`,
