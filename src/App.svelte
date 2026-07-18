@@ -2,7 +2,7 @@
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
-  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
+  import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { tdValuesToCandles } from './lib/candles.js';
@@ -355,6 +355,19 @@
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
         if (data) storeScoreSnapshot(ticker.symbol, computeScore(data).score);
+      }
+
+      // Watchlist breadth (%>EMA50/EMA200) — pure local aggregation, no new calls
+      if (marketContextData) {
+        const breadthEntries = tickers.map(t => {
+          const d = results[t.symbol];
+          return {
+            price:  d?.quote?.data?.c ?? null,
+            ema50:  d?.indicators?.ema50 ?? null,
+            ema200: d?.indicators?.ema200 ?? null,
+          };
+        });
+        marketContextData = { ...marketContextData, breadth: computeBreadth(breadthEntries) };
       }
 
       lastRefreshed = new Date();

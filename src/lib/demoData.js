@@ -84,4 +84,8 @@ export const DEMO_MARKET_CONTEXT = {
     XLRE: { data: { dp:  0.1 } },
     XLC:  { data: { dp: -0.7 } },
   },
+  breadth: {
+    ema50:  { above: 3, total: 5 },
+    ema200: { above: 5, total: 5 },
+  },
 };

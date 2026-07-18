@@ -720,6 +720,19 @@ export const TIPS = {
     why: 'Even the best individual setup gets dragged down when its sector is under distribution. Check whether your watchlist tickers belong to today\'s lagging sectors before committing capital.',
   },
 
+  breadth: {
+    title: 'Watchlist Breadth',
+    subtitle: '% of Watchlist Above EMA50 / EMA200',
+    category: 'Market Context',
+    description: 'How many of your watchlist tickers are trading above their 50-day and 200-day EMAs, right now. A regime read on your specific watchlist as a group — not the broad market.',
+    levels: [
+      { range: '≥ 70%', label: 'Bullish', color: C.green, desc: 'Broad strength across your watchlist — favorable backdrop for new longs.' },
+      { range: '40–70%', label: 'Mixed',  color: C.dim,   desc: 'Split picture — some names participating, others lagging. Be selective.' },
+      { range: '< 40%',  label: 'Bearish', color: C.red,  desc: 'Most of your watchlist is below trend — a tough tape for new longs, whatever any single setup looks like.' },
+    ],
+    why: 'A single ticker can look great in isolation while the group it belongs to is broadly breaking down (or vice versa). Breadth catches that — check it before sizing up on an individual setup.',
+  },
+
   scoreHistory: {
     title: 'Score History',
     subtitle: 'Composite Score Trend Over Time',
