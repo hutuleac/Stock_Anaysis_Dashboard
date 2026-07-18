@@ -19,6 +19,7 @@ import {
   computeVolumeConfirmation,
   computeSwingLows,
   resampleWeekly,
+  resampleMonthly,
   realizedVol,
 } from '../src/lib/indicators.js';
 
@@ -751,6 +752,39 @@ describe('resampleWeekly', () => {
     expect(resampleWeekly(null)).toBeNull();
     expect(resampleWeekly({ s: 'no_data' })).toBeNull();
     expect(resampleWeekly({ s: 'ok', c: [1], t: [] })).toBeNull();
+  });
+});
+
+// ─── resampleMonthly ──────────────────────────────────────────────────────────
+
+describe('resampleMonthly', () => {
+  // Three trading days across two calendar months (UTC).
+  // 2026-01-30, 2026-01-31, 2026-02-02
+  const raw = {
+    s: 'ok',
+    t: [1769731200, 1769817600, 1770004800],
+    o: [10, 11, 20],
+    h: [12, 15, 22],
+    l: [9, 10, 19],
+    c: [11, 14, 21],
+    v: [100, 200, 500],
+  };
+
+  it('groups daily bars into calendar-month OHLCV buckets', () => {
+    const m = resampleMonthly(raw);
+    expect(m.c).toEqual([14, 21]);        // last close of Jan, last close of Feb
+    expect(m.o).toEqual([10, 20]);        // first open of each month
+    expect(m.h).toEqual([15, 22]);        // max high per month
+    expect(m.l).toEqual([9, 19]);         // min low per month
+    expect(m.v).toEqual([300, 500]);      // summed volume per month
+    expect(m.t).toEqual([1769731200, 1770004800]); // first ts of each month
+  });
+
+  it('returns null for malformed or empty input', () => {
+    expect(resampleMonthly(null)).toBeNull();
+    expect(resampleMonthly({ s: 'no_data' })).toBeNull();
+    expect(resampleMonthly({ s: 'ok', t: [1], c: [] })).toBeNull();
+    expect(resampleMonthly({ s: 'ok', t: [1, 2], c: [10] })).toBeNull(); // length mismatch
   });
 });
 
