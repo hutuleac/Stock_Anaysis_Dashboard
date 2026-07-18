@@ -374,6 +374,60 @@ export function getScoreVelocity(symbol) {
   };
 }
 
+// ─── SECTOR MOMENTUM ────────────────────────────────────────────────────────
+// Smoothed replacement for the old single-day sectorTrend boolean. Stores a
+// rolling window of the sector ETF's daily % change (already fetched for the
+// Market Context rotation tile — zero new API calls), same localStorage
+// pattern as the sv_<SYMBOL> score-velocity history above.
+
+const SECTOR_MOMENTUM_KEY = (etf) => `sm_${etf}`;
+const MOMENTUM_WINDOW = 10;
+
+export function storeSectorMomentumSnapshot(etf, dp) {
+  if (!Number.isFinite(dp)) return;
+  const key = SECTOR_MOMENTUM_KEY(etf);
+  let history = [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) history = JSON.parse(raw);
+  } catch { /* noop */ }
+
+  const now = Date.now();
+  const last = history[history.length - 1];
+  if (!last || now - last.ts > 3600000) {
+    history.push({ dp, ts: now });
+  }
+  if (history.length > MOMENTUM_WINDOW) history = history.slice(-MOMENTUM_WINDOW);
+
+  try {
+    localStorage.setItem(key, JSON.stringify(history));
+  } catch { /* noop */ }
+}
+
+export function getSectorMomentumHistory(etf) {
+  const key = SECTOR_MOMENTUM_KEY(etf);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const history = JSON.parse(raw);
+    return Array.isArray(history) ? history : [];
+  } catch {
+    return [];
+  }
+}
+
+// Cold start (< 3 snapshots — new install, or a sector newly appearing because
+// a ticker was just added): fall back to today's single-day dp so scoring is
+// never undefined on day one.
+export function computeSectorMomentum(history, todayDp) {
+  const valid = (Array.isArray(history) ? history : []).filter(e => Number.isFinite(e?.dp));
+  if (valid.length < 3) {
+    return Number.isFinite(todayDp) ? todayDp : null;
+  }
+  const sum = valid.reduce((acc, e) => acc + e.dp, 0);
+  return Math.round((sum / valid.length) * 100) / 100;
+}
+
 // ─── SCORE Z-SCORE ────────────────────────────────────────────────────────────
 // Returns how many std-devs the current score sits above/below its 90-day mean.
 // Requires storeScoreSnapshot to have been called on prior refreshes.

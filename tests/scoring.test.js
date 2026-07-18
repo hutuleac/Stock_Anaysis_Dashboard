@@ -11,6 +11,9 @@ import {
   getScoreHistory,
   getScoreVelocity,
   betaAdjustedRiskPct,
+  storeSectorMomentumSnapshot,
+  getSectorMomentumHistory,
+  computeSectorMomentum,
 } from '../src/lib/scoring.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -460,5 +463,68 @@ describe('betaAdjustedRiskPct', () => {
   it('returns 1% for high-beta stocks (β > 1.8)', () => {
     expect(betaAdjustedRiskPct(2.0)).toEqual({ riskPct: 1.0, tier: 'high' });
     expect(betaAdjustedRiskPct(3.5)).toEqual({ riskPct: 1.0, tier: 'high' });
+  });
+});
+
+// ─── Sector momentum ──────────────────────────────────────────────────────────
+
+describe('storeSectorMomentumSnapshot / getSectorMomentumHistory', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('stores a snapshot and reads it back', () => {
+    storeSectorMomentumSnapshot('XLK', 1.5);
+    const history = getSectorMomentumHistory('XLK');
+    expect(history).toHaveLength(1);
+    expect(history[0].dp).toBe(1.5);
+    expect(typeof history[0].ts).toBe('number');
+  });
+
+  it('does not add a duplicate within 1 hour', () => {
+    storeSectorMomentumSnapshot('XLK', 1.5);
+    storeSectorMomentumSnapshot('XLK', 2.0);
+    expect(getSectorMomentumHistory('XLK')).toHaveLength(1);
+  });
+
+  it('trims to the trailing 10 entries', () => {
+    for (let i = 0; i < 15; i++) {
+      localStorage.setItem('sm_XLK', JSON.stringify(
+        [...JSON.parse(localStorage.getItem('sm_XLK') || '[]'), { dp: i, ts: Date.now() - (15 - i) * 3600000 * 2 }]
+      ));
+    }
+    storeSectorMomentumSnapshot('XLK', 99);
+    const history = getSectorMomentumHistory('XLK');
+    expect(history.length).toBeLessThanOrEqual(10);
+    expect(history[history.length - 1].dp).toBe(99);
+  });
+
+  it('returns an empty array when nothing is stored', () => {
+    expect(getSectorMomentumHistory('XLF')).toEqual([]);
+  });
+
+  it('ignores non-finite dp values', () => {
+    storeSectorMomentumSnapshot('XLK', NaN);
+    storeSectorMomentumSnapshot('XLK', undefined);
+    expect(getSectorMomentumHistory('XLK')).toEqual([]);
+  });
+});
+
+describe('computeSectorMomentum', () => {
+  it('falls back to today\'s dp when fewer than 3 snapshots exist (cold start)', () => {
+    expect(computeSectorMomentum([], 2.5)).toBe(2.5);
+    expect(computeSectorMomentum([{ dp: 1 }, { dp: 2 }], 2.5)).toBe(2.5);
+  });
+
+  it('returns null when there is no history and no today value', () => {
+    expect(computeSectorMomentum([], null)).toBeNull();
+  });
+
+  it('averages the window once at least 3 snapshots exist', () => {
+    const history = [{ dp: 1 }, { dp: 2 }, { dp: 3 }];
+    expect(computeSectorMomentum(history, 99)).toBe(2); // average of 1,2,3 — ignores todayDp once warm
+  });
+
+  it('filters out non-finite entries before averaging', () => {
+    const history = [{ dp: 1 }, { dp: NaN }, { dp: 2 }, { dp: 3 }];
+    expect(computeSectorMomentum(history, 99)).toBe(2);
   });
 });
