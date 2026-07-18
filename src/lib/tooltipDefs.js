@@ -423,6 +423,19 @@ export const TIPS = {
     why: 'A high P/E is not automatically expensive if growth justifies it. PEG normalizes valuation against growth so fast growers and slow growers are comparable.',
   },
 
+  dividendYield: {
+    title: 'Dividend Yield',
+    subtitle: 'Indicated annual dividend ÷ price',
+    category: 'Fundamental',
+    description: 'Annual dividend income as a percentage of the current share price. Most growth-stage names in a swing-trade watchlist won\'t pay one — that\'s expected, not a red flag.',
+    levels: [
+      { range: '0%',      label: 'Non-payer', color: C.dim,   desc: 'No dividend — common for growth names reinvesting cash into the business.' },
+      { range: '< 2%',    label: 'Modest',    color: C.dim,   desc: 'Small income component, not the reason to hold this name.' },
+      { range: '≥ 2%',    label: 'Payer',     color: C.green, desc: 'Meaningful income component — relevant for value/dividend-oriented positions.' },
+    ],
+    why: 'This dashboard is built for swing trades on price action, so dividend yield is informational only — it never feeds the composite score. Useful context when comparing a growth setup against a value/income alternative.',
+  },
+
   tfsScore: {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',

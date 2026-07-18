@@ -13,7 +13,7 @@ export const DEMO_MARKET_DATA = {
   AAPL: {
     quote:       { data: { c: 214.50, d: -2.61, dp: -1.2,  pc: 217.11 }, stale: true },
     earnings:    { data: { earningsCalendar: [{ date: '2026-07-24', symbol: 'AAPL' }] }, stale: true },
-    metrics:     { data: { metric: { marketCapitalization: 3200, peNormalizedAnnual: 31.2, peBasicExclExtraTTM: 31.2, epsGrowthTTMYoy: 7.8, epsGrowth3Y: 12.4, '50DayMovingAverage': 221.80, '200DayMovingAverage': 206.40, '52WeekHigh': 237.49, '52WeekLow': 164.08, beta: 1.24 } }, stale: true },
+    metrics:     { data: { metric: { marketCapitalization: 3200, peNormalizedAnnual: 31.2, peBasicExclExtraTTM: 31.2, epsGrowthTTMYoy: 7.8, epsGrowth3Y: 12.4, '50DayMovingAverage': 221.80, '200DayMovingAverage': 206.40, '52WeekHigh': 237.49, '52WeekLow': 164.08, beta: 1.24, dividendYieldIndicatedAnnual: 0.44 } }, stale: true },
     news:          { data: [], stale: true },
     indicators:    { rsi: 47.3, rsiDirection: 'falling', rsiZScore: -0.7, macd: { macd: -0.42, signal: -0.18, histogram: -0.24 }, macdCrossover: null, adx: 24.1, stochK: 34.2, stochD: 38.5, stochCross: null, bb: { upper: 228.5, middle: 214.0, lower: 199.5 }, ema20: 216.8, ema50: 221.80, ema200: 206.40, source: 'demo' },
     tdQuote:       { volume: 58_200_000, avgVolume: 62_000_000, volumeRatio: 0.94 },
@@ -54,7 +54,7 @@ export const DEMO_MARKET_DATA = {
   MSFT: {
     quote:         { data: { c: 378.90, d: -1.91, dp: -0.5,  pc: 380.81 }, stale: true },
     earnings:      { data: { earningsCalendar: [{ date: '2026-04-29', symbol: 'MSFT' }] }, stale: true },
-    metrics:       { data: { metric: { marketCapitalization: 2815, peNormalizedAnnual: 34.1, peBasicExclExtraTTM: 34.1, epsGrowthTTMYoy: 21.3, epsGrowth3Y: 18.9, revenueGrowthTTMYoy: 14.8, netProfitMarginTTM: 35.6, '50DayMovingAverage': 373.80, '200DayMovingAverage': 352.40, '52WeekHigh': 420.82, '52WeekLow': 309.45, beta: 0.91 } }, stale: true },
+    metrics:       { data: { metric: { marketCapitalization: 2815, peNormalizedAnnual: 34.1, peBasicExclExtraTTM: 34.1, epsGrowthTTMYoy: 21.3, epsGrowth3Y: 18.9, revenueGrowthTTMYoy: 14.8, netProfitMarginTTM: 35.6, '50DayMovingAverage': 373.80, '200DayMovingAverage': 352.40, '52WeekHigh': 420.82, '52WeekLow': 309.45, beta: 0.91, dividendYieldIndicatedAnnual: 0.68 } }, stale: true },
     news:          { data: [], stale: true },
     smartMoney:    { data: { rec: { buyRatio: 0.81, deteriorating: false }, mspr3m: 15.2 }, stale: true },
     indicators:    { rsi: 53.2, rsiDirection: 'flat', rsiZScore: 0.2, roc20: -5.5, roc60: -9.2, macd: { macd: 0.68, signal: 0.42, histogram: 0.26 }, macdCrossover: null, adx: 29.4, stochK: 61.4, stochD: 58.7, stochCross: null, bb: { upper: 395.0, middle: 375.0, lower: 355.0 }, ema20: 377.4, ema50: 373.80, ema200: 352.40, source: 'demo' },

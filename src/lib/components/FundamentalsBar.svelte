@@ -107,6 +107,11 @@
       color: peg == null ? '' : peg < 1 ? 'text-bull-strong' : peg > 2 ? 'text-bear-strong' : '',
     },
     {
+      label: 'Div Yield',
+      value: fmt(m['dividendYieldIndicatedAnnual'], '', '%'),
+      note: null,
+    },
+    {
       label: 'EMA50',
       value: fmt(m['50DayMovingAverage'] ?? data?.indicators?.ema50, '$'),
       note: (() => {
@@ -136,7 +141,7 @@
 <div class="bg-surface-800/60 border border-border/50 rounded-lg px-2.5 py-2.5 sm:px-4 sm:py-3">
   <div class="grid grid-cols-3 gap-x-2 gap-y-2 sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
     {#each metrics as metric}
-      {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : null}
+      {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : metric.label === 'Div Yield' ? TIPS.dividendYield : null}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={metricTip ?? undefined}>
         <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">{metric.label}</span>
         <div class="flex items-baseline gap-1.5 mt-0.5">
