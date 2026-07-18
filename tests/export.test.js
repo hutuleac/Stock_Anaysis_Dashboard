@@ -8,6 +8,7 @@ function makeData(overrides = {}) {
     metrics: { data: { metric: {
       epsGrowthTTMYoy: 21, revenueGrowthTTMYoy: 12, netProfitMarginTTM: 9.8,
       peNormalizedAnnual: 34, psTTM: 3.1, '52WeekHigh': 240, '52WeekLow': 150,
+      dividendYieldIndicatedAnnual: 0.52,
     } } },
     indicators: {
       rsi: 61, rsiDirection: 'rising', rsiZScore: 0.4,
@@ -56,6 +57,18 @@ describe('buildStockSnapshot', () => {
   it('shows 52w range position from pct52wRange', () => {
     const snap = buildStockSnapshot(TICKER, makeData(), CTX);
     expect(snap).toContain('52w range position: 87%'); // (228.4-150)/(240-150) = 87.1 → 87
+  });
+
+  it('shows dividend yield in the FUNDAMENTALS line', () => {
+    const snap = buildStockSnapshot(TICKER, makeData(), CTX);
+    expect(snap).toContain('Div yield 0.52%');
+  });
+
+  it('shows n/a for dividend yield when the field is absent', () => {
+    const snap = buildStockSnapshot(TICKER, makeData({
+      metrics: { data: { metric: { peNormalizedAnnual: 34 } } },
+    }), CTX);
+    expect(snap).toContain('Div yield n/a');
   });
 
   it('labels Fear & Greed zone', () => {

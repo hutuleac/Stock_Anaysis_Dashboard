@@ -423,6 +423,19 @@ export const TIPS = {
     why: 'A high P/E is not automatically expensive if growth justifies it. PEG normalizes valuation against growth so fast growers and slow growers are comparable.',
   },
 
+  dividendYield: {
+    title: 'Dividend Yield',
+    subtitle: 'Indicated annual dividend ÷ price',
+    category: 'Fundamental',
+    description: 'Annual dividend income as a percentage of the current share price. Most growth-stage names in a swing-trade watchlist won\'t pay one — that\'s expected, not a red flag.',
+    levels: [
+      { range: '0%',      label: 'Non-payer', color: C.dim,   desc: 'No dividend — common for growth names reinvesting cash into the business.' },
+      { range: '< 2%',    label: 'Modest',    color: C.dim,   desc: 'Small income component, not the reason to hold this name.' },
+      { range: '≥ 2%',    label: 'Payer',     color: C.green, desc: 'Meaningful income component — relevant for value/dividend-oriented positions.' },
+    ],
+    why: 'This dashboard is built for swing trades on price action, so dividend yield is informational only — it never feeds the composite score. Useful context when comparing a growth setup against a value/income alternative.',
+  },
+
   tfsScore: {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',
@@ -705,6 +718,19 @@ export const TIPS = {
       { range: '-0.3% to -1%',  label: 'Lagging',  color: C.orange, desc: 'Mild underperformance. Sector not in favor — wait for rotation to improve before entering.' },
     ],
     why: 'Even the best individual setup gets dragged down when its sector is under distribution. Check whether your watchlist tickers belong to today\'s lagging sectors before committing capital.',
+  },
+
+  breadth: {
+    title: 'Watchlist Breadth',
+    subtitle: '% of Watchlist Above EMA50 / EMA200',
+    category: 'Market Context',
+    description: 'How many of your watchlist tickers are trading above their 50-day and 200-day EMAs, right now. A regime read on your specific watchlist as a group — not the broad market.',
+    levels: [
+      { range: '≥ 70%', label: 'Bullish', color: C.green, desc: 'Broad strength across your watchlist — favorable backdrop for new longs.' },
+      { range: '40–70%', label: 'Mixed',  color: C.dim,   desc: 'Split picture — some names participating, others lagging. Be selective.' },
+      { range: '< 40%',  label: 'Bearish', color: C.red,  desc: 'Most of your watchlist is below trend — a tough tape for new longs, whatever any single setup looks like.' },
+    ],
+    why: 'A single ticker can look great in isolation while the group it belongs to is broadly breaking down (or vice versa). Breadth catches that — check it before sizing up on an individual setup.',
   },
 
   scoreHistory: {

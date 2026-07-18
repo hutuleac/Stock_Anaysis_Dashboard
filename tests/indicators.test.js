@@ -9,6 +9,7 @@ import {
   computeWeeklyTrend,
   priceReturn,
   computeRelativeStrength,
+  computeBreadth,
   computeEmaStack,
   computeOversoldConfluence,
   proximityTo52wHigh,
@@ -399,6 +400,45 @@ describe('computeRelativeStrength', () => {
     const r = computeRelativeStrength(stock, spy);
     expect(r.rs3m).not.toBeNull();
     expect(r.rs3m).toBeGreaterThan(0);
+  });
+});
+
+// ─── computeBreadth ────────────────────────────────────────────────────────
+
+describe('computeBreadth', () => {
+  it('counts tickers above EMA50 and EMA200 independently', () => {
+    const entries = [
+      { price: 110, ema50: 100, ema200: 90 },  // above both
+      { price: 95,  ema50: 100, ema200: 90 },  // below ema50, above ema200
+      { price: 85,  ema50: 100, ema200: 90 },  // below both
+    ];
+    const r = computeBreadth(entries);
+    expect(r.ema50).toEqual({ above: 1, total: 3 });
+    expect(r.ema200).toEqual({ above: 2, total: 3 });
+  });
+
+  it('excludes entries with a missing EMA from that EMA\'s denominator, not from the other', () => {
+    const entries = [
+      { price: 110, ema50: 100, ema200: null }, // has ema50 only
+      { price: 110, ema50: null, ema200: 90 },  // has ema200 only
+    ];
+    const r = computeBreadth(entries);
+    expect(r.ema50).toEqual({ above: 1, total: 1 });
+    expect(r.ema200).toEqual({ above: 1, total: 1 });
+  });
+
+  it('skips entries with a missing price entirely', () => {
+    const entries = [
+      { price: null, ema50: 100, ema200: 90 },
+      { price: 110,  ema50: 100, ema200: 90 },
+    ];
+    const r = computeBreadth(entries);
+    expect(r.ema50).toEqual({ above: 1, total: 1 });
+  });
+
+  it('returns all-zero totals for an empty or null input', () => {
+    expect(computeBreadth([])).toEqual({ ema50: { above: 0, total: 0 }, ema200: { above: 0, total: 0 } });
+    expect(computeBreadth(null)).toEqual({ ema50: { above: 0, total: 0 }, ema200: { above: 0, total: 0 } });
   });
 });
 

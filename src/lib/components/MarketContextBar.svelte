@@ -90,6 +90,16 @@
     return { ...state, value: `${up}/${all.length}`, leaders: all.slice(0, 2), laggards: all.slice(-2).reverse() };
   }
 
+  function getBreadthInfo(breadth) {
+    const e50 = breadth?.ema50;
+    if (!e50 || !e50.total) return null;
+    const ratio = e50.above / e50.total;
+    const state = ratio >= 0.7 ? { ...STATES.good, label: 'BULLISH' }
+                : ratio <= 0.4 ? { ...STATES.bad,  label: 'BEARISH' }
+                :                { ...STATES.neutral, label: 'MIXED' };
+    return { ...state, value: `${e50.above}/${e50.total}`, ema50: e50, ema200: breadth.ema200 };
+  }
+
   function getNudge(vixLevel, spyLabel, fg) {
     if (vixLevel === 'extreme') return { text: 'Extreme fear in the market — cash is a valid position today', type: 'danger' };
     if (fg?.score != null && fg.score <= 25) return { text: `Fear & Greed at ${fg.score} (Extreme Fear) — market in panic mode, tread carefully`, type: 'danger' };
@@ -105,6 +115,7 @@
   let macroInfo = $derived(getMacroInfo(marketData?.macro ?? null));
   let fgInfo   = $derived(getFgInfo(marketData?.fearGreed?.data ?? null));
   let rotation = $derived(getRotation(marketData?.sectors));
+  let breadthInfo = $derived(getBreadthInfo(marketData?.breadth ?? null));
   let nudge    = $derived(getNudge(vixInfo.level, spyInfo.label, fgInfo));
 </script>
 
@@ -211,6 +222,17 @@
               {@render rotationRow('▲', 'text-bull-strong', rotation.leaders)}
               {@render rotationRow('▼', 'text-bear-weak', rotation.laggards)}
             </div>
+          </div>
+        {/if}
+
+        <!-- Watchlist Breadth (%>EMA50/EMA200) -->
+        {#if breadthInfo}
+          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
+            use:tipAction={TIPS.breadth}>
+            {@render tileHeader(breadthInfo, 'Breadth')}
+            <span class="text-[12px] text-text-muted font-mono truncate">
+              {breadthInfo.ema50.above}/{breadthInfo.ema50.total} &gt; EMA50 · {breadthInfo.ema200.above}/{breadthInfo.ema200.total} &gt; EMA200
+            </span>
           </div>
         {/if}
       </div>

@@ -234,6 +234,30 @@ export function computeRelativeStrength(stockCloses, benchCloses) {
   return { rs1m: rsFor(BARS_1M), rs3m: rsFor(BARS_3M) };
 }
 
+// ── Watchlist breadth ────────────────────────────────────────────────────────
+// % of watchlist tickers trading above EMA50 / EMA200 — a regime read on the
+// watchlist as a group, not a per-ticker signal. Each MA's denominator only
+// counts entries that actually have that MA (insufficient history → excluded,
+// not counted as failing).
+export function computeBreadth(entries) {
+  let ema50Above = 0, ema50Total = 0, ema200Above = 0, ema200Total = 0;
+  for (const e of entries || []) {
+    if (e?.price == null) continue;
+    if (e.ema50 != null) {
+      ema50Total++;
+      if (e.price > e.ema50) ema50Above++;
+    }
+    if (e.ema200 != null) {
+      ema200Total++;
+      if (e.price > e.ema200) ema200Above++;
+    }
+  }
+  return {
+    ema50:  { above: ema50Above,  total: ema50Total },
+    ema200: { above: ema200Above, total: ema200Total },
+  };
+}
+
 // ── EMA stack alignment ──────────────────────────────────────────────────────
 // Full bull alignment = price > EMA20 > EMA50 > EMA200. Counts how many of the
 // three ordered relationships hold → BULL_STACK (3) / PARTIAL (1–2) / BROKEN (0).

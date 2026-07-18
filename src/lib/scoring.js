@@ -175,8 +175,9 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     sentScore += newsSent; sentFactors++; signals.push(newsSent);
   } else sentScore += 0.5;
 
-  if (tickerData.sectorTrend !== undefined && tickerData.sectorTrend !== null) {
-    const v = tickerData.sectorTrend ? 0.2 : 0.8;
+  if (tickerData.sectorMomentum !== undefined && tickerData.sectorMomentum !== null) {
+    const sm = tickerData.sectorMomentum;
+    const v = sm > 3 ? 0.9 : sm > 1 ? 0.7 : sm > -1 ? 0.5 : sm > -3 ? 0.3 : 0.1;
     sentScore += v; sentFactors++; signals.push(v);
   } else sentScore += 0.5;
 
@@ -374,6 +375,60 @@ export function getScoreVelocity(symbol) {
   };
 }
 
+// ─── SECTOR MOMENTUM ────────────────────────────────────────────────────────
+// Smoothed replacement for the old single-day sector-trend boolean. Stores a
+// rolling window of the sector ETF's daily % change (already fetched for the
+// Market Context rotation tile — zero new API calls), same localStorage
+// pattern as the sv_<SYMBOL> score-velocity history above.
+
+const SECTOR_MOMENTUM_KEY = (etf) => `sm_${etf}`;
+const MOMENTUM_WINDOW = 10;
+
+export function storeSectorMomentumSnapshot(etf, dp) {
+  if (!Number.isFinite(dp)) return;
+  const key = SECTOR_MOMENTUM_KEY(etf);
+  let history = [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) history = JSON.parse(raw);
+  } catch { /* noop */ }
+
+  const now = Date.now();
+  const last = history[history.length - 1];
+  if (!last || now - last.ts > 3600000) {
+    history.push({ dp, ts: now });
+  }
+  if (history.length > MOMENTUM_WINDOW) history = history.slice(-MOMENTUM_WINDOW);
+
+  try {
+    localStorage.setItem(key, JSON.stringify(history));
+  } catch { /* noop */ }
+}
+
+export function getSectorMomentumHistory(etf) {
+  const key = SECTOR_MOMENTUM_KEY(etf);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const history = JSON.parse(raw);
+    return Array.isArray(history) ? history : [];
+  } catch {
+    return [];
+  }
+}
+
+// Cold start (< 3 snapshots — new install, or a sector newly appearing because
+// a ticker was just added): fall back to today's single-day dp so scoring is
+// never undefined on day one.
+export function computeSectorMomentum(history, todayDp) {
+  const valid = (Array.isArray(history) ? history : []).filter(e => Number.isFinite(e?.dp));
+  if (valid.length < 3) {
+    return Number.isFinite(todayDp) ? todayDp : null;
+  }
+  const sum = valid.reduce((acc, e) => acc + e.dp, 0);
+  return Math.round((sum / valid.length) * 100) / 100;
+}
+
 // ─── SCORE Z-SCORE ────────────────────────────────────────────────────────────
 // Returns how many std-devs the current score sits above/below its 90-day mean.
 // Requires storeScoreSnapshot to have been called on prior refreshes.
@@ -454,8 +509,11 @@ export function generateThesis(tickerData, scoreResult) {
   }
 
   // ── SENTIMENT ──
-  if (tickerData.sectorTrend === true)  bears.push(`Sector ETF is in a downtrend — headwind for individual names.`);
-  if (tickerData.sectorTrend === false) bulls.push(`Sector ETF trending up — tailwind for this setup.`);
+  if (tickerData.sectorMomentum != null) {
+    const sm = tickerData.sectorMomentum;
+    if (sm < 0)      bears.push(`Sector momentum ${sm.toFixed(1)}% (10d) — headwind for individual names.`);
+    else if (sm > 0) bulls.push(`Sector momentum +${sm.toFixed(1)}% (10d) — tailwind for this setup.`);
+  }
 
 
 
