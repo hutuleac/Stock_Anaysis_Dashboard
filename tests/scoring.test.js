@@ -33,7 +33,7 @@ function makeTicker({
   stochCross = null,
   high52 = null,
   low52 = null,
-  sectorTrend = null,
+  sectorMomentum = null,
   news = null,
 } = {}) {
   return {
@@ -51,7 +51,7 @@ function makeTicker({
       },
     },
     news: news ?? null,
-    sectorTrend,
+    sectorMomentum,
     indicators: {
       rsi,
       macd: macd ? { histogram: macd.histogram, macd: macd.macd, signal: macd.signal } : null,
@@ -435,6 +435,43 @@ describe('generateThesis', () => {
     };
     const thesis = generateThesis(ticker, computeScore(ticker));
     expect(thesis.warnings.some(w => w.includes('Earnings'))).toBe(true);
+  });
+});
+
+// ─── sectorMomentum scoring + thesis ──────────────────────────────────────────
+
+describe('computeScore — sectorMomentum signal', () => {
+  it('scores higher sentiment for stronger positive momentum', () => {
+    const strong = makeTicker({ sectorMomentum: 4 });
+    const weak   = makeTicker({ sectorMomentum: -4 });
+    expect(computeScore(strong).sentiment).toBeGreaterThan(computeScore(weak).sentiment);
+  });
+
+  it('treats missing sectorMomentum as neutral (0.5), same as an in-range value of 0', () => {
+    const withNull = makeTicker({ sectorMomentum: null });
+    const neutral  = makeTicker({ sectorMomentum: 0 }); // strictly inside (-1, 1] → maps to 0.5
+    expect(computeScore(withNull).sentiment).toBeCloseTo(computeScore(neutral).sentiment, 5);
+  });
+});
+
+describe('generateThesis — sector momentum bullets', () => {
+  it('adds a bullish bullet with the numeric value for positive momentum', () => {
+    const ticker = makeTicker({ price: 100, sectorMomentum: 2.3 });
+    const thesis = generateThesis(ticker, computeScore(ticker));
+    expect(thesis.bulls.some(b => b.includes('+2.3%'))).toBe(true);
+  });
+
+  it('adds a bearish bullet with the numeric value for negative momentum', () => {
+    const ticker = makeTicker({ price: 100, sectorMomentum: -4.1 });
+    const thesis = generateThesis(ticker, computeScore(ticker));
+    expect(thesis.bears.some(b => b.includes('-4.1%'))).toBe(true);
+  });
+
+  it('adds no sector-momentum bullet when the value is null', () => {
+    const ticker = makeTicker({ price: 100, sectorMomentum: null });
+    const thesis = generateThesis(ticker, computeScore(ticker));
+    expect(thesis.bulls.some(b => b.includes('Sector momentum'))).toBe(false);
+    expect(thesis.bears.some(b => b.includes('Sector momentum'))).toBe(false);
   });
 });
 

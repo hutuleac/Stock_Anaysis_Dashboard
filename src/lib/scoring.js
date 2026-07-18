@@ -175,8 +175,9 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     sentScore += newsSent; sentFactors++; signals.push(newsSent);
   } else sentScore += 0.5;
 
-  if (tickerData.sectorTrend !== undefined && tickerData.sectorTrend !== null) {
-    const v = tickerData.sectorTrend ? 0.2 : 0.8;
+  if (tickerData.sectorMomentum !== undefined && tickerData.sectorMomentum !== null) {
+    const sm = tickerData.sectorMomentum;
+    const v = sm > 3 ? 0.9 : sm > 1 ? 0.7 : sm > -1 ? 0.5 : sm > -3 ? 0.3 : 0.1;
     sentScore += v; sentFactors++; signals.push(v);
   } else sentScore += 0.5;
 
@@ -508,8 +509,11 @@ export function generateThesis(tickerData, scoreResult) {
   }
 
   // ── SENTIMENT ──
-  if (tickerData.sectorTrend === true)  bears.push(`Sector ETF is in a downtrend — headwind for individual names.`);
-  if (tickerData.sectorTrend === false) bulls.push(`Sector ETF trending up — tailwind for this setup.`);
+  if (tickerData.sectorMomentum != null) {
+    const sm = tickerData.sectorMomentum;
+    if (sm < 0)      bears.push(`Sector momentum ${sm.toFixed(1)}% (10d) — headwind for individual names.`);
+    else if (sm > 0) bulls.push(`Sector momentum +${sm.toFixed(1)}% (10d) — tailwind for this setup.`);
+  }
 
 
 
