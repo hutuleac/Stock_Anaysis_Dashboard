@@ -340,7 +340,7 @@ describe('computeQualityScore — profitability component', () => {
 
     const neither = computeQualityScore({ metric: { roiTTM: 0.22, epsGrowthTTMYoy: -0.10, epsGrowth3Y: -0.05 }, marketCap: null, financials: null, earnings: null });
     expect(neither.components.profitability).toBe(18);
-    expect(neither.warnings.some((w) => w.includes('EPS growth is negative across multiple periods'))).toBe(true);
+    expect(neither.notes.some((w) => w.includes('EPS growth is negative across multiple periods'))).toBe(true);
   });
 
   it('caps profitability at 30', () => {
