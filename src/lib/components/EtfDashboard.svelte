@@ -46,6 +46,27 @@
   const fmtRs = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`;
   const compSummary = (score) => score.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
 
+  function buildEtfBriefing(etf) {
+    const isDirect = etf.ucits === etf.proxy;
+    const trackingLine = isDirect
+      ? 'Held directly — US-listed, no UCITS wrapper.'
+      : `You buy ${etf.ucits}; signals run on its US-listed proxy ${etf.proxy}.`;
+    return {
+      title: etf.ucits,
+      subtitle: etf.name,
+      category: etf.category,
+      current: {
+        value: etf.sig ? `$${etf.sig.price.toFixed(2)}` : 'n/a',
+        label: isDirect ? 'price' : `proxy ${etf.proxy}`,
+        color: '#9ca3af',
+      },
+      description: `${trackingLine} TER ${etf.ter || 'n/a'}.${etf.isin ? ` ISIN ${etf.isin}.` : ''}`,
+      why: etf.category?.startsWith('Leveraged')
+        ? '3x daily-reset leverage compounds against you in choppy, range-bound markets — meant for short, high-conviction trades, not a buy-and-hold core position.'
+        : `Category: ${etf.category}. Entry/Exit scores (hover the columns to the right) run on the proxy's price history.`,
+    };
+  }
+
   $effect(() => {
     const req = getEtfExpandRequest();
     if (req) { expanded = req; clearEtfExpandRequest(); }
@@ -160,7 +181,7 @@
             onclick={() => expanded = expanded === etf.ucits ? null : etf.ucits}
           >
             <td class="px-2 sm:px-4 py-2">
-              <span class="font-mono font-semibold text-text-primary">{etf.ucits}</span>
+              <span class="font-mono font-semibold text-text-primary cursor-help" use:tipAction={() => buildEtfBriefing(etf)}>{etf.ucits}</span>
               <span class="text-[10px] text-text-muted block">{etf.name}{etf.ter ? ` · TER ${etf.ter}` : ''}</span>
             </td>
             <td class="px-2 py-2 text-xs text-text-secondary hidden md:table-cell">{etf.category}</td>

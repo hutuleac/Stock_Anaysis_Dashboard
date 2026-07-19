@@ -13,6 +13,10 @@ const HARDCODED_ETFS = [
   { ucits: 'IUHC', isin: 'IE00B43HR379', name: 'iShares S&P 500 Health Care',  ter: '0.15%', category: 'Healthcare',   proxy: 'XLV'  },
   // No UCITS wrapper tracks this index — held directly (US-listed, no ISIN shown).
   { ucits: 'IGV',  isin: '',             name: 'iShares Expanded Tech-Software', ter: '0.39%', category: 'Software',  proxy: 'IGV'  },
+  { ucits: 'BOTZ', isin: '',             name: 'Global X Robotics & AI',       ter: '0.68%', category: 'AI/Robotics',  proxy: 'BOTZ' },
+  // 3x daily-leveraged — decays in chop, amplifies both directions. Not a buy-and-hold core position.
+  { ucits: 'SOXL', isin: '',             name: 'Direxion Daily Semiconductor Bull 3X', ter: '0.75%', category: 'Leveraged Semis', proxy: 'SOXL' },
+  { ucits: 'TQQQ', isin: '',             name: 'ProShares UltraPro QQQ 3X',    ter: '0.84%', category: 'Leveraged Tech', proxy: 'TQQQ' },
 ];
 
 let etfs = $state([]);
