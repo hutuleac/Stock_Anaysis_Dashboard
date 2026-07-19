@@ -18,6 +18,7 @@
 
   import SetupRadar from './lib/components/SetupRadar.svelte';
   import DipRadar from './lib/components/DipRadar.svelte';
+  import LongTermScanPanel from './lib/components/LongTermScanPanel.svelte';
   import EtfDashboard from './lib/components/EtfDashboard.svelte';
   import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses, requestEtfExpand } from './lib/stores/etflist.svelte.js';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
@@ -728,6 +729,7 @@
     {#if activeView === 'stocks'}
       <SetupRadar />
       <DipRadar marketData={marketContextData} />
+      <LongTermScanPanel marketContextData={marketContextData} />
       <WatchlistTable onTickerAdded={handleRefresh} onTickerExpand={loadQualityScoreForTicker} />
     {:else}
       <EtfDashboard />
