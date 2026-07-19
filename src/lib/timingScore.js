@@ -60,8 +60,9 @@ export function computeTimingScore(input = {}) {
   }
 
   // ── Oversold multi-timeframe (max 20) ──
+  const wOk = !!(weeklyCandles?.c?.length && weeklyCandles.s === 'ok');
   const dRsi = dCloses ? computeRSI(dCloses) : null;
-  const wRsi = weeklyCandles?.c?.length ? computeRSI(weeklyCandles.c) : null;
+  const wRsi = wOk ? computeRSI(weeklyCandles.c) : null;
   const monthly = dOk ? resampleMonthly(dailyCandles) : null;
   const mRsi = monthly?.c?.length ? computeRSI(monthly.c) : null;
   if (dRsi != null || wRsi != null || mRsi != null) {

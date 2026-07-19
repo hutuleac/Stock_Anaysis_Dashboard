@@ -38,13 +38,16 @@ describe('computeTimingScore', () => {
     expect(r.signals.some(s => s.startsWith('Daily RSI'))).toBe(true);
   });
 
-  it('maps the total to the correct label band', () => {
+  it('pins concrete total→label for the deep-decline fixture (NEUTRAL band, below the 50 cutoff)', () => {
     const daily = decliningDaily();
-    const r = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: true, sectorOutperforming: true } });
-    const expected = r.total >= 70 ? 'STRONG_ACCUMULATION_ZONE'
-      : r.total >= 50 ? 'WATCHLIST'
-      : r.total >= 30 ? 'NEUTRAL' : 'WAIT';
-    expect(r.label).toBe(expected);
+    // Bare: drawdown 20 + oversold 20 + consolidation 2 = 42 → NEUTRAL.
+    const bare = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
+    expect(bare.total).toBe(42);
+    expect(bare.label).toBe('NEUTRAL');
+    // +6 market-context = 48 → still NEUTRAL, pinning the WATCHLIST (≥50) cutoff from below.
+    const withMc = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: true, sectorOutperforming: true } });
+    expect(withMc.total).toBe(48);
+    expect(withMc.label).toBe('NEUTRAL');
   });
 
   it('adds market-context points and a downtrend warning appropriately', () => {
