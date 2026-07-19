@@ -10,7 +10,7 @@
   import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
-  import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
+  import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext, getMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
@@ -271,7 +271,7 @@
               results[ticker.symbol].timingScore = computeTimingScore({
                 dailyCandles: synthetic,
                 weeklyCandles: weeklyRaw,
-                marketContext: { fearGreed: marketContextData?.fearGreed?.data?.score ?? null },
+                marketContext: timingMarketContext(),
               });
 
               if (spyCloses) {
@@ -307,7 +307,7 @@
             results[ticker.symbol].timingScore = computeTimingScore({
               dailyCandles: candleRes?.data,
               weeklyCandles: weeklyRes?.data,
-              marketContext: { fearGreed: marketContextData?.fearGreed?.data?.score ?? null },
+              marketContext: timingMarketContext(),
             });
 
             if (spyCloses && candleRes?.data?.c?.length) {
@@ -454,10 +454,24 @@
       const financials = finRes?.data ? parseFinancials(finRes.data) : null;
       const earnings = Array.isArray(earnRes?.data) ? earnRes.data : null;
       const marketCap = data.profile?.marketCapitalization ?? null;
-      const metric = data.metrics?.data ?? null;
+      const metric = data.metrics?.data?.metric ?? null;
       const quality = computeQualityScore({ metric, marketCap, financials, earnings });
       setMarketData({ [symbol]: { ...data, qualityScore: quality } });
     } catch { /* non-blocking — Long-Term Setup shows "not yet checked" */ }
+  }
+
+  // Market context for computeTimingScore — same source as the scoring engine
+  // (spyDowntrend there already means "SPY below EMA50"). sectorOutperforming
+  // is per-ticker and not tracked in market context, so it stays unset.
+  function timingMarketContext() {
+    const ctx = getMarketContext() ?? {};
+    const spyKnown = typeof ctx.spyDowntrend === 'boolean';
+    return {
+      fearGreed: ctx.fearGreedValue ?? null,
+      volProxy: ctx.vixPrice ?? null,
+      spyAboveEma50: spyKnown ? !ctx.spyDowntrend : null,
+      spyDowntrend: spyKnown ? ctx.spyDowntrend : null,
+    };
   }
 
   // On startup: merge Finnhub cache + supplement into one object, then set once.
@@ -479,75 +493,11 @@
 
     // Start with Finnhub-cached fields (quote, earnings, metrics, news)
     const results = hydrateFromCache(symbols);
-    const tickerList = getTickers();
-    for (const ticker of tickerList) {
-      const data = results[ticker.symbol];
-      if (!data) continue;
-      if (data._candlesDaily)  { const ind = computeIndicatorsFromCandles(data._candlesDaily);  if (ind) data.indicators = ind; }
-      if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
-      if (data._candlesWeekly) { const st  = computeSetupSignals(data._candlesWeekly);          if (st)  data.setups    = st;  }
-      if (data._candlesDaily)  { const an  = computeChartAnchors(data._candlesDaily);           if (an)  data.anchors   = an;  }
-      if (data._candlesDaily || data._candlesWeekly) {
-        data.timingScore = computeTimingScore({
-          dailyCandles: data._candlesDaily,
-          weeklyCandles: data._candlesWeekly,
-          marketContext: { fearGreed: null }, // market context not yet loaded this early in startup
-        });
-      }
-      delete data._candlesDaily;
-      delete data._candlesWeekly;
 
-      // TwelveData candle cache — used when Finnhub candles are unavailable (403).
-      // Converts the cached td_ts_1day_* values into indicators on startup so tickers
-      // load fully without needing a fresh API refresh.
-      if (!data.indicators) {
-        try {
-          const tdRaw = localStorage.getItem(`td_ts_1day_${ticker.symbol}_1day_250`);
-          if (tdRaw) {
-            const td = JSON.parse(tdRaw);
-            if (td?.data?.length >= 30) {
-              const vals = td.data;
-              const synthetic = tdValuesToCandles(vals);
-              const ind = computeIndicatorsFromCandles(synthetic);
-              if (ind) {
-                data.indicators = ind;
-                const vols = synthetic.v.filter(v => v > 0);
-                if (vols.length >= 20) {
-                  const vol = vols[vols.length - 1];
-                  const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
-                  data.tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
-                }
-                // Aggregate daily→weekly (true OHLCV bars) for weekly trend + setups
-                const weeklyRaw = resampleWeekly(synthetic);
-                const wt = computeWeeklyTrend(weeklyRaw); if (wt) data.weekly = wt;
-                const st = computeSetupSignals(weeklyRaw); if (st) data.setups = st;
-                const an = computeChartAnchors(synthetic); if (an) data.anchors = an;
-                data.timingScore = computeTimingScore({
-                  dailyCandles: synthetic,
-                  weeklyCandles: weeklyRaw,
-                  marketContext: { fearGreed: null },
-                });
-              }
-            }
-          }
-        } catch { /* noop */ }
-      }
-    }
-
-    // ETF proxy candles from the TwelveData localStorage cache
-    for (const proxy of getUniqueProxies()) {
-      try {
-        const tdRaw = localStorage.getItem(`td_ts_1day_${proxy}_1day_250`);
-        if (!tdRaw) continue;
-        const vals = JSON.parse(tdRaw)?.data;
-        if (!vals?.length) continue;
-        const synthetic = tdValuesToCandles(vals);
-        setEtfProxyData(proxy, { weeklyRaw: resampleWeekly(synthetic), dailyCloses: synthetic.c });
-        if (proxy === 'SPY') setEtfSpyCloses(synthetic.c);
-      } catch { /* noop */ }
-    }
-
-    // Patch supplement fields directly into results (same object, no extra setMarketData call)
+    // Patch supplement fields directly into results (same object, no extra
+    // setMarketData call). Runs BEFORE the ticker loop so the market context
+    // it restores feeds the timingScore computations below; anything the loop
+    // recomputes from candles simply overwrites the supplement snapshot.
     try {
       const raw = localStorage.getItem('dashboard_supplement');
       if (raw) {
@@ -586,6 +536,74 @@
         }
       }
     } catch { /* corrupted supplement — non-fatal */ }
+
+    const tickerList = getTickers();
+    for (const ticker of tickerList) {
+      const data = results[ticker.symbol];
+      if (!data) continue;
+      if (data._candlesDaily)  { const ind = computeIndicatorsFromCandles(data._candlesDaily);  if (ind) data.indicators = ind; }
+      if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
+      if (data._candlesWeekly) { const st  = computeSetupSignals(data._candlesWeekly);          if (st)  data.setups    = st;  }
+      if (data._candlesDaily)  { const an  = computeChartAnchors(data._candlesDaily);           if (an)  data.anchors   = an;  }
+      if (data._candlesDaily || data._candlesWeekly) {
+        data.timingScore = computeTimingScore({
+          dailyCandles: data._candlesDaily,
+          weeklyCandles: data._candlesWeekly,
+          marketContext: timingMarketContext(),
+        });
+      }
+      delete data._candlesDaily;
+      delete data._candlesWeekly;
+
+      // TwelveData candle cache — used when Finnhub candles are unavailable (403).
+      // Converts the cached td_ts_1day_* values into indicators on startup so tickers
+      // load fully without needing a fresh API refresh.
+      if (!data.indicators) {
+        try {
+          const tdRaw = localStorage.getItem(`td_ts_1day_${ticker.symbol}_1day_250`);
+          if (tdRaw) {
+            const td = JSON.parse(tdRaw);
+            if (td?.data?.length >= 30) {
+              const vals = td.data;
+              const synthetic = tdValuesToCandles(vals);
+              const ind = computeIndicatorsFromCandles(synthetic);
+              if (ind) {
+                data.indicators = ind;
+                const vols = synthetic.v.filter(v => v > 0);
+                if (vols.length >= 20) {
+                  const vol = vols[vols.length - 1];
+                  const avgVol = Math.round(vols.slice(-20).reduce((s, v) => s + v, 0) / 20);
+                  data.tdQuote = { volume: vol, avgVolume: avgVol, volumeRatio: avgVol > 0 ? vol / avgVol : null };
+                }
+                // Aggregate daily→weekly (true OHLCV bars) for weekly trend + setups
+                const weeklyRaw = resampleWeekly(synthetic);
+                const wt = computeWeeklyTrend(weeklyRaw); if (wt) data.weekly = wt;
+                const st = computeSetupSignals(weeklyRaw); if (st) data.setups = st;
+                const an = computeChartAnchors(synthetic); if (an) data.anchors = an;
+                data.timingScore = computeTimingScore({
+                  dailyCandles: synthetic,
+                  weeklyCandles: weeklyRaw,
+                  marketContext: timingMarketContext(),
+                });
+              }
+            }
+          }
+        } catch { /* noop */ }
+      }
+    }
+
+    // ETF proxy candles from the TwelveData localStorage cache
+    for (const proxy of getUniqueProxies()) {
+      try {
+        const tdRaw = localStorage.getItem(`td_ts_1day_${proxy}_1day_250`);
+        if (!tdRaw) continue;
+        const vals = JSON.parse(tdRaw)?.data;
+        if (!vals?.length) continue;
+        const synthetic = tdValuesToCandles(vals);
+        setEtfProxyData(proxy, { weeklyRaw: resampleWeekly(synthetic), dailyCloses: synthetic.c });
+        if (proxy === 'SPY') setEtfSpyCloses(synthetic.c);
+      } catch { /* noop */ }
+    }
 
     setMarketData(results);
   }

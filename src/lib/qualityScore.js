@@ -64,18 +64,20 @@ function scoreProfitability(metric) {
   const roe = num(metric.roeTTM);
   const roicValue = roic !== null ? roic : roe;
   if (roic === null && roe !== null) notes.push('ROIC unavailable — used ROE');
+  // Finnhub metric ratios are percent numbers (roiTTM: 22 = 22%), matching
+  // scoring.js/dip.js conventions — not fractions.
   if (roicValue !== null) {
-    if (roicValue >= 0.20) score += 18;
-    else if (roicValue >= 0.15) score += 15;
-    else if (roicValue >= 0.10) score += 10;
-    else if (roicValue >= 0.05) score += 5;
+    if (roicValue >= 20) score += 18;
+    else if (roicValue >= 15) score += 15;
+    else if (roicValue >= 10) score += 10;
+    else if (roicValue >= 5) score += 5;
   }
 
   const opMargin = num(metric.operatingMarginTTM);
   if (opMargin !== null) {
-    if (opMargin >= 0.25) score += 8;
-    else if (opMargin >= 0.15) score += 6;
-    else if (opMargin >= 0.08) score += 4;
+    if (opMargin >= 25) score += 8;
+    else if (opMargin >= 15) score += 6;
+    else if (opMargin >= 8) score += 4;
     else if (opMargin > 0) score += 2;
   }
 
@@ -91,8 +93,8 @@ function scoreProfitability(metric) {
 
   const grossMargin = num(metric.grossMarginTTM);
   const roa = num(metric.roaTTM);
-  if (grossMargin !== null) notes.push(`Gross margin ${(grossMargin * 100).toFixed(1)}%`);
-  if (roa !== null) notes.push(`ROA ${(roa * 100).toFixed(1)}%`);
+  if (grossMargin !== null) notes.push(`Gross margin ${grossMargin.toFixed(1)}%`);
+  if (roa !== null) notes.push(`ROA ${roa.toFixed(1)}%`);
 
   return { score: Math.min(30, score), notes, warnings };
 }
@@ -174,9 +176,9 @@ function scoreShareholderReturn(metric, financials) {
     const yieldPct = num(metric.dividendYieldIndicatedAnnual);
     const payout = num(metric.payoutRatioTTM);
     if (yieldPct !== null && yieldPct > 0) {
-      if (yieldPct >= 0.02 && payout !== null && payout < 0.70) score += 4;
-      else if (payout !== null && payout >= 0.90) notes.push('Dividend payout may be unsustainable');
-      else if (payout === null || payout < 0.90) score += 2;
+      if (yieldPct >= 2 && payout !== null && payout < 70) score += 4;
+      else if (payout !== null && payout >= 90) notes.push('Dividend payout may be unsustainable');
+      else if (payout === null || payout < 90) score += 2;
     }
   }
 
