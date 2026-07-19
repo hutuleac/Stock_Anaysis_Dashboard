@@ -65,7 +65,7 @@ function buildReasons(status, timingScore, qualityScore) {
 /**
  * @param {Object|null} timingScore   computeTimingScore() output, or null if not yet run
  * @param {Object|null} qualityScore  computeQualityScore() output, or null if not yet fetched
- * @param {Object|null} marketContext currently unused here (Task 2 adds fearGreed)
+ * @param {Object|null} marketContext { fearGreed } — drives the extreme-panic boost
  * @returns {LongTermSetup}
  */
 export function buildLongTermSetup(timingScore, qualityScore, marketContext) {

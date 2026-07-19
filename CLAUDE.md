@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.19
+# Project State — Stock Analysis Dashboard v0.20
 
 ## What this is
 
@@ -94,51 +94,51 @@ Offline-first stock analysis dashboard for retail swing traders. Svelte 5 + Vite
 
 ```
 src/lib/
-  indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch)
-  scoring.js          — 9-signal scoring engine, thesis generator, badge logic
+  indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch) + priceReturn/computeRelativeStrength (RS vs SPY)
+  scoring.js          — 9-signal scoring engine, thesis generator, badge logic, market-context holder (set/getMarketContext)
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
-  indicators.js       — also: priceReturn + computeRelativeStrength (RS vs SPY, 1M/3M)
   dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
-  etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs
+  radar.js            — Setup Radar: gates setups on fundamentals (rev growth, RS, PEG), ranks survivors
+  etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs + generateEtfThesis + buildEtfBriefing
+  etfCatalog.js       — curated ~55-fund UCITS catalog + client-side search
   export.js           — AI export: buildStockSnapshot() + buildPrompt() + DEFAULT_TEMPLATES presets
   candles.js          — tdValuesToCandles(vals): TD → synthetic-candle mapping, shared by all 4 App.svelte call sites
-  actions/
-    tooltip.js         — Svelte action: desktop hover + mobile tap-to-open (matchMedia('(hover: none)')), single open-tooltip tracking
+  chartAnchors.js     — AVWAP / POC / Fib / FVG chart anchors (MIN_BARS 30)
+  highlights.js       — cross-view ACT/SOON digest + notification diff
+  timingScore.js      — Long-Term Timing Score (0–100): drawdown/oversold/reversal/consolidation/volume/market ctx
+  technicalPatterns.js — pattern primitives for timingScore (consolidation, capitulation, EMA reclaim, BB width %ile…)
+  qualityScore.js     — Quality Score (0–100) from Finnhub metrics + financials-reported + earnings history
+  longTermSetup.js    — buildLongTermSetup: timing×quality gate matrix → ACCUMULATE/WATCHLIST/…; F&G<30 panic boost
+  macro.js            — FRED parsing + macro regime derivation (pure)
+  demoData.js         — no-API-key demo dashboard fixtures
+  tooltipDefs.js      — TIPS.* rich tooltip definitions
+  actions/tooltip.js  — Svelte action: desktop hover + mobile tap-to-open (touchend on iOS)
   api/
-    finnhub.svelte.js — Finnhub API calls + localStorage cache
+    finnhub.svelte.js — Finnhub API calls + localStorage cache + evictStaleCache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
+    fred.js           — FRED macro series (dev: vite proxy /fred-api; prod: corsproxy.io — API key visible to that proxy)
   components/
-    WatchlistTable.svelte   — main table + expanded row
+    WatchlistTable.svelte   — main table + expanded row (incl. Long-Term Setup card, Copy for AI)
     EntryPanel.svelte       — position sizing, stop-loss, scenario table
     PriceChart.svelte       — candlestick + MACD/RSI/BB sub-panes
     FundamentalsBar.svelte  — all indicators displayed inline
     ThesisSummary.svelte    — plain-English score explanation
-    PaperTradePanel.svelte  — paper trade entry + tracking
-    PortfolioStats.svelte   — P&L, edge analysis, sector exposure
-    DipRadar.svelte         — Dip Hunter card, collapsible watchlist-scan panel
+    MarketContextBar.svelte — VIX proxy / SPY / F&G / breadth / macro tiles
+    DipRadar.svelte         — Dip Hunter collapsible watchlist-scan panel
+    SetupRadar.svelte       — Setup Radar panel (radar.js)
+    LongTermScanPanel.svelte — Long-Term Setup watchlist scan (longTermSetup.js)
     EtfDashboard.svelte     — UCITS ETF table (Stocks|ETFs header toggle) + catalog search add bar
     HighlightsStrip.svelte  — cross-view "Today" ACT/SOON digest + in-browser notifications
+    SettingsPanel.svelte    — API keys, AI prompts, notification toggle
+    TooltipOverlay.svelte / OnboardingModal.svelte
   stores/
     watchlist.svelte.js     — ticker list, fetch orchestration
     portfolio.svelte.js     — trade log, FIFO P&L
-    papertrades.svelte.js   — paper trade state
-    alerts.svelte.js        — price alert state
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
-    prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES, default id, CRUD)
-tests/
-  indicators.test.js  — 65 unit tests for indicators.js (incl. flat-RSI + pct52wRange)
-  scoring.test.js     — 42 unit tests for scoring.js
-  signals.test.js     — 32 unit tests for signals.js
-  valuation.test.js   — 3 unit tests for valuation.js
-  dip.test.js         — 20 unit tests for dip.js
-  etf.test.js         — 27 unit tests for etf.js (incl. indicators + thesis)
-  highlights.test.js  — 7 unit tests for highlights.js
-  etfCatalog.test.js  — 6 unit tests for etfCatalog.js
-  cache.test.js       — 7 unit tests for cache prune + quota self-heal
-  export.test.js      — 12 unit tests for export.js (snapshot formatting + prompt substitution)
-  tooltip.test.js     — 9 unit tests for actions/tooltip.js (tap-to-open, matchMedia gating, toggle behavior)
-  candles.test.js     — 4 unit tests for candles.js (tdValuesToCandles)  (319 total)
+    prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
+    notes.svelte.js / tooltip.svelte.js
+tests/                — 19 files, 424 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -208,6 +208,14 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 
 **v0.17 additions (all display-only, zero new API calls):** per-proxy `indicators { trendState, wRsi, rangePos52w, roc13w }` + `generateEtfThesis()` in `etf.js` (expanded row); `meta.wRsi` on `computeSetupSignals` shown in Setup Radar; `highlights.js` (`computeHighlights` ACT/SOON digest + `computeNotifications` diff, localStorage `notifySeen`, opt-in toggle `notifyEnabled` in Settings) rendered by `HighlightsStrip.svelte`; curated ~55-fund UCITS catalog with client-side search in `etfCatalog.js` (search bar in the ETF add panel); tooltip overlay clamps to viewport using measured height and closes on scroll.
 
+## Long-Term Dip Buying framework (v0.20 — timingScore.js / qualityScore.js / longTermSetup.js)
+
+Three-slice framework for long-horizon accumulation, all display-only:
+
+- **Timing Score** `computeTimingScore({ dailyCandles, weeklyCandles, marketContext })` → 0–100 across drawdown 20 / oversold (D+W+M RSI) 20 / reversal 20 / consolidation 15 / volume 15 / market ctx 10. Null-safe: missing components are omitted, all-null → total null. Primitives live in `technicalPatterns.js`. Market ctx comes from App.svelte's `timingMarketContext()` (derived from `getMarketContext()`; `spyAboveEma50 = !spyDowntrend` — same EMA50 semantic). `sectorOutperforming` is per-ticker and stays unset.
+- **Quality Score** `computeQualityScore({ metric, marketCap, financials, earnings })` → 0–100 across profitability 30 / cashFlow 25 / balanceSheet 25 / shareholderReturn 10 / earningsQuality 10. Label INSUFFICIENT_DATA under 3 non-null components. Fetched **lazily on row expand** (`loadQualityScoreForTicker`, 2 extra cached Finnhub calls: financials-reported 7d + earnings 24h) — never on batch refresh. `parseFinancials` extracts FCF/buyback/diluted shares from the raw financials-reported payload by concept substring.
+- **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
+
 ## AI export (export.js)
 
 "Copy for AI" — formats the full dashboard reading for a ticker as plain text and merges it into a user-editable prompt template, for pasting into any external LLM chat. Stocks view only; ETF export is a future round. Display-only, zero new API calls.
@@ -226,9 +234,12 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 - TwelveData is rate-limited to 8 calls/min on the free tier. The `twelvedata.svelte.js` queue handles this; do not add raw fetch calls outside it.
 - **Market cap currency:** the Finnhub metrics endpoint (`metric.marketCapitalization`) reports in the company's reporting currency (e.g. KRW for ADRs like SKM → "$21T"). Use `profile2` (`data.profile.marketCapitalization`, USD, cached 7d) for display. FundamentalsBar prefers `data.profile` and falls back to metrics.
 - **EPS growth** is a ratio (percent YoY), so it's currency-neutral — a large negative for a foreign ADR is likely real, not a units artifact.
+- **Finnhub metric ratios are PERCENT numbers, not fractions:** `roiTTM: 22` = 22%, `payoutRatioTTM: 45` = 45%, `dividendYieldIndicatedAnnual: 0.44` = 0.44%. Thresholds must be percent-scaled (`>= 20`, not `>= 0.20`) and test fixtures must use percent units too — fraction-scaled fixtures made broken thresholds pass in v0.20 (fixed in PR #49). When a new module consumes a metric field for the first time, check units against demoData.js or a real API response.
+- **Metric object path is `data.metrics?.data?.metric`** — the Finnhub payload wraps it in `{ metric, series }`. Passing `data.metrics?.data` gives a truthy object with zero expected fields (silent all-undefined reads, PR #49 bug).
+- **profile2 marketCapitalization is in millions USD** — qualityScore multiplies by 1e6 for FCF yield.
 - **Relative Strength (v0.11)** needs SPY history: App.svelte fetches SPY daily closes once per refresh (TD or Finnhub path, cached) and passes them to `computeRelativeStrength` per ticker → `data.rs = { rs1m, rs3m }`. RS = stock return − SPY return over ~21/63 trading bars. Candle sources are both oldest-first ascending (TD uses `order=ASC`).
 - **Valuation metric keys (Finnhub):** `revenueGrowthTTMYoy`, `psTTM`/`psAnnual`. PEG is computed client-side from existing pe + epsGrowth (`valuation.js`), null when growth ≤ 0 or P/E ≤ 0. All four (RS, Rev growth, P/S, PEG) are **display-only** — they do NOT feed `computeScore` or the setups (deliberate, to keep the calibrated engine stable).
-- All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>`. Trade log: `tradeLog`. Paper trades: `paperTrades`.
+- All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>`. Trade log: `tradeLog`. Refresh snapshot: `dashboard_supplement`. (Paper trades, price alerts, and the News UI were removed in the post-v0.19 mobile-fit round — don't re-document them.)
 
 ## v0.17 patch round (post-release fixes)
 
@@ -258,9 +269,11 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 319 unit tests, ~250ms
+npm test          # 424 unit tests, ~1s
 npm run build     # production build → dist/
 ```
+
+Vitest is scoped to `tests/**` in vite.config.js — do not remove that `include`, or it also runs suite copies inside `.claude/worktrees/` (and node_modules tests) whenever worktrees exist. Remove merged worktrees with `git worktree remove .claude/worktrees/<name>`.
 
 ## What's next (BACKLOG.md)
 

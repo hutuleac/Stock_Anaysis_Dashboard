@@ -73,40 +73,40 @@ describe('parseFinancials', () => {
 describe('computeQualityScore — profitability component', () => {
   it('scores ROIC tiers: >=20% -> 18, >=15% -> 15, >=10% -> 10, >=5% -> 5, <5% -> 0', () => {
     const base = { marketCap: null, financials: null, earnings: null };
-    expect(computeQualityScore({ ...base, metric: { roiTTM: 0.20 } }).components.profitability).toBeGreaterThanOrEqual(18);
-    expect(computeQualityScore({ ...base, metric: { roiTTM: 0.22 } }).components.profitability).toBe(18);
-    expect(computeQualityScore({ ...base, metric: { roiTTM: 0.16 } }).components.profitability).toBe(15);
-    expect(computeQualityScore({ ...base, metric: { roiTTM: 0.11 } }).components.profitability).toBe(10);
-    expect(computeQualityScore({ ...base, metric: { roiTTM: 0.06 } }).components.profitability).toBe(5);
-    expect(computeQualityScore({ ...base, metric: { roiTTM: 0.02 } }).components.profitability).toBe(0);
+    expect(computeQualityScore({ ...base, metric: { roiTTM: 20 } }).components.profitability).toBeGreaterThanOrEqual(18);
+    expect(computeQualityScore({ ...base, metric: { roiTTM: 22 } }).components.profitability).toBe(18);
+    expect(computeQualityScore({ ...base, metric: { roiTTM: 16 } }).components.profitability).toBe(15);
+    expect(computeQualityScore({ ...base, metric: { roiTTM: 11 } }).components.profitability).toBe(10);
+    expect(computeQualityScore({ ...base, metric: { roiTTM: 6 } }).components.profitability).toBe(5);
+    expect(computeQualityScore({ ...base, metric: { roiTTM: 2 } }).components.profitability).toBe(0);
   });
 
   it('falls back to ROE with a note when roiTTM is absent', () => {
-    const result = computeQualityScore({ metric: { roeTTM: 0.22 }, marketCap: null, financials: null, earnings: null });
+    const result = computeQualityScore({ metric: { roeTTM: 22 }, marketCap: null, financials: null, earnings: null });
     expect(result.components.profitability).toBe(18);
     expect(result.notes.some((n) => n.includes('ROIC unavailable'))).toBe(true);
   });
 
   it('adds operating margin tiers on top of ROIC', () => {
-    const result = computeQualityScore({ metric: { roiTTM: 0.22, operatingMarginTTM: 0.30 }, marketCap: null, financials: null, earnings: null });
+    const result = computeQualityScore({ metric: { roiTTM: 22, operatingMarginTTM: 30 }, marketCap: null, financials: null, earnings: null });
     expect(result.components.profitability).toBe(18 + 8);
   });
 
   it('adds +4 stability when both eps growth periods are positive, +2 when one is, 0 + warning when both negative', () => {
-    const both = computeQualityScore({ metric: { roiTTM: 0.22, epsGrowthTTMYoy: 0.10, epsGrowth3Y: 0.05 }, marketCap: null, financials: null, earnings: null });
+    const both = computeQualityScore({ metric: { roiTTM: 22, epsGrowthTTMYoy: 10, epsGrowth3Y: 5 }, marketCap: null, financials: null, earnings: null });
     expect(both.components.profitability).toBe(18 + 4);
 
-    const one = computeQualityScore({ metric: { roiTTM: 0.22, epsGrowthTTMYoy: 0.10, epsGrowth3Y: -0.05 }, marketCap: null, financials: null, earnings: null });
+    const one = computeQualityScore({ metric: { roiTTM: 22, epsGrowthTTMYoy: 10, epsGrowth3Y: -5 }, marketCap: null, financials: null, earnings: null });
     expect(one.components.profitability).toBe(18 + 2);
 
-    const neither = computeQualityScore({ metric: { roiTTM: 0.22, epsGrowthTTMYoy: -0.10, epsGrowth3Y: -0.05 }, marketCap: null, financials: null, earnings: null });
+    const neither = computeQualityScore({ metric: { roiTTM: 22, epsGrowthTTMYoy: -10, epsGrowth3Y: -5 }, marketCap: null, financials: null, earnings: null });
     expect(neither.components.profitability).toBe(18);
     expect(neither.notes.some((w) => w.includes('EPS growth is negative across multiple periods'))).toBe(true);
   });
 
   it('caps profitability at 30', () => {
     const result = computeQualityScore({
-      metric: { roiTTM: 0.25, operatingMarginTTM: 0.30, epsGrowthTTMYoy: 0.10, epsGrowth3Y: 0.10 },
+      metric: { roiTTM: 25, operatingMarginTTM: 30, epsGrowthTTMYoy: 10, epsGrowth3Y: 10 },
       marketCap: null, financials: null, earnings: null,
     });
     expect(result.components.profitability).toBeLessThanOrEqual(30);
@@ -209,13 +209,13 @@ describe('computeQualityScore — shareholderReturn component', () => {
   });
 
   it('scores dividend tiers: yield>=2% & payout<70% -> 4, yield>0 & payout<90% -> 2, payout>=90% -> 0 + warning', () => {
-    const good = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.025, payoutRatioTTM: 0.5 }, marketCap: null, financials: null, earnings: null });
+    const good = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 2.5, payoutRatioTTM: 50 }, marketCap: null, financials: null, earnings: null });
     expect(good.components.shareholderReturn).toBe(4);
 
-    const ok = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.01, payoutRatioTTM: 0.8 }, marketCap: null, financials: null, earnings: null });
+    const ok = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 1, payoutRatioTTM: 80 }, marketCap: null, financials: null, earnings: null });
     expect(ok.components.shareholderReturn).toBe(2);
 
-    const risky = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.01, payoutRatioTTM: 0.95 }, marketCap: null, financials: null, earnings: null });
+    const risky = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 1, payoutRatioTTM: 95 }, marketCap: null, financials: null, earnings: null });
     expect(risky.components.shareholderReturn).toBe(0);
     expect(risky.notes.some((n) => n.includes('Dividend payout may be unsustainable'))).toBe(true);
   });
@@ -239,12 +239,12 @@ describe('computeQualityScore — shareholderReturn component', () => {
   });
 
   it('leaves the share-count sub-score out (not forced to 0) when diluted-share history is missing', () => {
-    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.025, payoutRatioTTM: 0.5 }, marketCap: null, financials: fin(null, null), earnings: null });
+    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 2.5, payoutRatioTTM: 50 }, marketCap: null, financials: fin(null, null), earnings: null });
     expect(result.components.shareholderReturn).toBe(4); // dividend only, share-count sub contributes nothing
   });
 
   it('caps shareholderReturn at 10', () => {
-    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.03, payoutRatioTTM: 0.4 }, marketCap: null, financials: fin(900, 1000), earnings: null });
+    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 3, payoutRatioTTM: 40 }, marketCap: null, financials: fin(900, 1000), earnings: null });
     expect(result.components.shareholderReturn).toBeLessThanOrEqual(10);
   });
 
@@ -279,7 +279,7 @@ describe('computeQualityScore — earningsQuality component', () => {
 describe('computeQualityScore — total, label, INSUFFICIENT_DATA', () => {
   it('label is INSUFFICIENT_DATA when fewer than 3 of 5 components are non-null, even if total is reported', () => {
     const result = computeQualityScore({
-      metric: { roiTTM: 0.22 }, // profitability only
+      metric: { roiTTM: 22 }, // profitability only
       marketCap: null,
       financials: null,
       earnings: null,
@@ -302,10 +302,10 @@ describe('computeQualityScore — total, label, INSUFFICIENT_DATA', () => {
   it('labels HIGH >=75, MEDIUM 50-74, LOW <50 on a fully-populated high-quality input', () => {
     const result = computeQualityScore({
       metric: {
-        roiTTM: 0.25, operatingMarginTTM: 0.30, epsGrowthTTMYoy: 0.10, epsGrowth3Y: 0.10,
+        roiTTM: 25, operatingMarginTTM: 30, epsGrowthTTMYoy: 10, epsGrowth3Y: 10,
         pegTTM: 0.8,
         'totalDebt/totalEquityQuarterly': 0.2, currentRatioQuarterly: 2.0, netInterestCoverageTTM: 12,
-        dividendYieldIndicatedAnnual: 0.025, payoutRatioTTM: 0.4,
+        dividendYieldIndicatedAnnual: 2.5, payoutRatioTTM: 40,
       },
       marketCap: 1000,
       financials: { fcf: 90_000_000, ocf: null, capex: null, buyback: null, dilutedShares: 950, dilutedSharesPrior: 1000 },
@@ -319,7 +319,7 @@ describe('computeQualityScore — total, label, INSUFFICIENT_DATA', () => {
     const earn2 = (results) => results.map(([actual, estimate]) => ({ actual, estimate }));
     const result = computeQualityScore({
       metric: {
-        roiTTM: 0.11, operatingMarginTTM: 0.10,
+        roiTTM: 11, operatingMarginTTM: 10,
         'totalDebt/totalEquityQuarterly': 1.5, currentRatioQuarterly: 1.2,
       },
       marketCap: null,
