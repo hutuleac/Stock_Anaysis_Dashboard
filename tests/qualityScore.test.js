@@ -160,3 +160,95 @@ describe('computeQualityScore — cashFlow component', () => {
     expect(result.components.cashFlow).toBeNull();
   });
 });
+
+describe('computeQualityScore — balanceSheet component', () => {
+  const base = { metric: {}, marketCap: null, financials: null, earnings: null };
+
+  it('scores debt/equity fallback tiers: <0.5 -> 10, <1.0 -> 7, <2.0 -> 3, >=2.0 -> 0 + warning', () => {
+    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 0.3 } }).components.balanceSheet).toBe(10);
+    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 0.8 } }).components.balanceSheet).toBe(7);
+    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 1.5 } }).components.balanceSheet).toBe(3);
+    const high = computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 2.5 } });
+    expect(high.components.balanceSheet).toBe(0);
+    expect(high.notes.some((n) => n.includes('High leverage'))).toBe(true);
+  });
+
+  it('adds current ratio tiers: >=1.5 -> +5, >=1.0 -> +3, <1.0 -> 0 + warning', () => {
+    expect(computeQualityScore({ ...base, metric: { currentRatioQuarterly: 1.8 } }).components.balanceSheet).toBe(5);
+    expect(computeQualityScore({ ...base, metric: { currentRatioQuarterly: 1.2 } }).components.balanceSheet).toBe(3);
+    const low = computeQualityScore({ ...base, metric: { currentRatioQuarterly: 0.7 } });
+    expect(low.components.balanceSheet).toBe(0);
+    expect(low.notes.some((n) => n.includes('Current ratio below 1'))).toBe(true);
+  });
+
+  it('adds interest coverage tiers: >=8 -> +5, >=3 -> +3, <3 -> 0 + red flag', () => {
+    expect(computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 10 } }).components.balanceSheet).toBe(5);
+    expect(computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 4 } }).components.balanceSheet).toBe(3);
+    const weak = computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 1 } });
+    expect(weak.components.balanceSheet).toBe(0);
+    expect(weak.redFlags).toContain('Weak interest coverage');
+  });
+
+  it('sums leverage + liquidity + coverage, capped at 25', () => {
+    const result = computeQualityScore({
+      ...base,
+      metric: { 'totalDebt/totalEquityQuarterly': 0.3, currentRatioQuarterly: 1.8, netInterestCoverageTTM: 10 },
+    });
+    expect(result.components.balanceSheet).toBe(10 + 5 + 5);
+    expect(result.components.balanceSheet).toBeLessThanOrEqual(25);
+  });
+
+  it('balanceSheet is null when metric is entirely absent', () => {
+    expect(computeQualityScore({ metric: null, marketCap: null, financials: null, earnings: null }).components.balanceSheet).toBeNull();
+  });
+});
+
+describe('computeQualityScore — shareholderReturn component', () => {
+  const fin = (dilutedShares, dilutedSharesPrior) => ({
+    fcf: null, ocf: null, capex: null, buyback: null, dilutedShares, dilutedSharesPrior,
+  });
+
+  it('scores dividend tiers: yield>=2% & payout<70% -> 4, yield>0 & payout<90% -> 2, payout>=90% -> 0 + warning', () => {
+    const good = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.025, payoutRatioTTM: 0.5 }, marketCap: null, financials: null, earnings: null });
+    expect(good.components.shareholderReturn).toBe(4);
+
+    const ok = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.01, payoutRatioTTM: 0.8 }, marketCap: null, financials: null, earnings: null });
+    expect(ok.components.shareholderReturn).toBe(2);
+
+    const risky = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.01, payoutRatioTTM: 0.95 }, marketCap: null, financials: null, earnings: null });
+    expect(risky.components.shareholderReturn).toBe(0);
+    expect(risky.notes.some((n) => n.includes('Dividend payout may be unsustainable'))).toBe(true);
+  });
+
+  it('does not penalize a non-payer (yield 0, no warning)', () => {
+    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0 }, marketCap: null, financials: null, earnings: null });
+    expect(result.components.shareholderReturn).toBe(0);
+    expect(result.notes.some((n) => n.includes('Dividend'))).toBe(false);
+  });
+
+  it('scores share-count reduction: down>2% -> +6, down 0-2% -> +3, up>3% -> 0 + warning', () => {
+    const down = computeQualityScore({ metric: {}, marketCap: null, financials: fin(950, 1000), earnings: null }); // -5%
+    expect(down.components.shareholderReturn).toBe(6);
+
+    const flat = computeQualityScore({ metric: {}, marketCap: null, financials: fin(990, 1000), earnings: null }); // -1%
+    expect(flat.components.shareholderReturn).toBe(3);
+
+    const diluted = computeQualityScore({ metric: {}, marketCap: null, financials: fin(1050, 1000), earnings: null }); // +5%
+    expect(diluted.components.shareholderReturn).toBe(0);
+    expect(diluted.notes.some((n) => n.includes('Material share dilution'))).toBe(true);
+  });
+
+  it('leaves the share-count sub-score out (not forced to 0) when diluted-share history is missing', () => {
+    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.025, payoutRatioTTM: 0.5 }, marketCap: null, financials: fin(null, null), earnings: null });
+    expect(result.components.shareholderReturn).toBe(4); // dividend only, share-count sub contributes nothing
+  });
+
+  it('caps shareholderReturn at 10', () => {
+    const result = computeQualityScore({ metric: { dividendYieldIndicatedAnnual: 0.03, payoutRatioTTM: 0.4 }, marketCap: null, financials: fin(900, 1000), earnings: null });
+    expect(result.components.shareholderReturn).toBeLessThanOrEqual(10);
+  });
+
+  it('shareholderReturn is null when both metric and financials are entirely absent', () => {
+    expect(computeQualityScore({ metric: null, marketCap: null, financials: null, earnings: null }).components.shareholderReturn).toBeNull();
+  });
+});

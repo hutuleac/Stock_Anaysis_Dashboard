@@ -130,6 +130,68 @@ function scoreCashFlow(metric, marketCap, financials) {
   return { score: Math.min(25, score), notes: [], warnings: [], redFlags };
 }
 
+function scoreBalanceSheet(metric) {
+  if (!metric) return { score: null, notes: [], warnings: [], redFlags: [] };
+  const notes = [];
+  const warnings = [];
+  const redFlags = [];
+  let score = 0;
+
+  const debtEquity = num(metric['totalDebt/totalEquityQuarterly']);
+  if (debtEquity !== null) {
+    if (debtEquity < 0.5) score += 10;
+    else if (debtEquity < 1.0) score += 7;
+    else if (debtEquity < 2.0) score += 3;
+    else warnings.push('High leverage: debt/equity at or above 2');
+  }
+
+  const currentRatio = num(metric.currentRatioQuarterly);
+  if (currentRatio !== null) {
+    if (currentRatio >= 1.5) score += 5;
+    else if (currentRatio >= 1.0) score += 3;
+    else warnings.push('Current ratio below 1');
+  }
+
+  const coverage = num(metric.netInterestCoverageTTM);
+  if (coverage !== null) {
+    if (coverage >= 8) score += 5;
+    else if (coverage >= 3) score += 3;
+    else redFlags.push('Weak interest coverage');
+  }
+
+  return { score: Math.min(25, score), notes, warnings, redFlags };
+}
+
+function scoreShareholderReturn(metric, financials) {
+  const hasDividendInput = !!metric;
+  const hasShareCountInput = financials && num(financials.dilutedShares) !== null && num(financials.dilutedSharesPrior) !== null;
+  if (!hasDividendInput && !hasShareCountInput) return { score: null, notes: [], warnings: [] };
+
+  const notes = [];
+  let score = 0;
+
+  if (hasDividendInput) {
+    const yieldPct = num(metric.dividendYieldIndicatedAnnual);
+    const payout = num(metric.payoutRatioTTM);
+    if (yieldPct !== null && yieldPct > 0) {
+      if (yieldPct >= 0.02 && payout !== null && payout < 0.70) score += 4;
+      else if (payout !== null && payout >= 0.90) notes.push('Dividend payout may be unsustainable');
+      else if (payout === null || payout < 0.90) score += 2;
+    }
+  }
+
+  if (hasShareCountInput) {
+    const current = num(financials.dilutedShares);
+    const prior = num(financials.dilutedSharesPrior);
+    const changePct = ((current - prior) / prior) * 100;
+    if (changePct <= -2) score += 6;
+    else if (changePct <= 0) score += 3;
+    else if (changePct > 3) notes.push('Material share dilution');
+  }
+
+  return { score: Math.min(10, score), notes, warnings: [] };
+}
+
 /**
  * @typedef {Object} QualityScore
  * @property {number|null} total
@@ -157,17 +219,19 @@ export function computeQualityScore(input) {
 
   const profitability = scoreProfitability(metric);
   const cashFlow = scoreCashFlow(metric, marketCap, financials);
+  const balanceSheet = scoreBalanceSheet(metric);
+  const shareholderReturn = scoreShareholderReturn(metric, financials);
 
   const components = {
     profitability: profitability.score,
     cashFlow: cashFlow.score,
-    balanceSheet: null,
-    shareholderReturn: null,
+    balanceSheet: balanceSheet.score,
+    shareholderReturn: shareholderReturn.score,
     earningsQuality: null,
   };
-  const notes = [...profitability.notes, ...cashFlow.notes];
-  const warnings = [...profitability.warnings, ...cashFlow.warnings];
-  const redFlags = [...(cashFlow.redFlags || [])];
+  const notes = [...profitability.notes, ...cashFlow.notes, ...balanceSheet.notes, ...shareholderReturn.notes];
+  const warnings = [...profitability.warnings, ...cashFlow.warnings, ...balanceSheet.warnings, ...shareholderReturn.warnings];
+  const redFlags = [...(cashFlow.redFlags || []), ...(balanceSheet.redFlags || [])];
 
   const nonNull = Object.values(components).filter((c) => c !== null);
   const total = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0)) : null;
