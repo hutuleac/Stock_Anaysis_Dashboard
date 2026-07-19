@@ -454,7 +454,7 @@
       const financials = finRes?.data ? parseFinancials(finRes.data) : null;
       const earnings = Array.isArray(earnRes?.data) ? earnRes.data : null;
       const marketCap = data.profile?.marketCapitalization ?? null;
-      const metric = data.metrics?.data ?? null;
+      const metric = data.metrics?.data?.metric ?? null;
       const quality = computeQualityScore({ metric, marketCap, financials, earnings });
       setMarketData({ [symbol]: { ...data, qualityScore: quality } });
     } catch { /* non-blocking — Long-Term Setup shows "not yet checked" */ }
