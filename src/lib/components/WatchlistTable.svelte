@@ -12,7 +12,7 @@
   import PriceChart from './PriceChart.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
 
-  let { onTickerAdded = () => {} } = $props();
+  let { onTickerAdded = () => {}, onTickerExpand = () => {} } = $props();
 
   // Open a ticker and, on phones, scroll its header just under the sticky top
   // bar so every stock opens the same way and reads top-to-bottom. Tapping the
@@ -21,6 +21,7 @@
   async function toggleTicker(symbol) {
     const opening = getSelectedSymbol() !== symbol;
     selectTicker(symbol);
+    if (opening) onTickerExpand(symbol);
     if (opening && typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches) {
       await tick();
       const el = document.getElementById(`wl-m-${symbol}`);
