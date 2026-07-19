@@ -388,6 +388,39 @@ export function resampleWeekly(raw) {
   return out;
 }
 
+// ── Daily → monthly OHLCV resampling ─────────────────────────────────────────
+// Groups daily bars into calendar months (UTC): open = first, high = max,
+// low = min, close = last, volume = sum. Includes the current partial month,
+// so monthly signals reflect the latest trading day. Mirrors resampleWeekly.
+export function resampleMonthly(raw) {
+  if (!raw?.c?.length || raw.s !== 'ok' || !raw.t || raw.t.length !== raw.c.length) return null;
+  const monthKey = (ts) => {
+    const d = new Date(ts * 1000);
+    return d.getUTCFullYear() * 12 + d.getUTCMonth();
+  };
+  const out = { s: 'ok', t: [], o: [], h: [], l: [], c: [], v: [] };
+  let key = null;
+  for (let i = 0; i < raw.c.length; i++) {
+    const k = monthKey(raw.t[i]);
+    if (k !== key) {
+      key = k;
+      out.t.push(raw.t[i]);
+      out.o.push(raw.o?.[i] ?? raw.c[i]);
+      out.h.push(raw.h?.[i] ?? raw.c[i]);
+      out.l.push(raw.l?.[i] ?? raw.c[i]);
+      out.c.push(raw.c[i]);
+      out.v.push(raw.v?.[i] ?? 0);
+    } else {
+      const j = out.c.length - 1;
+      out.h[j] = Math.max(out.h[j], raw.h?.[i] ?? raw.c[i]);
+      out.l[j] = Math.min(out.l[j], raw.l?.[i] ?? raw.c[i]);
+      out.c[j] = raw.c[i];
+      out.v[j] += raw.v?.[i] ?? 0;
+    }
+  }
+  return out;
+}
+
 // ── Realized volatility (VIX proxy) ──────────────────────────────────────────
 // Annualized stdev of the last `window` daily log returns, in % points —
 // comparable to VIX levels. Finnhub free returns zeros for the real VIX,
