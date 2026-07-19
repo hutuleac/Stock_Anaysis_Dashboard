@@ -159,7 +159,7 @@
       // Per-ticker enrichment: checklist auto-answers + indicators
       const tickers = getTickers();
       const toTs = Math.floor(Date.now() / 1000);
-      const fromTs = toTs - 365 * 86400; // 365 calendar days ≈ 260 trading days — required for EMA200
+      const fromTs = toTs - 600 * 86400; // ~600 calendar days ≈ 415 trading days ≈ 19 monthly bars — EMA200 + monthly RSI(14)
 
       // SPY daily closes (fetched once, cached) — benchmark for Relative Strength
       let spyCloses = null;
