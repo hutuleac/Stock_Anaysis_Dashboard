@@ -1,9 +1,11 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
+  import { computeTimingScore } from './lib/timingScore.js';
+  import { parseFinancials, computeQualityScore } from './lib/qualityScore.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
@@ -16,6 +18,7 @@
 
   import SetupRadar from './lib/components/SetupRadar.svelte';
   import DipRadar from './lib/components/DipRadar.svelte';
+  import LongTermScanPanel from './lib/components/LongTermScanPanel.svelte';
   import EtfDashboard from './lib/components/EtfDashboard.svelte';
   import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses, requestEtfExpand } from './lib/stores/etflist.svelte.js';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
@@ -265,6 +268,12 @@
               const anchors = computeChartAnchors(synthetic);
               if (anchors) results[ticker.symbol].anchors = anchors;
 
+              results[ticker.symbol].timingScore = computeTimingScore({
+                dailyCandles: synthetic,
+                weeklyCandles: weeklyRaw,
+                marketContext: { fearGreed: marketContextData?.fearGreed?.data?.score ?? null },
+              });
+
               if (spyCloses) {
                 const rs = computeRelativeStrength(synthetic.c, spyCloses);
                 if (rs.rs1m !== null || rs.rs3m !== null) results[ticker.symbol].rs = rs;
@@ -294,6 +303,12 @@
 
             const anchors = computeChartAnchors(candleRes?.data);
             if (anchors) results[ticker.symbol].anchors = anchors;
+
+            results[ticker.symbol].timingScore = computeTimingScore({
+              dailyCandles: candleRes?.data,
+              weeklyCandles: weeklyRes?.data,
+              marketContext: { fearGreed: marketContextData?.fearGreed?.data?.score ?? null },
+            });
 
             if (spyCloses && candleRes?.data?.c?.length) {
               const rs = computeRelativeStrength(candleRes.data.c, spyCloses);
@@ -404,6 +419,8 @@
             rs:          d.rs          ?? p?.rs          ?? null,
             smartMoney:  d.smartMoney  ?? p?.smartMoney  ?? null,
             sectorMomentum: d.sectorMomentum ?? null,
+            timingScore:  d.timingScore  ?? p?.timingScore  ?? null,
+            qualityScore: d.qualityScore ?? p?.qualityScore ?? null,
           };
         }
         localStorage.setItem('dashboard_supplement', JSON.stringify({
@@ -420,6 +437,27 @@
   function formatTime(date) {
     if (!date) return 'Never';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Lazy Quality Score fetch — called when a ticker's row is expanded (Slice 3
+  // design decision: avoid 2 extra Finnhub calls/ticker on every batch refresh).
+  // Both underlying calls are already cached (7d financials, 24h earnings), so
+  // re-expanding within the cache window costs nothing.
+  async function loadQualityScoreForTicker(symbol) {
+    const data = getTickerData(symbol);
+    if (!data || data.qualityScore) return;
+    try {
+      const [finRes, earnRes] = await Promise.all([
+        fetchFinancialsReported(symbol).catch(() => null),
+        fetchHistoricalEarnings(symbol, 8).catch(() => null),
+      ]);
+      const financials = finRes?.data ? parseFinancials(finRes.data) : null;
+      const earnings = Array.isArray(earnRes?.data) ? earnRes.data : null;
+      const marketCap = data.profile?.marketCapitalization ?? null;
+      const metric = data.metrics?.data ?? null;
+      const quality = computeQualityScore({ metric, marketCap, financials, earnings });
+      setMarketData({ [symbol]: { ...data, qualityScore: quality } });
+    } catch { /* non-blocking — Long-Term Setup shows "not yet checked" */ }
   }
 
   // On startup: merge Finnhub cache + supplement into one object, then set once.
@@ -449,6 +487,13 @@
       if (data._candlesWeekly) { const wt  = computeWeeklyTrend(data._candlesWeekly);           if (wt)  data.weekly    = wt;  }
       if (data._candlesWeekly) { const st  = computeSetupSignals(data._candlesWeekly);          if (st)  data.setups    = st;  }
       if (data._candlesDaily)  { const an  = computeChartAnchors(data._candlesDaily);           if (an)  data.anchors   = an;  }
+      if (data._candlesDaily || data._candlesWeekly) {
+        data.timingScore = computeTimingScore({
+          dailyCandles: data._candlesDaily,
+          weeklyCandles: data._candlesWeekly,
+          marketContext: { fearGreed: null }, // market context not yet loaded this early in startup
+        });
+      }
       delete data._candlesDaily;
       delete data._candlesWeekly;
 
@@ -477,6 +522,11 @@
                 const wt = computeWeeklyTrend(weeklyRaw); if (wt) data.weekly = wt;
                 const st = computeSetupSignals(weeklyRaw); if (st) data.setups = st;
                 const an = computeChartAnchors(synthetic); if (an) data.anchors = an;
+                data.timingScore = computeTimingScore({
+                  dailyCandles: synthetic,
+                  weeklyCandles: weeklyRaw,
+                  marketContext: { fearGreed: null },
+                });
               }
             }
           }
@@ -517,6 +567,8 @@
             if (s.rs          != null) results[sym].rs          = s.rs;
             if (s.smartMoney  != null) results[sym].smartMoney  = s.smartMoney;
             if (s.sectorMomentum != null) results[sym].sectorMomentum = s.sectorMomentum;
+            if (s.timingScore  != null) results[sym].timingScore  = s.timingScore;
+            if (s.qualityScore != null) results[sym].qualityScore = s.qualityScore;
           }
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
@@ -677,7 +729,8 @@
     {#if activeView === 'stocks'}
       <SetupRadar />
       <DipRadar marketData={marketContextData} />
-      <WatchlistTable onTickerAdded={handleRefresh} />
+      <LongTermScanPanel marketContextData={marketContextData} />
+      <WatchlistTable onTickerAdded={handleRefresh} onTickerExpand={loadQualityScoreForTicker} />
     {:else}
       <EtfDashboard />
     {/if}
