@@ -252,3 +252,83 @@ describe('computeQualityScore — shareholderReturn component', () => {
     expect(computeQualityScore({ metric: null, marketCap: null, financials: null, earnings: null }).components.shareholderReturn).toBeNull();
   });
 });
+
+describe('computeQualityScore — earningsQuality component', () => {
+  const earn = (results) => results.map(([actual, estimate]) => ({ actual, estimate }));
+  const base = { metric: null, marketCap: null, financials: null };
+
+  it('scores beat rate tiers: >=75% -> 10, >=60% -> 7, >=50% -> 4, <50% -> 1', () => {
+    expect(computeQualityScore({ ...base, earnings: earn([[2, 1], [2, 1], [2, 1], [2, 1]]) }).components.earningsQuality).toBe(10);
+    expect(computeQualityScore({ ...base, earnings: earn([[2, 1], [2, 1], [2, 1], [1, 2], [1, 2]]) }).components.earningsQuality).toBe(7); // 3/5 = 60%
+    expect(computeQualityScore({ ...base, earnings: earn([[2, 1], [1, 2]]) }).components.earningsQuality).toBe(4); // 50%
+    expect(computeQualityScore({ ...base, earnings: earn([[1, 2], [1, 2], [2, 1]]) }).components.earningsQuality).toBe(1); // 33%
+  });
+
+  it('scores 0 + red flag for 3+ consecutive misses (trailing, most-recent-first)', () => {
+    const result = computeQualityScore({ ...base, earnings: earn([[1, 2], [1, 2], [1, 2], [2, 1]]) });
+    expect(result.components.earningsQuality).toBe(0);
+    expect(result.redFlags).toContain('Repeated earnings misses');
+  });
+
+  it('earningsQuality is null when earnings history is missing or empty', () => {
+    expect(computeQualityScore({ ...base, earnings: null }).components.earningsQuality).toBeNull();
+    expect(computeQualityScore({ ...base, earnings: [] }).components.earningsQuality).toBeNull();
+  });
+});
+
+describe('computeQualityScore — total, label, INSUFFICIENT_DATA', () => {
+  it('label is INSUFFICIENT_DATA when fewer than 3 of 5 components are non-null, even if total is reported', () => {
+    const result = computeQualityScore({
+      metric: { roiTTM: 0.22 }, // profitability only
+      marketCap: null,
+      financials: null,
+      earnings: null,
+    });
+    expect(result.components.profitability).not.toBeNull();
+    expect(result.components.cashFlow).toBeNull();
+    expect(result.components.balanceSheet).not.toBeNull(); // balanceSheet also scores off `metric`
+    expect(result.components.shareholderReturn).not.toBeNull(); // dividend sub scores off `metric` too (0, non-null)
+    expect(result.components.earningsQuality).toBeNull();
+    // 3 of 5 non-null here (profitability, balanceSheet, shareholderReturn) -> not INSUFFICIENT_DATA
+    expect(result.label).not.toBe('INSUFFICIENT_DATA');
+  });
+
+  it('label is INSUFFICIENT_DATA when everything is absent', () => {
+    const result = computeQualityScore({ metric: null, marketCap: null, financials: null, earnings: null });
+    expect(result.total).toBeNull();
+    expect(result.label).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('labels HIGH >=75, MEDIUM 50-74, LOW <50 on a fully-populated high-quality input', () => {
+    const result = computeQualityScore({
+      metric: {
+        roiTTM: 0.25, operatingMarginTTM: 0.30, epsGrowthTTMYoy: 0.10, epsGrowth3Y: 0.10,
+        pegTTM: 0.8,
+        'totalDebt/totalEquityQuarterly': 0.2, currentRatioQuarterly: 2.0, netInterestCoverageTTM: 12,
+        dividendYieldIndicatedAnnual: 0.025, payoutRatioTTM: 0.4,
+      },
+      marketCap: 1000,
+      financials: { fcf: 90_000_000, ocf: null, capex: null, buyback: null, dilutedShares: 950, dilutedSharesPrior: 1000 },
+      earnings: [{ actual: 2, estimate: 1 }, { actual: 2, estimate: 1 }, { actual: 2, estimate: 1 }],
+    });
+    expect(result.total).toBeGreaterThanOrEqual(75);
+    expect(result.label).toBe('HIGH');
+  });
+
+  it('pins a concrete MEDIUM fixture to catch the 50/75 boundary off-by-one', () => {
+    const earn2 = (results) => results.map(([actual, estimate]) => ({ actual, estimate }));
+    const result = computeQualityScore({
+      metric: {
+        roiTTM: 0.11, operatingMarginTTM: 0.10,
+        'totalDebt/totalEquityQuarterly': 1.5, currentRatioQuarterly: 1.2,
+      },
+      marketCap: null,
+      financials: null,
+      earnings: earn2([[2, 1], [1, 2]]),
+    });
+    // profitability: 10+4=14, cashFlow: null, balanceSheet: 3+3=6, shareholderReturn: 0 (metric present, no dividend/payout keys), earningsQuality: 4 (50% beat)
+    expect(result.components).toEqual({ profitability: 14, cashFlow: null, balanceSheet: 6, shareholderReturn: 0, earningsQuality: 4 });
+    expect(result.total).toBe(24);
+    expect(result.label).toBe('LOW');
+  });
+});

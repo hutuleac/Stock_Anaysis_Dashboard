@@ -192,6 +192,31 @@ function scoreShareholderReturn(metric, financials) {
   return { score: Math.min(10, score), notes, warnings: [] };
 }
 
+function scoreEarningsQuality(earnings) {
+  if (!Array.isArray(earnings) || earnings.length === 0) return { score: null, redFlags: [] };
+
+  const recent = earnings.slice(0, 8);
+  const beats = recent.filter((e) => num(e.actual) !== null && num(e.estimate) !== null && e.actual > e.estimate).length;
+  const scored = recent.filter((e) => num(e.actual) !== null && num(e.estimate) !== null).length;
+  const beatRate = scored > 0 ? beats / scored : 0;
+
+  let consecutiveMisses = 0;
+  for (const e of recent) {
+    if (num(e.actual) !== null && num(e.estimate) !== null && e.actual < e.estimate) consecutiveMisses += 1;
+    else break;
+  }
+
+  if (consecutiveMisses >= 3) return { score: 0, redFlags: ['Repeated earnings misses'] };
+
+  let score;
+  if (beatRate >= 0.75) score = 10;
+  else if (beatRate >= 0.60) score = 7;
+  else if (beatRate >= 0.50) score = 4;
+  else score = 1;
+
+  return { score, redFlags: [] };
+}
+
 /**
  * @typedef {Object} QualityScore
  * @property {number|null} total
@@ -221,17 +246,18 @@ export function computeQualityScore(input) {
   const cashFlow = scoreCashFlow(metric, marketCap, financials);
   const balanceSheet = scoreBalanceSheet(metric);
   const shareholderReturn = scoreShareholderReturn(metric, financials);
+  const earningsQuality = scoreEarningsQuality(earnings);
 
   const components = {
     profitability: profitability.score,
     cashFlow: cashFlow.score,
     balanceSheet: balanceSheet.score,
     shareholderReturn: shareholderReturn.score,
-    earningsQuality: null,
+    earningsQuality: earningsQuality.score,
   };
   const notes = [...profitability.notes, ...cashFlow.notes, ...balanceSheet.notes, ...shareholderReturn.notes];
   const warnings = [...profitability.warnings, ...cashFlow.warnings, ...balanceSheet.warnings, ...shareholderReturn.warnings];
-  const redFlags = [...(cashFlow.redFlags || []), ...(balanceSheet.redFlags || [])];
+  const redFlags = [...(cashFlow.redFlags || []), ...(balanceSheet.redFlags || []), ...(earningsQuality.redFlags || [])];
 
   const nonNull = Object.values(components).filter((c) => c !== null);
   const total = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0)) : null;
