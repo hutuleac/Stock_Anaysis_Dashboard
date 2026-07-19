@@ -77,6 +77,15 @@ export function buildLongTermSetup(timingScore, qualityScore, marketContext) {
     return { status: 'INSUFFICIENT_DATA', timingScore: timingScore ?? null, qualityScore: qualityScore ?? null, reasons: buildReasons('INSUFFICIENT_DATA', timingScore, qualityScore) };
   }
 
-  const status = MATRIX[timingBand(timingScore)][qualityBand(qualityScore)];
-  return { status, timingScore: timingScore ?? null, qualityScore: qualityScore ?? null, reasons: buildReasons(status, timingScore, qualityScore) };
+  let status = MATRIX[timingBand(timingScore)][qualityBand(qualityScore)];
+
+  const fg = marketContext?.fearGreed ?? null;
+  const qBand = qualityBand(qualityScore);
+  const boosted = status === 'WATCHLIST' && fg !== null && fg < 30 && (qBand === 'HIGH' || qBand === 'GOOD');
+  if (boosted) status = 'ACCUMULATE';
+
+  const reasons = buildReasons(status, timingScore, qualityScore);
+  if (boosted) reasons.push('Extreme market panic (F&G < 30) + confirmed quality — accelerated to ACCUMULATE');
+
+  return { status, timingScore: timingScore ?? null, qualityScore: qualityScore ?? null, reasons };
 }

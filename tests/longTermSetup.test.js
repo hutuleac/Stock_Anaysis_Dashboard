@@ -107,3 +107,37 @@ describe('buildLongTermSetup — return shape', () => {
     }
   });
 });
+
+describe('buildLongTermSetup — extreme-panic boost', () => {
+  it('WATCHLIST + fearGreed<30 + HIGH/GOOD quality -> boosted to ACCUMULATE', () => {
+    const high = buildLongTermSetup(timing(55), quality(80), { fearGreed: 22 });
+    expect(high.status).toBe('ACCUMULATE');
+    expect(high.reasons.some(r => r.includes('Extreme market panic'))).toBe(true);
+
+    const good = buildLongTermSetup(timing(55), quality(68), { fearGreed: 29 });
+    expect(good.status).toBe('ACCUMULATE');
+  });
+
+  it('does not fire when fearGreed >= 30', () => {
+    const result = buildLongTermSetup(timing(55), quality(80), { fearGreed: 30 });
+    expect(result.status).toBe('WATCHLIST');
+  });
+
+  it('does not fire when quality band is OK or WEAK_OR_UNKNOWN', () => {
+    expect(buildLongTermSetup(timing(55), quality(62), { fearGreed: 10 }).status).toBe('NEUTRAL');
+    expect(buildLongTermSetup(timing(55), quality(40), { fearGreed: 10 }).status).toBe('NEUTRAL');
+  });
+
+  it('does not fire on WAIT, OVERSOLD_BUT_CAUTION, NEUTRAL, or INSUFFICIENT_DATA', () => {
+    expect(buildLongTermSetup(timing(20), quality(80), { fearGreed: 5 }).status).toBe('WAIT');
+    expect(buildLongTermSetup(timing(75), quality(40), { fearGreed: 5 }).status).toBe('OVERSOLD_BUT_CAUTION');
+    expect(buildLongTermSetup(timing(55), quality(62), { fearGreed: 5 }).status).toBe('NEUTRAL');
+    expect(buildLongTermSetup(null, null, { fearGreed: 5 }).status).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('handles a null/missing marketContext gracefully (no boost, no throw)', () => {
+    expect(buildLongTermSetup(timing(55), quality(80), null).status).toBe('WATCHLIST');
+    expect(buildLongTermSetup(timing(55), quality(80), {}).status).toBe('WATCHLIST');
+    expect(buildLongTermSetup(timing(55), quality(80), undefined).status).toBe('WATCHLIST');
+  });
+});
