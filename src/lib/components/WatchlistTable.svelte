@@ -7,6 +7,7 @@
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
+  import { buildLongTermSetup } from '../longTermSetup.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
@@ -288,6 +289,13 @@
       : { color: '#9ca3af', label: 'Neutral' };
   }
 
+  function longTermStatusStyle(status) {
+    if (status === 'ACCUMULATE') return 'bg-bull-strong/20 text-bull-strong';
+    if (status === 'OVERSOLD_BUT_CAUTION' || status === 'WATCHLIST') return 'bg-uncertain/20 text-uncertain';
+    if (status === 'INSUFFICIENT_DATA') return 'bg-surface-600 text-text-muted';
+    return 'bg-surface-600 text-text-secondary'; // NEUTRAL / WAIT
+  }
+
   function handleDragStart(e, index) {
     dragIndex = index;
     e.dataTransfer.effectAllowed = 'move';
@@ -437,6 +445,22 @@
 
 
   {#snippet expandedPanel(ticker, data, score, variant)}
+    {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null }) : null}
+    {#if setup}
+      <div class="mb-3 px-3 py-2 rounded-lg bg-surface-800/60 border border-border/40">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Long-Term Setup</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold {longTermStatusStyle(setup.status)}">{setup.status.replace(/_/g, ' ')}</span>
+        </div>
+        <div class="flex gap-3 text-[11px] text-text-secondary mb-1">
+          <span>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
+          <span>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
+        </div>
+        {#each setup.reasons as reason}
+          <p class="text-[11px] text-text-muted">{reason}</p>
+        {/each}
+      </div>
+    {/if}
     {#if variant === 'desktop'}
       <!-- AI export toolbar -->
       <div class="flex items-center justify-end gap-1 mb-3 relative">
