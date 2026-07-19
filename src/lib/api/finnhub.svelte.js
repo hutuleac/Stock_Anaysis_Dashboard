@@ -11,6 +11,7 @@ const CACHE_TTL = {
   earnings_hist: 86400,    // historical earnings surprises — 24h
   smart_money: 604800,     // analyst recs + insider sentiment — 7d cache
   btc: 900,                // BTC risk-appetite proxy (Binance public API) — 15 min
+  financials: 604800,      // financials-reported — statements update quarterly, 7d cache
 };
 
 // Prefix → max age (seconds) used ONLY to reclaim space under quota pressure.
@@ -24,6 +25,7 @@ const EVICT_TTL = {
   'fh_news_':         CACHE_TTL.news,
   'fh_smart_money_':  CACHE_TTL.smart_money,
   'fh_candles_':      CACHE_TTL.candles,
+  'fh_financials_':   CACHE_TTL.financials,
   'td_tdquote_':      60,
   'td_ts_1day_':      86400,
   'td_ts_1h_':        900,
@@ -383,6 +385,14 @@ export async function fetchHistoricalEarnings(symbol, limit = 8) {
     const data = await fetchFinnhub(`/stock/earnings?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
     return Array.isArray(data) ? data : [];
   });
+}
+
+// ── Financials Reported (cash flow + share-count concepts for Quality Score) ─
+// Returns the raw financials-reported payload: { data: [{ year, quarter, form, report: { bs, cf, ic } }] }
+export async function fetchFinancialsReported(symbol) {
+  return fetchWithCache('financials', symbol, () =>
+    fetchFinnhub(`/stock/financials-reported?symbol=${encodeURIComponent(symbol)}`)
+  );
 }
 
 // ── CNN Fear & Greed Index ────────────────────────────────────────────────────
