@@ -102,6 +102,20 @@ describe('dip score components', () => {
     }
   });
 
+  it('Market Fear is gated on stock-specific weakness — a rising name banks nothing', () => {
+    // No oversold / no drawdown / far from 52w low = not on sale, despite max fear.
+    const strong = makeTicker({
+      indicators: { rsi: 63, rsiZScore: 0.5, roc20: 3, roc60: 8, oversoldConfluence: false,
+        macdCrossover: 'bullish_cross', obv: null },
+    });
+    strong.data.metrics.data.metric['52WeekLow'] = 20; // price 80 → mid-range, no 52w-low bonus
+    const fear = comp(computeDipRadar([strong], FEAR), 'Market Fear');
+    expect(fear.score).toBe(0);
+    expect(fear.detail).toContain('not down');
+    // A genuinely weak name still banks the full 1.5 in the same tape.
+    expect(comp(computeDipRadar([makeTicker()], FEAR), 'Market Fear').score).toBe(1.5);
+  });
+
   it('scores drawdown tiers and caps at 1.0', () => {
     // roc60 −18 → 0.6, roc20 −7 → 0.4 = 1.0
     const hits = computeDipRadar([makeTicker()], FEAR);

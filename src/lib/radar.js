@@ -1,7 +1,9 @@
-// Setup Radar — early entries in great stocks.
-// Pure logic: gates each watchlist name on (a) an early weekly setup and
-// (b) a fundamental quality screen, then ranks the survivors. Display-only;
-// reads data already on the ticker object — no API calls, no scoring changes.
+// Setup Radar — early entries, split into two honest buckets.
+// ACCUMULATION (Pullback setup): buy weakness before the wave — laggards welcome,
+//   the leaders (rs3m>0) gate is deliberately NOT applied here.
+// BREAKOUT (Momentum setup): confirmation as a leader's trend starts — leaders gate kept.
+// Both still require real revenue growth + PEG<3. Display-only; reads data already
+// on the ticker object — no API calls, no scoring changes.
 import { computePEG } from './valuation.js';
 
 const READINESS_RANK = { ACT: 3, SOON: 2, WATCH: 1 };
@@ -71,13 +73,16 @@ export function computeRadar(list) {
     const setup = activeSetup(data.setups);
     if (!setup) continue;
 
+    const category = setup.type === 'MOMENTUM' ? 'BREAKOUT' : 'ACCUMULATION';
     const readiness = nudgeReadiness(setup.readiness, data.anchors);
 
     const metric = data?.metrics?.data?.metric ?? {};
     const revGrowth = metric.revenueGrowthTTMYoy;
     const rs3m = data?.rs?.rs3m;
     if (!isFiniteNum(revGrowth) || revGrowth <= 0) continue;
-    if (!isFiniteNum(rs3m) || rs3m <= 0) continue;
+    // Leaders gate applies only to BREAKOUT confirmation. ACCUMULATION (buy-weakness
+    // Pullback) deliberately admits laggards — that's the whole point of the bucket.
+    if (category === 'BREAKOUT' && (!isFiniteNum(rs3m) || rs3m <= 0)) continue;
 
     const peg = computePEG(
       metric.peNormalizedAnnual ?? metric.peBasicExclExtraTTM ?? null,
@@ -87,6 +92,7 @@ export function computeRadar(list) {
 
     hits.push({
       symbol: item.symbol,
+      category,
       setupType: setup.type,
       readiness,
       setupScore: setup.score,

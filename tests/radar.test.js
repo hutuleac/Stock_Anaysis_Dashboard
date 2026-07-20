@@ -36,14 +36,29 @@ describe('computeRadar', () => {
     expect(out).toHaveLength(1);
     expect(out[0].symbol).toBe('AAA');
     expect(out[0].setupType).toBe('PULLBACK');
+    expect(out[0].category).toBe('ACCUMULATION');
     expect(out[0].readiness).toBe('SOON');
     expect(out[0].peg).toBeCloseTo(20 / 30, 1); // computePEG rounds to 2 dp (0.67)
     expect(out[0].rsRank).toBe(1);
     expect(out[0].rsTotal).toBe(1);
   });
 
-  it('excludes an active setup that fails the quality gate (rs3m <= 0)', () => {
-    expect(computeRadar([ticker('AAA', { rs3m: -2 })])).toHaveLength(0);
+  it('tags a momentum setup as BREAKOUT', () => {
+    const out = computeRadar([ticker('AAA', { setupType: 'momentum' })]);
+    expect(out).toHaveLength(1);
+    expect(out[0].category).toBe('BREAKOUT');
+    expect(out[0].setupType).toBe('MOMENTUM');
+  });
+
+  it('BREAKOUT (momentum) keeps the leaders gate — excludes rs3m <= 0', () => {
+    expect(computeRadar([ticker('AAA', { setupType: 'momentum', rs3m: -2 })])).toHaveLength(0);
+  });
+
+  it('ACCUMULATION (pullback) admits laggards with negative RS', () => {
+    const out = computeRadar([ticker('AAA', { rs3m: -2 })]);
+    expect(out).toHaveLength(1);
+    expect(out[0].category).toBe('ACCUMULATION');
+    expect(out[0].rs3m).toBe(-2);
   });
 
   it('excludes a great company with only WAIT readiness', () => {
@@ -62,9 +77,17 @@ describe('computeRadar', () => {
     expect(computeRadar([ticker('AAA', { pe: 60, epsGrowth: 10 })])).toHaveLength(0);
   });
 
-  it('excludes when rs or metrics are missing', () => {
-    expect(computeRadar([ticker('AAA', { hasRs: false })])).toHaveLength(0);
+  it('excludes when metrics are missing (both buckets need revenue growth)', () => {
     expect(computeRadar([ticker('AAA', { hasMetrics: false })])).toHaveLength(0);
+    expect(computeRadar([ticker('AAA', { setupType: 'momentum', hasMetrics: false })])).toHaveLength(0);
+  });
+
+  it('missing RS excludes BREAKOUT but not ACCUMULATION', () => {
+    expect(computeRadar([ticker('AAA', { setupType: 'momentum', hasRs: false })])).toHaveLength(0);
+    const out = computeRadar([ticker('AAA', { hasRs: false })]);
+    expect(out).toHaveLength(1);
+    expect(out[0].category).toBe('ACCUMULATION');
+    expect(out[0].rsRank).toBeNull();
   });
 
   it('ranks ACT before SOON, then by setupScore', () => {
