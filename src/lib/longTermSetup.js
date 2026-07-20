@@ -84,8 +84,20 @@ export function buildLongTermSetup(timingScore, qualityScore, marketContext) {
   const boosted = status === 'WATCHLIST' && fg !== null && fg < 30 && (qBand === 'HIGH' || qBand === 'GOOD');
   if (boosted) status = 'ACCUMULATE';
 
-  const reasons = buildReasons(status, timingScore, qualityScore);
-  if (boosted) reasons.push('Extreme market panic (F&G < 30) + confirmed quality — accelerated to ACCUMULATE');
+  // HY credit-spread gate (FRED BAMLH0A0HYM2 via the macro regime). In STRESS
+  // — spread > 5% or +0.5pp in ~20 sessions — a drawdown can be systemic risk
+  // rather than a dip, so ACCUMULATE (boosted or not) is demoted. Checked
+  // after the panic boost on purpose: credit stress overrides panic buying.
+  const credit = marketContext?.creditStress ?? null;
+  const creditDemoted = credit === 'STRESS' && status === 'ACCUMULATE';
+  if (creditDemoted) status = 'OVERSOLD_BUT_CAUTION';
+
+  const reasons = creditDemoted
+    ? [...buildReasons('ACCUMULATE', timingScore, qualityScore),
+       'HY credit spreads in stress — could be systemic risk, not a dip; staged entries + stronger confirmation required']
+    : buildReasons(status, timingScore, qualityScore);
+  if (boosted && !creditDemoted) reasons.push('Extreme market panic (F&G < 30) + confirmed quality — accelerated to ACCUMULATE');
+  if (credit === 'ELEVATED' && status === 'ACCUMULATE') reasons.push('Credit spreads elevated (HY 4–5%) — prefer staged entries');
 
   return { status, timingScore: timingScore ?? null, qualityScore: qualityScore ?? null, reasons };
 }

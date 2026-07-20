@@ -445,7 +445,7 @@
 
 
   {#snippet expandedPanel(ticker, data, score, variant)}
-    {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null }) : null}
+    {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null }) : null}
     {#if setup}
       <div class="mb-3 px-3 py-2 rounded-lg bg-surface-800/60 border border-border/40">
         <div class="flex items-center justify-between mb-1">
