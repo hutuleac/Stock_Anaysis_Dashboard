@@ -1,6 +1,7 @@
 <script>
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
+  import { timingChips, chipColor } from '../longTermIndicators.js';
 
   let { marketContextData = null } = $props();
   let collapsed = $state(false);
@@ -61,11 +62,23 @@
           <div class="space-y-1.5">
             {#each (showAll ? rows : primaryRows.length ? primaryRows : rows.slice(0, 3)) as row (row.symbol)}
               <button
-                class="w-full flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-700/50 hover:bg-surface-700 transition-colors text-left"
+                class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded bg-surface-700/50 hover:bg-surface-700 transition-colors text-left overflow-x-auto"
                 onclick={() => selectTicker(row.symbol)}
               >
-                <span class="text-xs font-mono font-semibold text-text-primary">{row.symbol}</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold {statusStyle(row.setup.status)}">{statusLabel(row.setup.status)}</span>
+                <span class="text-xs font-mono font-semibold text-text-primary w-14 shrink-0">{row.symbol}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 {statusStyle(row.setup.status)}">{statusLabel(row.setup.status)}</span>
+                <span class="text-[10px] font-mono shrink-0" style="color:{chipColor(row.setup.timingScore?.total, 100)}"
+                  title="Timing score 0–100">T {row.setup.timingScore?.total ?? '–'}</span>
+                <span class="text-[10px] font-mono shrink-0 text-text-muted"
+                  title="Quality score 0–100 (fetched when you expand the ticker)">Q {row.setup.qualityScore?.total ?? '–'}</span>
+                {#if row.setup.timingScore?.components}
+                  {#each timingChips(row.setup.timingScore.components) as c}
+                    <span class="text-[10px] px-1 py-0.5 rounded bg-surface-600 font-mono shrink-0"
+                      style="color:{chipColor(c.score, c.max)}"
+                      title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max}`}"
+                    >{c.label} {c.score ?? '–'}</span>
+                  {/each}
+                {/if}
               </button>
             {/each}
           </div>

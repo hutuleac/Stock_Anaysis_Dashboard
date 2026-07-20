@@ -99,7 +99,7 @@ src/lib/
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
-  radar.js            — Setup Radar: gates setups on fundamentals (rev growth, RS, PEG), ranks survivors
+  radar.js            — Setup Radar: gates setups on fundamentals, splits into ACCUMULATION/BREAKOUT buckets, ranks survivors
   etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs + generateEtfThesis + buildEtfBriefing
   etfCatalog.js       — curated ~55-fund UCITS catalog + client-side search
   export.js           — AI export: buildStockSnapshot() + buildPrompt() + DEFAULT_TEMPLATES presets
@@ -171,6 +171,14 @@ Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaW
 
 **Inversions from the crypto source** (grid bots want chop; we want trends): high ADX/trend is positive for momentum, divergence is used long-only (bullish at lows), and everything runs on weekly not 4H. Crypto-only inputs (funding, OI, order-flow CVD) were dropped. Squeeze COMPRESSING is gated on bandwidth percentile (scale-agnostic across tickers), not an absolute bandwidth level.
 
+## Setup Radar (radar.js)
+
+Watchlist-wide surface for the weekly setups above (`computeSetupSignals`), display-only. `computeRadar(list)` picks the stronger active (WATCH/SOON/ACT) setup per ticker and tags it with a **`category`** (v0.21):
+- **ACCUMULATION** (Pullback setup — buy weakness before the wave): the leaders `rs3m > 0` gate is **deliberately NOT applied** — laggards/red names are exactly what a buy-weakness setup wants, so they're allowed and `rs3m` may be null/negative.
+- **BREAKOUT** (Momentum setup — confirmation as a leader's trend starts): leaders gate **kept** (`rs3m > 0`, finite required).
+
+Both buckets still require revenue growth > 0 and PEG < 3 (quality). `SetupRadar.svelte` renders the two as separate labelled sections; null/negative RS is guarded in the UI. AVWAP-reclaimed + POC-not-below nudges readiness one tier (never demotes). Rejected (Jul 2026, deliberate): A) an overbought/extension guard on Momentum and B) relaxing the leaders gate globally — Peter watches entries manually instead. The split (C) + Dip fear gate (D) shipped; A/B did not.
+
 ## Dip Hunter (dip.js)
 
 Watchlist-wide scan for early entries in quality names on sale — display-only, does not feed `computeScore`. Two stages, entry point `computeDipRadar(list, marketCtx)`:
@@ -180,7 +188,7 @@ Watchlist-wide scan for early entries in quality names on sale — display-only,
 
 | Component | Max | Signal |
 |---|---|---|
-| Market Fear | 1.5 | F&G in fear zone + SPY below EMA50 |
+| Market Fear | 1.5 | F&G in fear zone + SPY below EMA50 — **gated on stock-specific weakness (v0.21):** only counts when this ticker's own Oversold / Drawdown / 52w-Low fired, else 0. Stops a rising, high-RSI name banking the market-wide 1.5 and masquerading as a dip in a fearful tape |
 | Oversold | 1.5 | RSI tiers + z-score ≤ −1.5 + BB confluence |
 | Drawdown | 1.0 | 60d/20d ROC decline |
 | 52w Low | 1.0 | proximity to 52-week low (own tiers, not folded into Drawdown) |
@@ -192,7 +200,7 @@ Watchlist-wide scan for early entries in quality names on sale — display-only,
 
 **Risk context (not scored, never gates):** a strong-ADX (>35) downtrend that hasn't stalled (60d ROC ≤ −8%) caps readiness at WATCH. A broken most-recent swing-low support level (`data.indicators.swingLows`) is flagged in the UI. Both surface as warnings only — they never add or remove score points.
 
-Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component (never fires in a greedy market) · `SOON` ≥ 5 · `WATCH` ≥ 3 (below 3, excluded entirely). All inputs are already computed elsewhere on the ticker object (`data.indicators`, `data.rs`, `data.smartMoney`, `data.metrics`) — zero new API calls.
+Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component — which now (v0.21) requires *both* a fearful market **and** this ticker being genuinely down, so ACT never fires on a greedy market or on a name that isn't itself on sale · `SOON` ≥ 5 · `WATCH` ≥ 3 (below 3, excluded entirely). All inputs are already computed elsewhere on the ticker object (`data.indicators`, `data.rs`, `data.smartMoney`, `data.metrics`) — zero new API calls.
 
 ## ETF section (etf.js)
 
@@ -215,6 +223,7 @@ Three-slice framework for long-horizon accumulation, all display-only:
 - **Timing Score** `computeTimingScore({ dailyCandles, weeklyCandles, marketContext })` → 0–100 across drawdown 20 / oversold (D+W+M RSI) 20 / reversal 20 / consolidation 15 / volume 15 / market ctx 10. Null-safe: missing components are omitted, all-null → total null. Primitives live in `technicalPatterns.js`. Market ctx comes from App.svelte's `timingMarketContext()` (derived from `getMarketContext()`; `spyAboveEma50 = !spyDowntrend` — same EMA50 semantic). `sectorOutperforming` is per-ticker and stays unset.
 - **Quality Score** `computeQualityScore({ metric, marketCap, financials, earnings })` → 0–100 across profitability 30 / cashFlow 25 / balanceSheet 25 / shareholderReturn 10 / earningsQuality 10. Label INSUFFICIENT_DATA under 3 non-null components. Fetched **lazily on row expand** (`loadQualityScoreForTicker`, 2 extra cached Finnhub calls: financials-reported 7d + earnings 24h) — never on batch refresh. `parseFinancials` extracts FCF/buyback/diluted shares from the raw financials-reported payload by concept substring.
 - **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed, creditStress })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
+- **Indicator breakdown (v0.21):** `longTermIndicators.js` (`timingChips`/`qualityChips`/`chipColor`) maps the timing & quality component sub-scores into labeled fill-coloured chips — pure formatting, zero new compute. Expanded card shows both chip rows + the concrete timing `signals[]` (Daily/Weekly/Monthly RSI, drawdown %, consolidation days, capitulation/breakout) and `warnings[]`; scan-panel rows show T/Q totals + timing chips (quality stays lazy). Null component (missing input) reads muted grey, distinct from a real 0. Chip maxes mirror the score engines — keep in sync if a component cap changes.
 - **HY credit-stress gate (FRED `BAMLH0A0HYM2`):** `deriveMacroRegime` adds `creditStress` — STRESS when HY spread > 5% or Δ ≥ +0.5pp over ~20 sessions, ELEVATED 4–5%, CALM below. STRESS demotes ACCUMULATE → OVERSOLD_BUT_CAUTION and overrides the panic boost (systemic risk, not a dip); ELEVATED appends a staged-entries reason. This is the **only macro input that changes classification** — everything else in the Macro tile is context-only. Deliberately rejected as redundant/YAGNI (Jul 2026): T10Y3M, DFF, ICSA, Alpha Vantage fallback, CBOE vol indices, direct SEC EDGAR (Finnhub financials-reported *is* EDGAR data).
 
 ## AI export (export.js)
