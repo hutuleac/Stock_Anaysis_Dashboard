@@ -10,6 +10,8 @@
     const list = getTickers().map(t => ({ symbol: t.symbol, data: getTickerData(t.symbol) }));
     return computeRadar(list);
   });
+  const accumulation = $derived(hits.filter(h => h.category === 'ACCUMULATION'));
+  const breakout = $derived(hits.filter(h => h.category === 'BREAKOUT'));
 
   function readinessColor(r) {
     if (r === 'ACT')  return 'bg-bull-strong/20 text-bull-strong';
@@ -22,6 +24,8 @@
     return '#6b7280';
   }
   const fmtPct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+  const fmtRs = (v) => (v == null ? '—' : fmtPct(v)); // laggards in Accumulation may have null/negative RS
+  const rsCssColor = (v) => (v == null ? '#6b7280' : v > 5 ? '#22c55e' : v > 0 ? '#86efac' : '#ef4444');
   const fmtPeg = (v) => (v === null ? '—' : `${v.toFixed(2)}x`);
   const scoreColor = (s) => s >= 7 ? '#22c55e' : s >= 4.5 ? '#f59e0b' : '#6b7280';
 </script>
@@ -44,9 +48,7 @@
 
     {#if !collapsed}
       <div class="px-4 pb-3 border-t border-border/40 pt-3">
-        {#if hits.length}
-          <div class="space-y-1.5">
-            {#each hits as h}
+        {#snippet row(h)}
               <button
                 class="w-full flex items-center gap-3 hover:bg-surface-700/40 rounded px-1.5 py-1.5 transition-colors text-left overflow-x-auto"
                 onclick={() => selectTicker(h.symbol)}
@@ -103,26 +105,26 @@
                   use:tipAction={() => ({
                     ...TIPS.radarRsRank,
                     current: {
-                      value: `#${h.rsRank} of ${h.rsTotal}`,
-                      label: h.rsRank <= 3 ? 'Top tier' : h.rsRank <= 7 ? 'Mid tier' : 'Lower',
-                      color: h.rsRank <= 3 ? '#22c55e' : h.rsRank <= 7 ? '#6b7280' : '#f59e0b',
+                      value: h.rsRank != null ? `#${h.rsRank} of ${h.rsTotal}` : 'unranked',
+                      label: h.rsRank == null ? 'No RS data' : h.rsRank <= 3 ? 'Top tier' : h.rsRank <= 7 ? 'Mid tier' : 'Lower',
+                      color: h.rsRank == null ? '#6b7280' : h.rsRank <= 3 ? '#22c55e' : h.rsRank <= 7 ? '#6b7280' : '#f59e0b',
                     },
                   })}
-                >RS {h.rsRank}/{h.rsTotal}</span>
+                >RS {h.rsRank != null ? `${h.rsRank}/${h.rsTotal}` : '—'}</span>
 
                 <!-- 3M RS % -->
                 <span
                   class="font-mono text-xs w-16 shrink-0 cursor-default"
-                  style="color:{h.rs3m > 5 ? '#22c55e' : h.rs3m > 0 ? '#86efac' : '#ef4444'}"
+                  style="color:{rsCssColor(h.rs3m)}"
                   use:tipAction={() => ({
                     ...TIPS.relativeStrength,
                     current: {
-                      value: fmtPct(h.rs3m),
-                      label: h.rs3m > 5 ? 'Strong leader' : h.rs3m > 0 ? 'Ahead of SPY' : 'Lagging SPY',
-                      color: h.rs3m > 5 ? '#22c55e' : h.rs3m > 0 ? '#86efac' : '#ef4444',
+                      value: fmtRs(h.rs3m),
+                      label: h.rs3m == null ? 'No RS data' : h.rs3m > 5 ? 'Strong leader' : h.rs3m > 0 ? 'Ahead of SPY' : 'Lagging SPY',
+                      color: rsCssColor(h.rs3m),
                     },
                   })}
-                >{fmtPct(h.rs3m)}</span>
+                >{fmtRs(h.rs3m)}</span>
 
                 <!-- Revenue growth -->
                 <span
@@ -173,10 +175,19 @@
                   >⚠ support broken</span>
                 {/if}
               </button>
-            {/each}
-          </div>
+        {/snippet}
+
+        {#if hits.length}
+          {#if accumulation.length}
+            <div class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1.5">Early Accumulation · buy weakness before the wave</div>
+            <div class="space-y-1.5">{#each accumulation as h}{@render row(h)}{/each}</div>
+          {/if}
+          {#if breakout.length}
+            <div class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1.5 {accumulation.length ? 'mt-3' : ''}">Breakout Confirmation · leaders only</div>
+            <div class="space-y-1.5">{#each breakout as h}{@render row(h)}{/each}</div>
+          {/if}
         {:else}
-          <p class="text-xs text-text-muted italic">No great-stock entries today — the gate is intentionally strict.</p>
+          <p class="text-xs text-text-muted italic">No entries today — the gate is intentionally strict.</p>
         {/if}
       </div>
     {/if}
