@@ -79,6 +79,39 @@ describe('deriveMacroRegime', () => {
     expect(deriveMacroRegime({})).toBeNull();
     expect(deriveMacroRegime({ T10Y2Y: [], FEDFUNDS: [] })).toBeNull();
   });
+
+  // helper: n daily HY observations, newest-first, all at `flat` except the newest at `now`
+  const hySeries = (now, flat, n = 25) =>
+    obs(Array.from({ length: n }, (_, i) => [`2026-06-${n - i}`, i === 0 ? now : flat]));
+
+  it('creditStress CALM below 4, ELEVATED 4–5, STRESS above 5', () => {
+    expect(deriveMacroRegime({ BAMLH0A0HYM2: hySeries(3.2, 3.2) }).creditStress).toBe('CALM');
+    expect(deriveMacroRegime({ BAMLH0A0HYM2: hySeries(4.3, 4.3) }).creditStress).toBe('ELEVATED');
+    expect(deriveMacroRegime({ BAMLH0A0HYM2: hySeries(5.4, 5.4) }).creditStress).toBe('STRESS');
+  });
+
+  it('creditStress STRESS on +0.5pp in ~20 sessions even at a calm level', () => {
+    const r = deriveMacroRegime({ BAMLH0A0HYM2: hySeries(3.6, 3.0) }); // Δ20d = +0.6
+    expect(r.creditStress).toBe('STRESS');
+    expect(r.hyDelta20d).toBeCloseTo(0.6, 2);
+    expect(r.hySpread).toBe(3.6);
+  });
+
+  it('creditStress uses level only when history is too short for Δ20d', () => {
+    const r = deriveMacroRegime({ BAMLH0A0HYM2: hySeries(3.6, 3.0, 5) });
+    expect(r.hyDelta20d).toBeNull();
+    expect(r.creditStress).toBe('CALM');
+  });
+
+  it('creditStress is null (and other fields intact) without the HY series', () => {
+    const r = deriveMacroRegime({ T10Y2Y: obs([['2026-07-02', 0.3]]) });
+    expect(r.creditStress).toBeNull();
+    expect(r.hySpread).toBeNull();
+  });
+
+  it('HY series alone is enough to produce a regime object', () => {
+    expect(deriveMacroRegime({ BAMLH0A0HYM2: hySeries(3.2, 3.2) })).not.toBeNull();
+  });
 });
 
 // ─── computeScore macro regime integration ───────────────────────────────────
