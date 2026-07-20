@@ -8,6 +8,7 @@
   import { TIPS } from '../tooltipDefs.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
+  import { timingChips, qualityChips, chipColor } from '../longTermIndicators.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import PriceChart from './PriceChart.svelte';
@@ -456,6 +457,45 @@
           <span>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
           <span>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
         </div>
+
+        <!-- Timing indicator breakdown (the components feeding the 0–100 score) -->
+        {#if data.timingScore?.components}
+          <div class="flex flex-wrap gap-1 mb-1">
+            <span class="text-[9px] text-text-muted uppercase tracking-wider self-center mr-0.5">Timing</span>
+            {#each timingChips(data.timingScore.components) as c}
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
+                style="color:{chipColor(c.score, c.max)}"
+                title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
+              >{c.label} {c.score ?? '–'}/{c.max}</span>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Quality indicator breakdown (lazy — only after the row's fundamentals fetch) -->
+        {#if data.qualityScore?.components}
+          <div class="flex flex-wrap gap-1 mb-1">
+            <span class="text-[9px] text-text-muted uppercase tracking-wider self-center mr-0.5">Quality</span>
+            {#each qualityChips(data.qualityScore.components) as c}
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
+                style="color:{chipColor(c.score, c.max)}"
+                title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
+              >{c.label} {c.score ?? '–'}/{c.max}</span>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Concrete readings behind the timing score (RSI/drawdown/consolidation/etc.) -->
+        {#if data.timingScore?.signals?.length}
+          <div class="text-[10px] text-text-muted space-y-0.5 mb-1">
+            {#each data.timingScore.signals as s}<div>· {s}</div>{/each}
+          </div>
+        {/if}
+        {#if data.timingScore?.warnings?.length}
+          <div class="text-[10px] text-bear-strong/80 space-y-0.5 mb-1">
+            {#each data.timingScore.warnings as w}<div>⚠ {w}</div>{/each}
+          </div>
+        {/if}
+
         {#each setup.reasons as reason}
           <p class="text-[11px] text-text-muted">{reason}</p>
         {/each}
