@@ -57,8 +57,11 @@
     if (macro.fedFunds != null) parts.push(`Fed ${macro.fedFunds.toFixed(2)}${macro.fedRising ? '↑' : '→'}`);
     if (macro.cpiYoY != null) parts.push(`CPI ${macro.cpiYoY.toFixed(1)}`);
     if (macro.unemployment != null) parts.push(`U ${macro.unemployment.toFixed(1)}`);
+    if (macro.hySpread != null) parts.push(`HY ${macro.hySpread.toFixed(2)}`);
     const sub = parts.join(' · ') || null;
+    if (macro.creditStress === 'STRESS') return { ...STATES.bad, value, label: 'CREDIT STRESS', sub, hex: '#ef4444' };
     if (macro.curveInverted) return { ...STATES.bad,  value, label: 'INVERTED',   sub, hex: '#ef4444' };
+    if (macro.creditStress === 'ELEVATED') return { ...STATES.warn, value, label: 'HY ELEVATED', sub, hex: '#f59e0b' };
     if (macro.fedRising)     return { ...STATES.warn, value, label: 'FED RISING', sub, hex: '#f59e0b' };
     return { ...STATES.good, value, label: 'NORMAL', sub, hex: '#22c55e' };
   }

@@ -271,7 +271,7 @@
               results[ticker.symbol].timingScore = computeTimingScore({
                 dailyCandles: synthetic,
                 weeklyCandles: weeklyRaw,
-                marketContext: timingMarketContext(),
+                marketContext: timingMarketContext(results[ticker.symbol].sectorMomentum),
               });
 
               if (spyCloses) {
@@ -307,7 +307,7 @@
             results[ticker.symbol].timingScore = computeTimingScore({
               dailyCandles: candleRes?.data,
               weeklyCandles: weeklyRes?.data,
-              marketContext: timingMarketContext(),
+              marketContext: timingMarketContext(results[ticker.symbol].sectorMomentum),
             });
 
             if (spyCloses && candleRes?.data?.c?.length) {
@@ -461,9 +461,9 @@
   }
 
   // Market context for computeTimingScore — same source as the scoring engine
-  // (spyDowntrend there already means "SPY below EMA50"). sectorOutperforming
-  // is per-ticker and not tracked in market context, so it stays unset.
-  function timingMarketContext() {
+  // (spyDowntrend there already means "SPY below EMA50"), plus the per-ticker
+  // sectorMomentum already computed on refresh (sector ETF avg daily % move).
+  function timingMarketContext(sectorMomentum) {
     const ctx = getMarketContext() ?? {};
     const spyKnown = typeof ctx.spyDowntrend === 'boolean';
     return {
@@ -471,6 +471,8 @@
       volProxy: ctx.vixPrice ?? null,
       spyAboveEma50: spyKnown ? !ctx.spyDowntrend : null,
       spyDowntrend: spyKnown ? ctx.spyDowntrend : null,
+      // sector ETF avg daily % move; > 1 matches scoring.js's positive tier
+      sectorOutperforming: Number.isFinite(sectorMomentum) ? sectorMomentum > 1 : null,
     };
   }
 
@@ -549,7 +551,7 @@
         data.timingScore = computeTimingScore({
           dailyCandles: data._candlesDaily,
           weeklyCandles: data._candlesWeekly,
-          marketContext: timingMarketContext(),
+          marketContext: timingMarketContext(data.sectorMomentum),
         });
       }
       delete data._candlesDaily;
@@ -583,7 +585,7 @@
                 data.timingScore = computeTimingScore({
                   dailyCandles: synthetic,
                   weeklyCandles: weeklyRaw,
-                  marketContext: timingMarketContext(),
+                  marketContext: timingMarketContext(data.sectorMomentum),
                 });
               }
             }

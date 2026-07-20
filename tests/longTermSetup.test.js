@@ -141,3 +141,34 @@ describe('buildLongTermSetup — extreme-panic boost', () => {
     expect(buildLongTermSetup(timing(55), quality(80), undefined).status).toBe('WATCHLIST');
   });
 });
+
+describe('buildLongTermSetup — HY credit-stress gate', () => {
+  it('STRESS demotes ACCUMULATE to OVERSOLD_BUT_CAUTION with a systemic-risk reason', () => {
+    const r = buildLongTermSetup(timing(75), quality(80), { creditStress: 'STRESS' });
+    expect(r.status).toBe('OVERSOLD_BUT_CAUTION');
+    expect(r.reasons.some(x => x.includes('credit spreads in stress'))).toBe(true);
+  });
+
+  it('STRESS overrides the extreme-panic boost', () => {
+    const r = buildLongTermSetup(timing(55), quality(80), { fearGreed: 10, creditStress: 'STRESS' });
+    expect(r.status).toBe('OVERSOLD_BUT_CAUTION');
+    expect(r.reasons.some(x => x.includes('Extreme market panic'))).toBe(false);
+  });
+
+  it('STRESS leaves non-ACCUMULATE statuses untouched', () => {
+    expect(buildLongTermSetup(timing(55), quality(80), { creditStress: 'STRESS' }).status).toBe('WATCHLIST');
+    expect(buildLongTermSetup(timing(20), quality(80), { creditStress: 'STRESS' }).status).toBe('WAIT');
+    expect(buildLongTermSetup(timing(75), quality(40), { creditStress: 'STRESS' }).status).toBe('OVERSOLD_BUT_CAUTION');
+  });
+
+  it('ELEVATED keeps ACCUMULATE but appends a staged-entries reason', () => {
+    const r = buildLongTermSetup(timing(75), quality(80), { creditStress: 'ELEVATED' });
+    expect(r.status).toBe('ACCUMULATE');
+    expect(r.reasons.some(x => x.includes('staged entries'))).toBe(true);
+  });
+
+  it('CALM or missing creditStress changes nothing', () => {
+    expect(buildLongTermSetup(timing(75), quality(80), { creditStress: 'CALM' }).status).toBe('ACCUMULATE');
+    expect(buildLongTermSetup(timing(75), quality(80), {}).status).toBe('ACCUMULATE');
+  });
+});

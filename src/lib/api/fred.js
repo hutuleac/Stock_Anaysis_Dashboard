@@ -18,7 +18,11 @@ export function setFredApiKey(key) {
 }
 try { apiKey = localStorage.getItem('fred_api_key') || ''; } catch { /* noop */ }
 
-export const FRED_SERIES = ['CPIAUCSL', 'FEDFUNDS', 'UNRATE', 'T10Y2Y'];
+export const FRED_SERIES = ['CPIAUCSL', 'FEDFUNDS', 'UNRATE', 'T10Y2Y', 'BAMLH0A0HYM2'];
+
+// BAMLH0A0HYM2 (HY credit spread) is daily and needs ~20 trading days of
+// history for the Δ20d stress rule; the rest need 13 (a year of monthly CPI).
+const SERIES_LIMIT = { BAMLH0A0HYM2: 30 };
 
 function cacheKey(seriesId) {
   return `fred_${seriesId}`;
@@ -45,8 +49,9 @@ function writeCache(key, data) {
 }
 
 function fredUrl(seriesId) {
-  // limit=13: thirteen monthly observations span a full year → real CPI YoY
-  const params = `series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=13`;
+  // default limit=13: thirteen monthly observations span a full year → real CPI YoY
+  const limit = SERIES_LIMIT[seriesId] ?? 13;
+  const params = `series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
   if (import.meta.env.DEV) return `/fred-api/fred/series/observations?${params}`;
   const direct = `https://api.stlouisfed.org/fred/series/observations?${params}`;
   return `https://corsproxy.io/?url=${encodeURIComponent(direct)}`;
