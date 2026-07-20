@@ -24,11 +24,19 @@ function gateMetrics(data) {
   return { peg, pass };
 }
 
-function fearComponent(ctx) {
+// Market-wide fear is a discount only if THIS stock is actually on sale. Without
+// the stockWeak gate a rising, high-RSI name would pocket the full 1.5 in any
+// fearful tape and masquerade as a dip. stockWeak = the ticker's own oversold /
+// drawdown / 52w-low components scored something.
+function fearComponent(ctx, stockWeak) {
   const fg = num(ctx?.fearGreedValue);
   let s = fg === null ? 0 : fg < 25 ? 1.2 : fg < 35 ? 0.9 : fg < 45 ? 0.45 : 0;
   if (ctx?.spyBelowEma50 === true) s += 0.3;
   s = Math.min(1.5, s);
+  if (!stockWeak) {
+    return { label: 'Market Fear', score: 0, max: 1.5,
+      detail: fg === null ? 'n/a' : `F&G ${fg} — stock not down, ignored` };
+  }
   const detail = fg === null ? 'n/a' : `F&G ${fg}${ctx?.spyBelowEma50 ? ', SPY < EMA50' : ''}`;
   return { label: 'Market Fear', score: s, max: 1.5, detail };
 }
@@ -142,11 +150,18 @@ export function computeDipRadar(list, marketCtx) {
     const gate = gateMetrics(data);
     if (!gate.pass) continue;
 
+    // Stock-specific weakness gate for Market Fear: the ticker only counts as
+    // "on sale" if its own oversold / drawdown / 52w-low reading fired.
+    const oversold = oversoldComponent(data.indicators);
+    const drawdown = drawdownComponent(data.indicators);
+    const low = lowComponent(data);
+    const stockWeak = oversold.score > 0 || drawdown.score > 0 || low.score > 0;
+
     const components = [
-      fearComponent(marketCtx),
-      oversoldComponent(data.indicators),
-      drawdownComponent(data.indicators),
-      lowComponent(data),
+      fearComponent(marketCtx, stockWeak),
+      oversold,
+      drawdown,
+      low,
       turnComponent(data.indicators),
       rsComponent(data.rs),
       valueComponent(gate.peg),
