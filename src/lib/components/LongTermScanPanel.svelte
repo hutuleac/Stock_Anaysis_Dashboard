@@ -9,11 +9,12 @@
 
   const rows = $derived.by(() => {
     const fearGreed = marketContextData?.fearGreed?.data?.score ?? null;
+    const creditStress = marketContextData?.macro?.creditStress ?? null;
     return getTickers()
       .map(t => {
         const data = getTickerData(t.symbol);
         if (!data?.timingScore) return null; // no candle data yet — nothing to show
-        const setup = buildLongTermSetup(data.timingScore, data.qualityScore ?? null, { fearGreed });
+        const setup = buildLongTermSetup(data.timingScore, data.qualityScore ?? null, { fearGreed, creditStress });
         return { symbol: t.symbol, setup };
       })
       .filter(Boolean)

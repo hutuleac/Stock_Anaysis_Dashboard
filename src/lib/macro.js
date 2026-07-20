@@ -17,7 +17,21 @@ export function deriveMacroRegime(series) {
   const t10y2y  = series?.T10Y2Y?.[0]?.value ?? null;
   const ffNow   = series?.FEDFUNDS?.[0]?.value ?? null;
   const ffPrev  = series?.FEDFUNDS?.[1]?.value ?? null;
-  if (t10y2y === null && ffNow === null) return null;
+  const hyNow   = series?.BAMLH0A0HYM2?.[0]?.value ?? null;
+  if (t10y2y === null && ffNow === null && hyNow === null) return null;
+
+  // HY credit spread stress: daily obs newest-first, index 20 ≈ 20 trading
+  // days back. STRESS = level > 5% or +0.5pp in ~20 sessions (systemic risk,
+  // not a buyable dip); ELEVATED = 4–5%; CALM below. Thresholds would have
+  // flagged 2008, 2020, and 2022 — tune here if the tape says otherwise.
+  const hyPrev = series?.BAMLH0A0HYM2?.[20]?.value ?? null;
+  const hyDelta20d = hyNow !== null && hyPrev !== null
+    ? Math.round((hyNow - hyPrev) * 100) / 100
+    : null;
+  const creditStress = hyNow === null ? null
+    : (hyNow > 5 || (hyDelta20d !== null && hyDelta20d >= 0.5)) ? 'STRESS'
+    : hyNow >= 4 ? 'ELEVATED'
+    : 'CALM';
 
   // CPI YoY needs the observation 12 months back (13 obs fetched)
   const cpiNow  = series?.CPIAUCSL?.[0]?.value ?? null;
@@ -35,5 +49,8 @@ export function deriveMacroRegime(series) {
     cpi:           cpiNow,
     cpiYoY,
     unemployment:  series?.UNRATE?.[0]?.value ?? null,
+    hySpread:      hyNow,
+    hyDelta20d,
+    creditStress,
   };
 }
