@@ -762,4 +762,205 @@ export const TIPS = {
     why: 'A single number to cut through the noise. Use it for screening and sorting, not as a standalone trade signal. Always combine with conviction %, pillar breakdown, and market context.',
   },
 
+  // ── Long-Term Setup (Timing × Quality gate matrix) ──
+
+  ltStatus: {
+    title: 'Long-Term Setup',
+    subtitle: 'Timing × Quality gate',
+    category: 'Long-Term',
+    description: 'Combines two independent 0–100 scores — Timing (is now a good moment?) and Quality (is this a good company?) — through a fixed lookup table. They are never averaged into one number, so a cheap junk stock can\'t disguise itself as a real accumulation zone by having one great score cancel out a bad one.',
+    levels: [
+      { range: 'ACCUMULATE',           label: 'Buy zone',        color: C.green,  desc: 'Timing ≥70 (STRONG) and Quality ≥60 — the moment and the company both check out.' },
+      { range: 'WATCHLIST',            label: 'Good co., early', color: C.amber,  desc: 'Quality is good but Timing is only 50–69 (WATCH) — wait for a deeper pullback before buying.' },
+      { range: 'OVERSOLD_BUT_CAUTION', label: 'Value-trap risk', color: C.orange, desc: 'Timing ≥70 (deep drawdown/oversold) but Quality is below 60 or not checked yet — could be a falling knife, not a dip. Expand the row to fetch Quality.' },
+      { range: 'NEUTRAL',              label: 'Mixed',           color: C.dim,    desc: 'Timing 50–69 with weak/unknown quality — no clear edge either way.' },
+      { range: 'WAIT',                 label: 'Not attractive',  color: C.muted,  desc: 'Timing below 50 — technically not yet an entry moment, regardless of quality.' },
+    ],
+    why: 'Two overrides sit on top of the matrix: extreme market panic (Fear & Greed < 30) can lift a confirmed-quality WATCHLIST straight to ACCUMULATE; high-yield credit stress (spread > 5%) demotes ACCUMULATE back to caution, because a systemic credit event is not a stock-specific dip.',
+  },
+
+  ltTiming: {
+    title: 'Timing Score',
+    subtitle: '0–100 · is now a good moment to buy?',
+    category: 'Long-Term',
+    description: 'Adds up 6 technical components (hover each chip below for its own breakdown): Drawdown, Oversold, Reversal, Base (consolidation), Volume, Market. A component with no usable data is left out of the total entirely — it never drags the score down just because data is missing.',
+    levels: [
+      { range: '≥ 70',   label: 'Strong',      color: C.green, desc: 'Deep pullback with several confirming signals — technically an attractive entry window.' },
+      { range: '50–69',  label: 'Watch',       color: C.amber, desc: 'A setup is forming but isn\'t fully confirmed yet.' },
+      { range: '30–49',  label: 'Neutral',     color: C.dim,   desc: 'No technical edge either way.' },
+      { range: '< 30',   label: 'Wait',        color: C.muted, desc: 'Not oversold, no reversal signs — not the moment.' },
+      { range: 'n/a',    label: 'No data',     color: C.muted, desc: 'Not enough price history yet (needs daily/weekly candles).' },
+    ],
+    why: 'This score never says "buy" by itself — it only measures whether the moment looks technically attractive. It is gated against the Quality Score before becoming a status (see Long-Term Setup above).',
+  },
+
+  ltQuality: {
+    title: 'Quality Score',
+    subtitle: '0–100 · is this a good company to hold?',
+    category: 'Long-Term',
+    description: 'Adds up 5 fundamental components (hover each chip below): Profit, Cash, Balance, Payout, Earnings. Needs at least 3 of the 5 to have usable data, or it reads "insufficient data". Fetched lazily — only after you expand this row (2 extra cached Finnhub calls: financials-reported + earnings history).',
+    levels: [
+      { range: '≥ 75',   label: 'High',               color: C.green, desc: 'Profitable, cash-generative, low leverage — clears the ACCUMULATE quality gate with room to spare.' },
+      { range: '50–74',  label: 'Medium',             color: C.amber, desc: 'Decent fundamentals with some weak spots.' },
+      { range: '< 50',   label: 'Low',                color: C.red,   desc: 'Weak fundamentals overall — below the ≥60 gate the Long-Term Setup requires for ACCUMULATE.' },
+      { range: 'n/a',    label: 'Insufficient data',  color: C.muted, desc: 'Fewer than 3 of the 5 components had usable inputs (thin data coverage from Finnhub).' },
+    ],
+    why: 'A stock can have a great Timing Score (deep drawdown) and a weak Quality Score at the same time — that combination is flagged OVERSOLD_BUT_CAUTION, never ACCUMULATE. Cheap does not mean good.',
+  },
+
+  ltDrawdown: {
+    title: 'Drawdown',
+    subtitle: 'Timing component · max 20 pts',
+    category: 'Long-Term · Timing',
+    description: 'How far the current price sits below its 52-week high. A deeper drawdown scores higher points, on the theory that more damage already priced in means more of the downside is behind you.',
+    levels: [
+      { range: '≤ −40%',      label: '20 pts', color: C.green, desc: 'Deep drawdown — also flags a warning to double-check the investment thesis hasn\'t actually changed.' },
+      { range: '−25% to −40%', label: '18 pts', color: C.green, desc: 'Major pullback.' },
+      { range: '−15% to −25%', label: '12 pts', color: C.amber, desc: 'Moderate pullback.' },
+      { range: '−10% to −15%', label: '6 pts',  color: C.amber, desc: 'Mild pullback.' },
+      { range: '> −10%',       label: '2 pts',  color: C.dim,   desc: 'Near highs — little discount to buy at.' },
+    ],
+    why: 'A deep drawdown alone is not a buy signal — it just means the price has moved. Pair it with Oversold and Reversal (below) for confirmation the selling is actually exhausted.',
+  },
+
+  ltOversold: {
+    title: 'Oversold',
+    subtitle: 'Timing component · max 20 pts',
+    category: 'Long-Term · Timing',
+    description: 'Multi-timeframe RSI check — Daily (up to 6 pts), Weekly (up to 6 pts), Monthly (up to 8 pts) all scored separately and summed. Requiring all three timeframes to agree filters out a daily dip inside an otherwise healthy monthly uptrend.',
+    levels: [
+      { range: 'Daily RSI < 30',    label: '+6 pts', color: C.green, desc: 'Short-term oversold.' },
+      { range: 'Weekly RSI < 35',   label: '+6 pts', color: C.green, desc: 'Medium-term oversold — carries more weight than daily.' },
+      { range: 'Monthly RSI < 40',  label: '+8 pts', color: C.green, desc: 'Long-term oversold — the highest-weighted signal, since it means the multi-month trend itself is stretched.' },
+    ],
+    why: 'Monthly RSI gets the biggest weight because it is the hardest to fake — a stock rarely gets monthly-oversold without a genuine, sustained decline.',
+  },
+
+  ltReversal: {
+    title: 'Reversal',
+    subtitle: 'Timing component · max 20 pts',
+    category: 'Long-Term · Timing',
+    description: 'Early evidence the decline is actually turning, not just paused. Four independent signals, each adds its points if present: bullish RSI divergence (+8), price reclaiming the 20-day EMA (+5), MACD histogram improving for 3 straight days (+4), and a fresh MACD bullish crossover (+3).',
+    levels: [
+      { range: 'Bull RSI divergence', label: '+8 pts', color: C.green, desc: 'Price made a lower low but RSI made a higher low — selling momentum is fading even as price falls.' },
+      { range: 'Reclaimed 20-EMA',    label: '+5 pts', color: C.green, desc: 'Price back above its 20-day average — short-term trend flipping up.' },
+      { range: 'MACD improving 3d',   label: '+4 pts', color: C.green, desc: 'Momentum histogram has grown 3 sessions in a row.' },
+      { range: 'MACD bull cross',     label: '+3 pts', color: C.green, desc: 'MACD line just crossed above its signal line.' },
+    ],
+    why: 'Drawdown and Oversold tell you a stock is beaten down; Reversal tells you buyers are starting to actually show up. High Drawdown + high Reversal together is the classic "catching the bottom" combination.',
+  },
+
+  ltBase: {
+    title: 'Base (Consolidation)',
+    subtitle: 'Timing component · max 15 pts',
+    category: 'Long-Term · Timing',
+    description: 'Rewards price building a tight, quiet base rather than still falling — a squeeze (tight Bollinger Bands, up to 8 pts) plus time spent range-bound (up to 7 pts for 60+ trading days).',
+    levels: [
+      { range: 'BB width < 10th pctile', label: '+8 pts', color: C.green, desc: 'Bollinger Bands are unusually tight vs. this stock\'s own history — volatility has compressed, often precedes a breakout.' },
+      { range: '60+ days ranging',       label: '+7 pts', color: C.green, desc: 'Extended sideways base — supply has likely been absorbed.' },
+      { range: '20–40 days ranging',     label: '+2–4 pts', color: C.amber, desc: 'A base is forming but hasn\'t matured yet.' },
+    ],
+    why: 'A tight, long base after a decline is where accumulation happens quietly before a move — very different from a stock that is still actively falling.',
+  },
+
+  ltVolume: {
+    title: 'Volume',
+    subtitle: 'Timing component · max 15 pts',
+    category: 'Long-Term · Timing',
+    description: 'Reads what volume says about who is in control: capitulation-style panic volume (up to 6 pts), more volume on up days than down days over the recent window (up to 6 pts), and a volume-confirmed breakout above the base high (+3 pts).',
+    levels: [
+      { range: 'Capitulation detected',  label: '+6 pts', color: C.green, desc: 'A volume spike consistent with panic selling — often marks exhaustion, the last sellers leaving.' },
+      { range: 'Up/down vol. ratio >1.3', label: '+6 pts', color: C.green, desc: 'Buyers are transacting more volume than sellers — accumulation, not distribution.' },
+      { range: 'Up/down vol. ratio <0.7', label: 'warning', color: C.red,  desc: 'Selling volume still dominates — flagged as a warning, not scored.' },
+      { range: 'Breakout on volume',      label: '+3 pts', color: C.green, desc: 'Price cleared the base high on above-average volume — real participation, not a thin drift.' },
+    ],
+    why: 'Price without volume context can be misleading — a bounce on shrinking volume is far less trustworthy than the same bounce on strong participation.',
+  },
+
+  ltMarket: {
+    title: 'Market',
+    subtitle: 'Timing component · max 10 pts',
+    category: 'Long-Term · Timing',
+    description: 'The only Timing component that looks outside the stock itself — is the broader tape and sector helping or fighting this entry? SPY above its 50-day EMA (+3), the stock\'s sector outperforming (+3), extreme Fear & Greed below 30 (+2), and elevated-but-not-extreme volatility (+2).',
+    levels: [
+      { range: 'SPY above EMA50',       label: '+3 pts', color: C.green, desc: 'Broad market uptrend intact — a tailwind for any long entry.' },
+      { range: 'Sector outperforming',  label: '+3 pts', color: C.green, desc: 'This stock\'s sector is leading, not lagging.' },
+      { range: 'Fear & Greed < 30',     label: '+2 pts', color: C.green, desc: 'Extreme fear in the broad market — often coincides with capitulation lows.' },
+      { range: 'Volatility 25–35',      label: '+2 pts', color: C.amber, desc: 'Elevated but not panic-level volatility.' },
+      { range: 'Volatility > 35',       label: 'warning', color: C.red,  desc: 'Extreme volatility — flagged as a warning: use staged entries only, don\'t go all-in.' },
+    ],
+    why: 'A stock can look perfect on its own chart and still get dragged down by a falling market — this component is the sanity check against fighting the broader trend.',
+  },
+
+  ltProfit: {
+    title: 'Profitability',
+    subtitle: 'Quality component · max 30 pts',
+    category: 'Long-Term · Quality',
+    description: 'The biggest single component. Combines return on invested capital (or ROE as a fallback, up to 18 pts), operating margin (up to 8 pts), and consistent EPS growth across recent periods (up to 4 pts).',
+    levels: [
+      { range: 'ROIC ≥ 20%',      label: '+18 pts', color: C.green, desc: 'Excellent capital efficiency — the company earns far more than its cost of capital.' },
+      { range: 'ROIC 10–20%',     label: '+10–15 pts', color: C.amber, desc: 'Solid, above-average returns on capital.' },
+      { range: 'Op. margin ≥ 25%', label: '+8 pts', color: C.green, desc: 'High operating leverage — pricing power or a lean cost structure.' },
+      { range: 'EPS growing both YoY & 3Y', label: '+4 pts', color: C.green, desc: 'Earnings growth isn\'t a one-off — it holds up over a longer window too.' },
+    ],
+    why: 'Profitability is weighted highest of the five because a company that can\'t convert revenue into real returns on capital is structurally weak, no matter how cheap it looks.',
+  },
+
+  ltCash: {
+    title: 'Cash Flow',
+    subtitle: 'Quality component · max 25 pts',
+    category: 'Long-Term · Quality',
+    description: 'Free cash flow yield relative to market cap (up to 15 pts) plus the PEG ratio — P/E adjusted for growth (up to 10 pts). Free cash flow (operating cash flow minus capex) is what\'s actually left over for buybacks, dividends, or debt paydown.',
+    levels: [
+      { range: 'FCF yield ≥ 8%',  label: '+15 pts', color: C.green, desc: 'Generates a lot of real cash relative to its price.' },
+      { range: 'Negative FCF',    label: 'red flag', color: C.red,  desc: 'Burning cash — flagged as a red flag rather than scored.' },
+      { range: 'PEG ≤ 1.0',       label: '+10 pts', color: C.green, desc: 'Cheap relative to its own growth rate.' },
+      { range: 'PEG > 2.0',       label: '+1 pt',   color: C.dim,   desc: 'Expensive relative to growth.' },
+    ],
+    why: 'Earnings can be accounting fiction; cash flow is much harder to fake. A company can report a profit on paper while burning cash — this component catches that gap.',
+  },
+
+  ltBalance: {
+    title: 'Balance Sheet',
+    subtitle: 'Quality component · max 25 pts',
+    category: 'Long-Term · Quality',
+    description: 'Financial resilience: debt-to-equity (up to 10 pts), current ratio — short-term assets vs. short-term liabilities (up to 5 pts), and interest coverage — how many times over operating income covers interest expense (up to 5 pts).',
+    levels: [
+      { range: 'Debt/Equity < 0.5',     label: '+10 pts', color: C.green, desc: 'Low leverage — plenty of room to weather a downturn.' },
+      { range: 'Debt/Equity ≥ 2.0',     label: 'warning', color: C.red,  desc: 'High leverage — flagged as a warning.' },
+      { range: 'Current ratio ≥ 1.5',   label: '+5 pts',  color: C.green, desc: 'Comfortably covers short-term obligations.' },
+      { range: 'Interest coverage ≥ 8x', label: '+5 pts', color: C.green, desc: 'Operating income covers interest payments many times over.' },
+      { range: 'Interest coverage < 3x', label: 'red flag', color: C.red, desc: 'Thin cushion on debt payments — flagged as a red flag.' },
+    ],
+    why: 'A great business with a fragile balance sheet can still get wiped out in a downturn or a credit crunch — this component checks it can survive stress, not just grow in good times.',
+  },
+
+  ltPayout: {
+    title: 'Shareholder Return',
+    subtitle: 'Quality component · max 10 pts',
+    category: 'Long-Term · Quality',
+    description: 'How the company treats shareholders with its cash: a sustainable dividend — yield above 2% with payout ratio under 70% (up to 4 pts), plus a shrinking diluted share count from buybacks (up to 6 pts).',
+    levels: [
+      { range: 'Div. yield ≥ 2%, payout < 70%', label: '+4 pts', color: C.green, desc: 'A dividend that looks sustainable, not stretched.' },
+      { range: 'Payout ≥ 90%',                  label: 'note',  color: C.amber, desc: 'Payout may be unsustainable — noted rather than scored.' },
+      { range: 'Share count down ≥ 2% YoY',     label: '+6 pts', color: C.green, desc: 'Meaningful buybacks — fewer shares means your slice of the company grows.' },
+      { range: 'Share count up > 3%',           label: 'note',  color: C.amber, desc: 'Material dilution — noted as a drag on per-share value.' },
+    ],
+    why: 'Two very different ways to return cash to shareholders — dividends and buybacks — both count. A company doing neither still scores here if it has no dividend and flat share count (score 0, not penalized further).',
+  },
+
+  ltEarnings: {
+    title: 'Earnings Quality',
+    subtitle: 'Quality component · max 10 pts',
+    category: 'Long-Term · Quality',
+    description: 'Track record of hitting estimates over the last 8 reported quarters. Three or more consecutive misses (most recent quarters first) zeroes this component entirely, regardless of the historical beat rate.',
+    levels: [
+      { range: 'Beat rate ≥ 75%',        label: '10 pts', color: C.green, desc: 'Consistently beats estimates — management under-promises and over-delivers, or the business is simply predictable.' },
+      { range: 'Beat rate 60–75%',       label: '7 pts',  color: C.amber, desc: 'Good track record.' },
+      { range: 'Beat rate 50–60%',       label: '4 pts',  color: C.dim,   desc: 'Roughly a coin flip.' },
+      { range: '3+ consecutive misses',  label: '0 pts',  color: C.red,   desc: 'Recent, repeated misses override the historical beat rate — something has changed.' },
+    ],
+    why: 'A strong historical beat rate dragged down by a recent losing streak is a warning the business (or its guidance discipline) has changed — the consecutive-miss override exists specifically to catch that.',
+  },
+
 };
