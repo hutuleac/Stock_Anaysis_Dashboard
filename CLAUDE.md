@@ -138,7 +138,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     notes.svelte.js / tooltip.svelte.js
-tests/                — 20 files, 444 tests (~1s). One test file per lib module, same basename.
+tests/                — 20 files, 449 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -224,6 +224,7 @@ Three-slice framework for long-horizon accumulation, all display-only:
 
 - **Timing Score** `computeTimingScore({ dailyCandles, weeklyCandles, marketContext })` → 0–100 across drawdown 20 / oversold (D+W+M RSI) 20 / reversal 20 / consolidation 15 / volume 15 / market ctx 10. Null-safe: missing components are omitted, all-null → total null. Primitives live in `technicalPatterns.js`. Market ctx comes from App.svelte's `timingMarketContext()` (derived from `getMarketContext()`; `spyAboveEma50 = !spyDowntrend` — same EMA50 semantic). `sectorOutperforming` is per-ticker and stays unset.
 - **Quality Score** `computeQualityScore({ metric, marketCap, financials, earnings })` → 0–100 across profitability 30 / cashFlow 25 / balanceSheet 25 / shareholderReturn 10 / earningsQuality 10. Label INSUFFICIENT_DATA under 3 non-null components. Fetched **lazily on row expand** (`loadQualityScoreForTicker`, 2 extra cached Finnhub calls: financials-reported 7d + earnings 24h) — never on batch refresh. `parseFinancials` extracts FCF/buyback/diluted shares from the raw financials-reported payload by concept substring.
+- **Revenue history (v0.21):** `parseRevenueHistory(reported, years=5)` in `qualityScore.js` reuses the exact same financials-reported payload as `parseFinancials` (zero new API calls) to extract annual revenue + YoY growth per fiscal year, oldest→newest. Revenue concept tag varies by filer/era, tried in priority order (`REVENUE_CONCEPTS`: ASC 606 tags → `salesrevenuenet` → generic `revenues`) via the same `findConcept` substring-match helper. Stored as `data.revenueHistory` alongside `qualityScore` in `loadQualityScoreForTicker` (App.svelte). Rendered as a 5-bar mini chart (green/red by YoY sign, hover tooltip per bar) in the WatchlistTable Long-Term Setup card, right after the Quality chips — answers "is growth accelerating or decelerating", which the single YoY number in FundamentalsBar's `revenueGrowthTTMYoy` chip can't show on its own. Not surfaced in `LongTermScanPanel` (quality data stays lazy there too).
 - **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed, creditStress })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
 - **Indicator breakdown (v0.21):** `longTermIndicators.js` (`timingChips`/`qualityChips`/`chipColor`) maps the timing & quality component sub-scores into labeled fill-coloured chips — pure formatting, zero new compute. Expanded card shows both chip rows + the concrete timing `signals[]` (Daily/Weekly/Monthly RSI, drawdown %, consolidation days, capitulation/breakout) and `warnings[]`; scan-panel rows show T/Q totals + timing chips (quality stays lazy). Null component (missing input) reads muted grey, distinct from a real 0. Chip maxes mirror the score engines — keep in sync if a component cap changes.
 - **HY credit-stress gate (FRED `BAMLH0A0HYM2`):** `deriveMacroRegime` adds `creditStress` — STRESS when HY spread > 5% or Δ ≥ +0.5pp over ~20 sessions, ELEVATED 4–5%, CALM below. STRESS demotes ACCUMULATE → OVERSOLD_BUT_CAUTION and overrides the panic boost (systemic risk, not a dip); ELEVATED appends a staged-entries reason. This is the **only macro input that changes classification** — everything else in the Macro tile is context-only. Deliberately rejected as redundant/YAGNI (Jul 2026): T10Y3M, DFF, ICSA, Alpha Vantage fallback, CBOE vol indices, direct SEC EDGAR (Finnhub financials-reported *is* EDGAR data).
@@ -282,7 +283,7 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 444 unit tests, ~1s
+npm test          # 449 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
