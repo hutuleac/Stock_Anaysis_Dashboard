@@ -291,6 +291,14 @@
       : { color: '#9ca3af', label: 'Neutral' };
   }
 
+  function fmtRevenue(val) {
+    if (val == null) return '—';
+    if (Math.abs(val) >= 1e12) return `$${(val / 1e12).toFixed(1)}T`;
+    if (Math.abs(val) >= 1e9)  return `$${(val / 1e9).toFixed(1)}B`;
+    if (Math.abs(val) >= 1e6)  return `$${(val / 1e6).toFixed(1)}M`;
+    return `$${val.toFixed(0)}`;
+  }
+
   const LT_CHIP_TIPS = {
     drawdown: 'ltDrawdown', oversold: 'ltOversold', reversal: 'ltReversal',
     consolidation: 'ltBase', volumeBehavior: 'ltVolume', marketContext: 'ltMarket',
@@ -508,6 +516,26 @@
           {#if data.timingScore?.warnings?.length}
             <div class="text-xs text-bear-strong/80 space-y-0.5 mb-1.5">
               {#each data.timingScore.warnings as w}<div>⚠ {w}</div>{/each}
+            </div>
+          {/if}
+
+          <!-- Revenue history (lazy — same financials-reported fetch as Quality Score) -->
+          {#if data.revenueHistory?.length}
+            {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
+            <div class="mb-1.5">
+              <div class="text-xs text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
+              <div class="flex items-end gap-1.5 h-10">
+                {#each data.revenueHistory as r}
+                  {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
+                  {@const h = maxRev > 0 ? Math.max(12, Math.round((r.revenue / maxRev) * 100)) : 12}
+                  <div class="flex-1 flex flex-col items-center justify-end gap-0.5 h-full cursor-default"
+                    use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}
+                  >
+                    <div class="w-full rounded-t" style="height:{h}%; background:{barColor}"></div>
+                    <span class="text-[9px] text-text-muted">{String(r.year).slice(2)}</span>
+                  </div>
+                {/each}
+              </div>
             </div>
           {/if}
 
