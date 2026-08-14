@@ -45,6 +45,10 @@
   }
   const fmtRs = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`;
   const compSummary = (score) => score.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
+  const COMPONENT_TIPS = {
+    Oversold: 'etfOversoldComp', Rotation: 'etfRotationComp', Turn: 'etfTurnComp', Drawdown: 'etfDrawdownComp',
+    Overbought: 'etfOverboughtComp', Extension: 'etfExtensionComp', 'Rotation Loss': 'etfRotationLossComp', 'Climax Vol': 'etfClimaxVolComp',
+  };
 
   function buildEtfBriefing(etf) {
     const isDirect = etf.ucits === etf.proxy;
@@ -266,18 +270,26 @@
                   {/if}
                   <div class="grid md:grid-cols-2 gap-4 mb-4 text-xs">
                     <div>
-                      <div class="text-text-muted uppercase tracking-wider mb-1.5">Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
+                      <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
+                        use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: etf.sig.entry.readiness, color: scoreColor(etf.sig.entry.score) } })}
+                      >Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
                       {#each etf.sig.entry.components as c}
-                        <div class="flex justify-between py-0.5">
+                        <div class="flex justify-between py-0.5 cursor-default"
+                          use:tipAction={() => ({ ...TIPS[COMPONENT_TIPS[c.label]], current: { value: `${c.score}/${c.max}`, label: '', color: c.score > 0 ? '#22c55e' : '#6b7280' } })}
+                        >
                           <span class="text-text-secondary">{c.label}</span>
                           <span class="font-mono" style="color:{c.score > 0 ? '#22c55e' : '#6b7280'}">{c.score}/{c.max} <span class="text-text-muted">· {c.detail}</span></span>
                         </div>
                       {/each}
                     </div>
                     <div>
-                      <div class="text-text-muted uppercase tracking-wider mb-1.5">Exit {etf.sig.exit.score.toFixed(1)}/10 · {etf.sig.exit.readiness}</div>
+                      <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
+                        use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: etf.sig.exit.readiness, color: scoreColor(etf.sig.exit.score) } })}
+                      >Exit {etf.sig.exit.score.toFixed(1)}/10 · {etf.sig.exit.readiness}</div>
                       {#each etf.sig.exit.components as c}
-                        <div class="flex justify-between py-0.5">
+                        <div class="flex justify-between py-0.5 cursor-default"
+                          use:tipAction={() => ({ ...TIPS[COMPONENT_TIPS[c.label]], current: { value: `${c.score}/${c.max}`, label: '', color: c.score > 0 ? '#ef4444' : '#6b7280' } })}
+                        >
                           <span class="text-text-secondary">{c.label}</span>
                           <span class="font-mono" style="color:{c.score > 0 ? '#ef4444' : '#6b7280'}">{c.score}/{c.max} <span class="text-text-muted">· {c.detail}</span></span>
                         </div>
