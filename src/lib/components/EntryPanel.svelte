@@ -1,16 +1,11 @@
 <script>
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { getPortfolioValue } from '../stores/portfolio.svelte.js';
-  import ThesisSummary from './ThesisSummary.svelte';
-  import { getDaysToEarnings, betaAdjustedRiskPct } from '../scoring.js';
+  import { betaAdjustedRiskPct } from '../scoring.js';
 
   let { symbol } = $props();
 
   const data = $derived(getTickerData(symbol));
-
-  // Daily ATR(14) — reuse the value computed from the candles App.svelte already
-  // fetches (data.indicators.atr); no extra API call.
-  const atr = $derived(data?.indicators?.atr ?? null);
 
   const currentPrice = $derived(data?.quote?.data?.c ?? null);
   const dp = $derived(data?.quote?.data?.dp ?? null);
@@ -83,7 +78,6 @@
   }
 
   const scenarios = $derived(getScenarios());
-  const daysToEarnings = $derived(getDaysToEarnings(data?.earnings));
 
   function formatUSD(val) {
     if (val == null) return '—';
@@ -112,10 +106,7 @@
         </div>
       {/if}
 
-      <!-- Two-column trade layout: risk/position/scenarios left, ATR + R:R right -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <!-- Left column -->
-        <div class="space-y-3">
+      <div class="space-y-3">
           <!-- Risk Snapshot -->
           <div class="grid grid-cols-2 gap-2">
             <div class="bg-surface-700 rounded-lg p-2.5">
@@ -203,43 +194,6 @@
               </table>
             </div>
           {/if}
-        </div>
-
-        <!-- Right column: thesis + trade window + ATR + R:R -->
-        <div class="space-y-2">
-          <!-- Why this score (compact) -->
-          <div class="bg-surface-700/50 rounded-lg p-2 border border-border/40">
-            <ThesisSummary {symbol} />
-          </div>
-
-          <!-- Trade Window (compact) -->
-          {#if daysToEarnings !== null}
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
-              <span class="text-base shrink-0">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
-              <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
-                  Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day left' : `${daysToEarnings} days left`}
-                </p>
-                <p class="text-[10px] text-text-muted leading-snug">
-                  {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into hold time and size.' : 'Earnings not imminent — window is open.'}
-                </p>
-              </div>
-            </div>
-          {/if}
-
-          <!-- ATR Volatility Band -->
-          {#if atr !== null && currentPrice}
-            {@const atrPct = (atr / currentPrice) * 100}
-            <div class="rounded-lg p-2.5 border bg-surface-700/50 border-border/40">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-xs font-semibold text-text-muted">📊 Intraday Volatility (ATR 14)</p>
-                <span class="font-mono text-xs text-text-secondary">{formatUSD(atr)} / {atrPct.toFixed(1)}%</span>
-              </div>
-              <p class="text-[11px] text-text-muted">
-                On a normal day, {symbol} moves ≈ {formatUSD(atr)} ({atrPct.toFixed(1)}%).
-              </p>
-            </div>
-          {/if}
 
           <!-- R:R to swing-high target -->
           {#if rrToTarget !== null}
@@ -252,7 +206,6 @@
             </div>
           {/if}
         </div>
-      </div>
 
     </div>
 </div>

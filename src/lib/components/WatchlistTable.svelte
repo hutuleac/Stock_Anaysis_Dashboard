@@ -11,6 +11,7 @@
   import { timingChips, qualityChips, chipColor } from '../longTermIndicators.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
+  import ThesisSummary from './ThesisSummary.svelte';
   import PriceChart from './PriceChart.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
 
@@ -447,60 +448,97 @@
 
   {#snippet expandedPanel(ticker, data, score, variant)}
     {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null }) : null}
-    {#if setup}
-      <div class="mb-3 px-3 py-2 rounded-lg bg-surface-800/60 border border-border/40">
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Long-Term Setup</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold {longTermStatusStyle(setup.status)}">{setup.status.replace(/_/g, ' ')}</span>
+    {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
+    {@const atr = data?.indicators?.atr ?? null}
+    {@const currentPrice = data?.quote?.data?.c ?? null}
+    {@const atrPct = atr !== null && currentPrice ? (atr / currentPrice) * 100 : null}
+    <div class="mb-3 px-3 py-3 rounded-lg bg-surface-800/60 border border-border/40 space-y-3">
+      {#if setup}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">Long-Term Setup</span>
+            <span class="text-xs px-1.5 py-0.5 rounded font-semibold {longTermStatusStyle(setup.status)}">{setup.status.replace(/_/g, ' ')}</span>
+          </div>
+          <div class="flex gap-3 text-sm text-text-secondary mb-1.5">
+            <span>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
+            <span>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
+          </div>
+
+          <!-- Timing indicator breakdown (the components feeding the 0–100 score) -->
+          {#if data.timingScore?.components}
+            <div class="flex flex-wrap gap-1.5 mb-1.5">
+              <span class="text-xs text-text-muted uppercase tracking-wider self-center mr-0.5">Timing</span>
+              {#each timingChips(data.timingScore.components) as c}
+                <span class="text-xs px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
+                  style="color:{chipColor(c.score, c.max)}"
+                  title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
+                >{c.label} {c.score ?? '–'}/{c.max}</span>
+              {/each}
+            </div>
+          {/if}
+
+          <!-- Quality indicator breakdown (lazy — only after the row's fundamentals fetch) -->
+          {#if data.qualityScore?.components}
+            <div class="flex flex-wrap gap-1.5 mb-1.5">
+              <span class="text-xs text-text-muted uppercase tracking-wider self-center mr-0.5">Quality</span>
+              {#each qualityChips(data.qualityScore.components) as c}
+                <span class="text-xs px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
+                  style="color:{chipColor(c.score, c.max)}"
+                  title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
+                >{c.label} {c.score ?? '–'}/{c.max}</span>
+              {/each}
+            </div>
+          {/if}
+
+          <!-- Concrete readings behind the timing score (RSI/drawdown/consolidation/etc.) -->
+          {#if data.timingScore?.signals?.length}
+            <div class="text-xs text-text-muted space-y-0.5 mb-1.5">
+              {#each data.timingScore.signals as s}<div>· {s}</div>{/each}
+            </div>
+          {/if}
+          {#if data.timingScore?.warnings?.length}
+            <div class="text-xs text-bear-strong/80 space-y-0.5 mb-1.5">
+              {#each data.timingScore.warnings as w}<div>⚠ {w}</div>{/each}
+            </div>
+          {/if}
+
+          {#each setup.reasons as reason}
+            <p class="text-sm text-text-muted">{reason}</p>
+          {/each}
         </div>
-        <div class="flex gap-3 text-[11px] text-text-secondary mb-1">
-          <span>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
-          <span>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
-        </div>
+      {/if}
 
-        <!-- Timing indicator breakdown (the components feeding the 0–100 score) -->
-        {#if data.timingScore?.components}
-          <div class="flex flex-wrap gap-1 mb-1">
-            <span class="text-[9px] text-text-muted uppercase tracking-wider self-center mr-0.5">Timing</span>
-            {#each timingChips(data.timingScore.components) as c}
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
-                style="color:{chipColor(c.score, c.max)}"
-                title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
-              >{c.label} {c.score ?? '–'}/{c.max}</span>
-            {/each}
+      <!-- Why this score + trade window + ATR — consolidated with Long-Term Setup above -->
+      <div class="space-y-2.5 {setup ? 'pt-2.5 border-t border-border/30' : ''}">
+        <ThesisSummary symbol={ticker.symbol} />
+
+        {#if daysToEarnings !== null}
+          <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+            <span class="text-lg shrink-0">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold leading-tight {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
+                Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day left' : `${daysToEarnings} days left`}
+              </p>
+              <p class="text-xs text-text-muted leading-snug">
+                {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into hold time and size.' : 'Earnings not imminent — window is open.'}
+              </p>
+            </div>
           </div>
         {/if}
 
-        <!-- Quality indicator breakdown (lazy — only after the row's fundamentals fetch) -->
-        {#if data.qualityScore?.components}
-          <div class="flex flex-wrap gap-1 mb-1">
-            <span class="text-[9px] text-text-muted uppercase tracking-wider self-center mr-0.5">Quality</span>
-            {#each qualityChips(data.qualityScore.components) as c}
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
-                style="color:{chipColor(c.score, c.max)}"
-                title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
-              >{c.label} {c.score ?? '–'}/{c.max}</span>
-            {/each}
+        {#if atr !== null && currentPrice}
+          <div class="rounded-lg p-2.5 border bg-surface-700/50 border-border/40">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-semibold text-text-muted">📊 Intraday Volatility (ATR 14)</p>
+              <span class="font-mono text-sm text-text-secondary">${atr.toFixed(2)} / {atrPct.toFixed(1)}%</span>
+            </div>
+            <p class="text-sm text-text-muted">
+              On a normal day, {ticker.symbol} moves ≈ ${atr.toFixed(2)} ({atrPct.toFixed(1)}%).
+            </p>
           </div>
         {/if}
-
-        <!-- Concrete readings behind the timing score (RSI/drawdown/consolidation/etc.) -->
-        {#if data.timingScore?.signals?.length}
-          <div class="text-[10px] text-text-muted space-y-0.5 mb-1">
-            {#each data.timingScore.signals as s}<div>· {s}</div>{/each}
-          </div>
-        {/if}
-        {#if data.timingScore?.warnings?.length}
-          <div class="text-[10px] text-bear-strong/80 space-y-0.5 mb-1">
-            {#each data.timingScore.warnings as w}<div>⚠ {w}</div>{/each}
-          </div>
-        {/if}
-
-        {#each setup.reasons as reason}
-          <p class="text-[11px] text-text-muted">{reason}</p>
-        {/each}
       </div>
-    {/if}
+    </div>
     {#if variant === 'desktop'}
       <!-- AI export toolbar -->
       <div class="flex items-center justify-end gap-1 mb-3 relative">
