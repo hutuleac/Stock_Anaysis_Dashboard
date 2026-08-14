@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFinancials, computeQualityScore } from '../src/lib/qualityScore.js';
+import { parseFinancials, parseRevenueHistory, computeQualityScore } from '../src/lib/qualityScore.js';
 
 function reportEntry({ year, quarter = 0, cf = [], ic = [] }) {
   return { year, quarter, form: '10-K', report: { bs: [], cf, ic } };
@@ -330,5 +330,51 @@ describe('computeQualityScore — total, label, INSUFFICIENT_DATA', () => {
     expect(result.components).toEqual({ profitability: 14, cashFlow: null, balanceSheet: 6, shareholderReturn: 0, earningsQuality: 4 });
     expect(result.total).toBe(24);
     expect(result.label).toBe('LOW');
+  });
+});
+
+describe('parseRevenueHistory', () => {
+  const rev = (value) => ({ concept: 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax', label: 'Revenue', value, unit: 'USD' });
+
+  it('returns oldest-to-newest revenue with YoY growth, dropping the baseline-only year', () => {
+    const reported = {
+      data: [
+        reportEntry({ year: 2023, ic: [rev(100)] }),
+        reportEntry({ year: 2024, ic: [rev(120)] }),
+        reportEntry({ year: 2025, ic: [rev(90)] }),
+      ],
+    };
+    const result = parseRevenueHistory(reported, 2);
+    expect(result).toEqual([
+      { year: 2024, revenue: 120, growthPct: 20 },
+      { year: 2025, revenue: 90, growthPct: -25 },
+    ]);
+  });
+
+  it('caps at the requested number of years, keeping the most recent', () => {
+    const reported = {
+      data: [1, 2, 3, 4, 5, 6].map((n) => reportEntry({ year: 2019 + n, ic: [rev(n * 100)] })),
+    };
+    const result = parseRevenueHistory(reported, 3);
+    expect(result.map((r) => r.year)).toEqual([2023, 2024, 2025]);
+    expect(result.every((r) => r.growthPct !== null)).toBe(true);
+  });
+
+  it('falls back through revenue concept tags (older filers use salesrevenuenet)', () => {
+    const oldTagRev = { concept: 'us-gaap_SalesRevenueNet', label: 'Net sales', value: 500, unit: 'USD' };
+    const reported = { data: [reportEntry({ year: 2020, ic: [oldTagRev] }), reportEntry({ year: 2021, ic: [rev(600)] })] };
+    const result = parseRevenueHistory(reported, 1);
+    expect(result).toEqual([{ year: 2021, revenue: 600, growthPct: 20 }]);
+  });
+
+  it('skips years with no matching revenue concept instead of throwing', () => {
+    const reported = { data: [reportEntry({ year: 2025, ic: [] })] };
+    expect(parseRevenueHistory(reported)).toEqual([]);
+  });
+
+  it('returns [] for empty, null, or malformed payloads', () => {
+    expect(parseRevenueHistory({ data: [] })).toEqual([]);
+    expect(parseRevenueHistory(null)).toEqual([]);
+    expect(parseRevenueHistory({})).toEqual([]);
   });
 });

@@ -5,7 +5,7 @@
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeTimingScore } from './lib/timingScore.js';
-  import { parseFinancials, computeQualityScore } from './lib/qualityScore.js';
+  import { parseFinancials, parseRevenueHistory, computeQualityScore } from './lib/qualityScore.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
@@ -452,11 +452,12 @@
         fetchHistoricalEarnings(symbol, 8).catch(() => null),
       ]);
       const financials = finRes?.data ? parseFinancials(finRes.data) : null;
+      const revenueHistory = finRes?.data ? parseRevenueHistory(finRes.data) : null;
       const earnings = Array.isArray(earnRes?.data) ? earnRes.data : null;
       const marketCap = data.profile?.marketCapitalization ?? null;
       const metric = data.metrics?.data?.metric ?? null;
       const quality = computeQualityScore({ metric, marketCap, financials, earnings });
-      setMarketData({ [symbol]: { ...data, qualityScore: quality } });
+      setMarketData({ [symbol]: { ...data, qualityScore: quality, revenueHistory } });
     } catch { /* non-blocking — Long-Term Setup shows "not yet checked" */ }
   }
 

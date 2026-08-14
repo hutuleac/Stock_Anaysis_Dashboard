@@ -22,6 +22,54 @@ function pickAnnualReports(data) {
   return { latest: sorted[0] ?? null, prior: sorted[1] ?? null };
 }
 
+// Revenue concept tag varies by filer/era — try modern ASC 606 tags first,
+// falling back to older ones. Order matters: 'revenues' is deliberately last
+// because it's the substring most likely to false-match unrelated lines.
+const REVENUE_CONCEPTS = [
+  'revenuefromcontractwithcustomerexcludingassessedtax',
+  'revenuefromcontractwithcustomerincludingassessedtax',
+  'salesrevenuenet',
+  'revenues',
+];
+
+function findRevenue(lines) {
+  for (const c of REVENUE_CONCEPTS) {
+    const v = findConcept(lines, c);
+    if (v !== null) return v;
+  }
+  return null;
+}
+
+/**
+ * Multi-year annual revenue + YoY growth, oldest → newest. Reuses the same
+ * financials-reported payload as parseFinancials — zero new API calls.
+ * @param {Object} reported  raw /stock/financials-reported payload
+ * @param {number} years     how many years of growth to return (default 5)
+ * @returns {{ year: number, revenue: number, growthPct: number|null }[]}
+ */
+export function parseRevenueHistory(reported, years = 5) {
+  const data = reported && Array.isArray(reported.data) ? reported.data : null;
+  if (!data || data.length === 0) return [];
+
+  const annual = data.filter((d) => d && d.quarter === 0 && d.report && Array.isArray(d.report.ic));
+  if (annual.length === 0) return [];
+
+  const ascending = [...annual]
+    .sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
+    .slice(0, years + 1)
+    .reverse();
+
+  const out = [];
+  for (let i = 0; i < ascending.length; i++) {
+    const rev = findRevenue(ascending[i].report.ic);
+    if (rev == null) continue;
+    const prev = i > 0 ? findRevenue(ascending[i - 1].report.ic) : null;
+    const growthPct = prev != null && prev !== 0 ? ((rev - prev) / Math.abs(prev)) * 100 : null;
+    out.push({ year: ascending[i].year, revenue: rev, growthPct });
+  }
+  return out.slice(-years);
+}
+
 /**
  * @param {Object} reported  raw `/stock/financials-reported` payload: { data: [{ year, quarter, form, report: { bs, cf, ic } }] }
  * @returns {{ fcf: number|null, ocf: number|null, capex: number|null, buyback: number|null, dilutedShares: number|null, dilutedSharesPrior: number|null }}

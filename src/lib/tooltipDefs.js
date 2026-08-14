@@ -397,6 +397,14 @@ export const TIPS = {
     why: 'For growth names where earnings are thin or negative, revenue growth is the better signal than P/E. Pair with P/S to value pre-profit companies.',
   },
 
+  revenueHistory: {
+    title: 'Revenue History',
+    subtitle: 'Annual revenue, last 5 fiscal years',
+    category: 'Fundamental',
+    description: 'Total revenue from each annual (10-K) filing, oldest to newest — the fiscal-year trend behind the single YoY number above. Sourced from the same financials-reported data as the Quality Score, fetched once when you expand this row (cached 7 days, zero extra API calls).',
+    why: 'A single YoY figure can look strong right after a rebound from a bad year, or weak right after a blowout one. The 5-year bar trend shows whether growth is accelerating, decelerating, or lumpy — hover a bar for that year\'s exact revenue and growth rate.',
+  },
+
   priceToSales: {
     title: 'Price / Sales (P/S)',
     subtitle: 'Market cap ÷ revenue',
