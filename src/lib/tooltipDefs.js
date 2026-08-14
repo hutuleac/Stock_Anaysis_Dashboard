@@ -963,4 +963,115 @@ export const TIPS = {
     why: 'A strong historical beat rate dragged down by a recent losing streak is a warning the business (or its guidance discipline) has changed — the consecutive-miss override exists specifically to catch that.',
   },
 
+  // ── ETF Entry/Exit component breakdown (expanded row) ──
+
+  etfOversoldComp: {
+    title: 'Oversold',
+    subtitle: 'Entry component · max 3.0 pts',
+    category: 'ETF · Entry',
+    description: 'Weekly RSI tiers, plus a bonus if price has touched the lower weekly Bollinger Band.',
+    levels: [
+      { range: 'wRSI < 30',       label: '2.0 pts',  color: C.green, desc: 'Weekly oversold — the deepest tier.' },
+      { range: 'wRSI 30–35',      label: '1.5 pts',  color: C.green, desc: 'Approaching weekly oversold.' },
+      { range: 'wRSI 35–40',      label: '0.75 pts', color: C.amber, desc: 'Mildly soft, not yet oversold.' },
+      { range: '≤ lower weekly BB', label: '+1.0 pt', color: C.green, desc: 'Bonus on top of the RSI tier — price has touched the statistical floor of its weekly range.' },
+    ],
+    why: 'Capped at 3.0 even if both fire at their max — RSI and the BB touch are correlated, so the bonus is additive but bounded.',
+  },
+
+  etfRotationComp: {
+    title: 'Rotation',
+    subtitle: 'Entry component · max 3.0 pts',
+    category: 'ETF · Entry',
+    description: 'Rewards this proxy lagging SPY over 3 months — mild underperformance reads as a rotation discount, not weakness. Scored two ways: how far it lags SPY outright, plus how far it lags the median of your other ETFs (a genuine relative laggard, not just a soft market day).',
+    levels: [
+      { range: 'RS3m ≤ −10% vs SPY',        label: '+1.5 pts', color: C.green, desc: 'Meaningfully lagging the index.' },
+      { range: 'RS3m −5% to −10%',          label: '+1.0 pt',  color: C.green, desc: 'Mildly lagging.' },
+      { range: 'Gap vs group median ≥ 8pp', label: '+1.5 pts', color: C.green, desc: 'Lagging its peers by a wide margin — a relative, not just absolute, laggard.' },
+      { range: 'RS3m < −25%',               label: '0 pts',   color: C.red,   desc: 'Falling knife — beyond this point it\'s no longer a "discount", so the component zeroes out entirely rather than scoring higher.' },
+    ],
+    why: 'A small amount of underperformance is the setup (buy the rotation before it reverses); a large amount is a warning the trend itself has broken. The −25% cutoff is the line between the two.',
+  },
+
+  etfTurnComp: {
+    title: 'Turn',
+    subtitle: 'Entry component · max 2.0 pts',
+    category: 'ETF · Entry',
+    description: 'Early evidence weekly momentum is actually reversing, not just oversold. Two independent signals on weekly candles, each worth 1.0 pt.',
+    levels: [
+      { range: 'MACD bull cross',    label: '+1.0 pt', color: C.green, desc: 'Weekly MACD line just crossed above its signal line.' },
+      { range: 'Bullish divergence', label: '+1.0 pt', color: C.green, desc: 'Price made a lower low but the indicator made a higher low — selling pressure fading beneath the surface.' },
+    ],
+    why: 'Oversold + Rotation say a proxy is cheap; Turn says buyers are starting to actually show up. Both firing together is the strongest entry case.',
+  },
+
+  etfDrawdownComp: {
+    title: 'Drawdown',
+    subtitle: 'Entry component · max 2.0 pts',
+    category: 'ETF · Entry',
+    description: 'Distance below the ~52-week daily closing high. Deeper drawdown scores higher — more of the move down is already priced in.',
+    levels: [
+      { range: '≥ 20% off high', label: '2.0 pts', color: C.green, desc: 'Major pullback.' },
+      { range: '12–20% off high', label: '1.5 pts', color: C.green, desc: 'Significant pullback.' },
+      { range: '8–12% off high',  label: '1.0 pt',  color: C.amber, desc: 'Moderate pullback.' },
+      { range: '5–8% off high',   label: '0.5 pt',  color: C.amber, desc: 'Mild pullback.' },
+      { range: '< 5% off high',   label: '0 pts',   color: C.dim,   desc: 'Near highs — no discount to buy at.' },
+    ],
+    why: 'On its own this only measures distance moved, not whether the selling is done — pair it with Oversold and Turn for confirmation.',
+  },
+
+  etfOverboughtComp: {
+    title: 'Overbought',
+    subtitle: 'Exit component · max 3.0 pts',
+    category: 'ETF · Exit',
+    description: 'Weekly RSI tiers — the exit-side mirror of the entry Oversold component.',
+    levels: [
+      { range: 'wRSI ≥ 75', label: '3.0 pts', color: C.red,   desc: 'Deeply overbought.' },
+      { range: 'wRSI ≥ 70', label: '2.0 pts', color: C.red,   desc: 'Overbought.' },
+      { range: 'wRSI ≥ 65', label: '1.0 pt',  color: C.amber, desc: 'Getting hot.' },
+      { range: 'wRSI < 65', label: '0 pts',   color: C.dim,   desc: 'No overbought reading.' },
+    ],
+    why: 'A high reading alone isn\'t a sell signal — a strong uptrend can stay overbought for a while. Combine with Extension and Climax Vol before treating it as exhaustion.',
+  },
+
+  etfExtensionComp: {
+    title: 'Extension',
+    subtitle: 'Exit component · max 3.0 pts',
+    category: 'ETF · Exit',
+    description: 'How far price has stretched above its weekly EMA30 — a proxy for "how far from fair value has this run".',
+    levels: [
+      { range: '≥ +25% above wEMA30', label: '3.0 pts', color: C.red,   desc: 'Very stretched — historically prone to mean-reversion.' },
+      { range: '+18% to +25%',        label: '2.0 pts', color: C.red,   desc: 'Notably extended.' },
+      { range: '+12% to +18%',        label: '1.0 pt',  color: C.amber, desc: 'Mildly extended.' },
+      { range: '< +12%',              label: '0 pts',   color: C.dim,   desc: 'Within normal range of its trend average.' },
+    ],
+    why: 'Extension measures distance from trend, independent of RSI — a proxy can be extended without being technically overbought yet, or vice versa.',
+  },
+
+  etfRotationLossComp: {
+    title: 'Rotation Loss',
+    subtitle: 'Exit component · max 2.0 pts',
+    category: 'ETF · Exit',
+    description: 'Catches capital starting to rotate OUT while the longer trend still looks fine — 1-month relative strength turning negative while 3-month RS is still positive.',
+    levels: [
+      { range: 'RS1m ≤ −2% and RS3m ≥ +5%', label: '2.0 pts', color: C.red,   desc: 'Clear rotation loss — recent flows have reversed even though the quarterly trend is still up.' },
+      { range: 'RS1m < 0% and RS3m > 0%',   label: '1.0 pt',  color: C.amber, desc: 'Early rotation loss — worth watching.' },
+      { range: 'otherwise',                 label: '0 pts',  color: C.dim,   desc: 'No rotation-loss pattern present.' },
+    ],
+    why: 'This is often the earliest exit tell — RSI and Extension are usually still fine when Rotation Loss first appears, because it\'s about where new money is flowing, not where price already is.',
+  },
+
+  etfClimaxVolComp: {
+    title: 'Climax Vol',
+    subtitle: 'Exit component · max 2.0 pts',
+    category: 'ETF · Exit',
+    description: 'A weekly volume spike — but only counted once the proxy is already hot (weekly RSI ≥ 60). The same volume spike in a cold market means nothing; in an overbought one, it can mark a blow-off top.',
+    levels: [
+      { range: 'wRSI ≥ 60 and volume ≥ 2.0× avg', label: '2.0 pts', color: C.red,   desc: 'Climactic volume — classic exhaustion-top signature.' },
+      { range: 'wRSI ≥ 60 and volume ≥ 1.5× avg', label: '1.0 pt',  color: C.amber, desc: 'Elevated volume on a hot reading.' },
+      { range: 'wRSI < 60',                       label: '0 pts',  color: C.dim,   desc: 'Gated off — volume alone doesn\'t count without an overbought backdrop.' },
+    ],
+    why: 'Volume ratio compares the latest weekly bar to the prior 20-week average — the gate on RSI ≥ 60 is what turns "high volume" into "climax volume".',
+  },
+
 };
