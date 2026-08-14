@@ -291,6 +291,13 @@
       : { color: '#9ca3af', label: 'Neutral' };
   }
 
+  const LT_CHIP_TIPS = {
+    drawdown: 'ltDrawdown', oversold: 'ltOversold', reversal: 'ltReversal',
+    consolidation: 'ltBase', volumeBehavior: 'ltVolume', marketContext: 'ltMarket',
+    profitability: 'ltProfit', cashFlow: 'ltCash', balanceSheet: 'ltBalance',
+    shareholderReturn: 'ltPayout', earningsQuality: 'ltEarnings',
+  };
+
   function longTermStatusStyle(status) {
     if (status === 'ACCUMULATE') return 'bg-bull-strong/20 text-bull-strong';
     if (status === 'OVERSOLD_BUT_CAUTION' || status === 'WATCHLIST') return 'bg-uncertain/20 text-uncertain';
@@ -456,12 +463,14 @@
       {#if setup}
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">Long-Term Setup</span>
-            <span class="text-xs px-1.5 py-0.5 rounded font-semibold {longTermStatusStyle(setup.status)}">{setup.status.replace(/_/g, ' ')}</span>
+            <span class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.ltStatus}>Long-Term Setup</span>
+            <span class="text-xs px-1.5 py-0.5 rounded font-semibold cursor-default {longTermStatusStyle(setup.status)}"
+              use:tipAction={() => ({ ...TIPS.ltStatus, current: { value: setup.status.replace(/_/g, ' '), label: '', color: 'inherit' } })}
+            >{setup.status.replace(/_/g, ' ')}</span>
           </div>
           <div class="flex gap-3 text-sm text-text-secondary mb-1.5">
-            <span>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
-            <span>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
+            <span class="cursor-default" use:tipAction={() => ({ ...TIPS.ltTiming, current: { value: data.timingScore?.total ?? 'n/a', label: data.timingScore?.label ?? 'n/a', color: 'inherit' } })}>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
+            <span class="cursor-default" use:tipAction={() => ({ ...TIPS.ltQuality, current: { value: data.qualityScore?.total ?? 'not checked', label: data.qualityScore?.label ?? '', color: 'inherit' } })}>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
           </div>
 
           <!-- Timing indicator breakdown (the components feeding the 0–100 score) -->
@@ -471,7 +480,7 @@
               {#each timingChips(data.timingScore.components) as c}
                 <span class="text-xs px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
                   style="color:{chipColor(c.score, c.max)}"
-                  title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
+                  use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}
                 >{c.label} {c.score ?? '–'}/{c.max}</span>
               {/each}
             </div>
@@ -484,7 +493,7 @@
               {#each qualityChips(data.qualityScore.components) as c}
                 <span class="text-xs px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
                   style="color:{chipColor(c.score, c.max)}"
-                  title="{c.label}: {c.score == null ? 'no data' : `${c.score} of ${c.max} points`}"
+                  use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}
                 >{c.label} {c.score ?? '–'}/{c.max}</span>
               {/each}
             </div>
