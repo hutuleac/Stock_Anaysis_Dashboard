@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.20
+# Project State — Stock Analysis Dashboard v0.21
 
 ## What this is
 
@@ -138,7 +138,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     notes.svelte.js / tooltip.svelte.js
-tests/                — 19 files, 424 tests (~1s). One test file per lib module, same basename.
+tests/                — 20 files, 444 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -216,6 +216,8 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 
 **v0.17 additions (all display-only, zero new API calls):** per-proxy `indicators { trendState, wRsi, rangePos52w, roc13w }` + `generateEtfThesis()` in `etf.js` (expanded row); `meta.wRsi` on `computeSetupSignals` shown in Setup Radar; `highlights.js` (`computeHighlights` ACT/SOON digest + `computeNotifications` diff, localStorage `notifySeen`, opt-in toggle `notifyEnabled` in Settings) rendered by `HighlightsStrip.svelte`; curated ~55-fund UCITS catalog with client-side search in `etfCatalog.js` (search bar in the ETF add panel); tooltip overlay clamps to viewport using measured height and closes on scroll.
 
+**v0.21 additions:** `XDEW` (Xtrackers S&P 500 Equal Weight, Ireland-domiciled Acc, proxy RSP — the RSP-equivalent European traders were missing) added to `HARDCODED_ETFS` in `etflist.svelte.js`; existing users need to re-add it manually via the catalog search (their `localStorage['etfList']` predates the change and isn't migrated). Each of the 8 Entry/Exit score components in the expanded row (Oversold, Rotation, Turn, Drawdown, Overbought, Extension, Rotation Loss, Climax Vol) plus the Entry/Exit section headers got a `tipAction` hover tooltip (`TIPS.etf*Comp` in `tooltipDefs.js`, mapped via `EtfDashboard.svelte`'s `COMPONENT_TIPS` const) — same "what it measures / exact point thresholds / why it matters" pattern as the Long-Term Setup chips.
+
 ## Long-Term Dip Buying framework (v0.20 — timingScore.js / qualityScore.js / longTermSetup.js)
 
 Three-slice framework for long-horizon accumulation, all display-only:
@@ -225,6 +227,7 @@ Three-slice framework for long-horizon accumulation, all display-only:
 - **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed, creditStress })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
 - **Indicator breakdown (v0.21):** `longTermIndicators.js` (`timingChips`/`qualityChips`/`chipColor`) maps the timing & quality component sub-scores into labeled fill-coloured chips — pure formatting, zero new compute. Expanded card shows both chip rows + the concrete timing `signals[]` (Daily/Weekly/Monthly RSI, drawdown %, consolidation days, capitulation/breakout) and `warnings[]`; scan-panel rows show T/Q totals + timing chips (quality stays lazy). Null component (missing input) reads muted grey, distinct from a real 0. Chip maxes mirror the score engines — keep in sync if a component cap changes.
 - **HY credit-stress gate (FRED `BAMLH0A0HYM2`):** `deriveMacroRegime` adds `creditStress` — STRESS when HY spread > 5% or Δ ≥ +0.5pp over ~20 sessions, ELEVATED 4–5%, CALM below. STRESS demotes ACCUMULATE → OVERSOLD_BUT_CAUTION and overrides the panic boost (systemic risk, not a dip); ELEVATED appends a staged-entries reason. This is the **only macro input that changes classification** — everything else in the Macro tile is context-only. Deliberately rejected as redundant/YAGNI (Jul 2026): T10Y3M, DFF, ICSA, Alpha Vantage fallback, CBOE vol indices, direct SEC EDGAR (Finnhub financials-reported *is* EDGAR data).
+- **v0.21 UI consolidation (Aug 2026):** the Long-Term Setup card and the `ThesisSummary`/Trade-Window/ATR block (previously split — the latter three lived inside `EntryPanel`'s right column) are now one visual card in `WatchlistTable.svelte`'s `expandedPanel` snippet, with larger text (`text-xs`/`text-sm` in place of `text-[10px]`/`text-[11px]`) for readability on large screens. `EntryPanel.svelte` lost its two-column grid (R:R to Target moved to the bottom of the single remaining column) and no longer imports `ThesisSummary` — that component is now only rendered from `WatchlistTable`. Every element in the merged card (status badge, Timing/Quality totals, all 11 timing/quality chips) got a rich `tipAction` hover tooltip (`TIPS.lt*` in `tooltipDefs.js`) explaining what it measures, the exact point thresholds, and why it matters — aimed at making the section readable without knowing the underlying formulas. The chip→tooltip mapping lives in `WatchlistTable.svelte`'s `LT_CHIP_TIPS` const; keep it in sync with `longTermIndicators.js`'s component keys.
 
 ## AI export (export.js)
 
@@ -279,7 +282,7 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 424 unit tests, ~1s
+npm test          # 444 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
