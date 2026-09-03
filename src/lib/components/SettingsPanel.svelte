@@ -354,7 +354,7 @@
                 bind:value={promptDraft}
                 onblur={() => updateTemplate(tpl.id, promptDraft)}
               ></textarea>
-              <p class="text-[11px] text-text-muted mt-1">Saved automatically when you click away.</p>
+              <p class="text-[13px] text-text-muted mt-1">Saved automatically when you click away.</p>
             {/if}
           </div>
         {/each}
