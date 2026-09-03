@@ -617,7 +617,7 @@
             >{icon}</button>
           {/each}
           {#if drawings.length}
-            <button class="px-1.5 py-0.5 text-[10px] rounded text-text-muted hover:text-danger transition-colors" title="Clear all drawings" onclick={() => clearAllDrawings()}>✕</button>
+            <button class="px-1.5 py-0.5 text-[12px] rounded text-text-muted hover:text-danger transition-colors" title="Clear all drawings" onclick={() => clearAllDrawings()}>✕</button>
           {/if}
         </div>
       {/if}

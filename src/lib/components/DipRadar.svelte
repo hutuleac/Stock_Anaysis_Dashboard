@@ -38,9 +38,9 @@
     >
       <div class="flex items-center gap-2">
         <span class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.dipRadar}>▼ Dip Hunter</span>
-        <span class="text-[10px] text-text-muted hidden sm:inline">quality stocks on sale</span>
+        <span class="text-[12px] text-text-muted hidden sm:inline">quality stocks on sale</span>
         {#if hits.length}
-          <span class="text-[10px] bg-bull-strong/20 text-bull-strong px-1.5 py-0.5 rounded font-semibold">{hits.length}</span>
+          <span class="text-[12px] bg-bull-strong/20 text-bull-strong px-1.5 py-0.5 rounded font-semibold">{hits.length}</span>
         {/if}
       </div>
       <span class="text-text-muted text-xs">{collapsed ? '▸' : '▾'}</span>
@@ -52,14 +52,14 @@
           <div class="space-y-1.5">
             {#each hits as h}
               <button
-                class="w-full flex items-center gap-3 hover:bg-surface-700/40 rounded px-1.5 py-1.5 transition-colors text-left overflow-x-auto"
+                class="w-full flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1.5 hover:bg-surface-700/40 rounded px-1.5 py-1.5 transition-colors text-left sm:overflow-x-auto"
                 onclick={() => selectTicker(h.symbol)}
               >
-                <span class="font-mono font-semibold text-sm text-text-primary w-16 shrink-0">{h.symbol}</span>
+                <span class="font-mono font-semibold text-sm text-text-primary sm:w-16 shrink-0">{h.symbol}</span>
 
                 <!-- Dip score + component breakdown tooltip -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary w-20 shrink-0 text-center cursor-default"
+                  class="text-[12px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary sm:w-20 shrink-0 text-center cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.dipScore,
                     current: { value: `${h.score.toFixed(1)}/10`, label: componentSummary(h), color: scoreColor(h.score) },
@@ -68,7 +68,7 @@
 
                 <!-- Readiness -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded {readinessColor(h.readiness)} w-14 shrink-0 text-center cursor-default"
+                  class="text-[12px] px-1.5 py-0.5 rounded {readinessColor(h.readiness)} sm:w-14 shrink-0 text-center cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.radarReadiness,
                     current: { value: h.readiness, label: h.readiness === 'ACT' ? 'fear + oversold + quality aligned' : '', color: readinessCssColor(h.readiness) },
@@ -77,7 +77,7 @@
 
                 <!-- RSI -->
                 <span
-                  class="font-mono text-xs w-16 shrink-0 cursor-default"
+                  class="font-mono text-xs sm:w-16 shrink-0 cursor-default"
                   style="color:{h.rsi == null ? '#6b7280' : h.rsi < 30 ? '#22c55e' : h.rsi < 40 ? '#86efac' : '#6b7280'}"
                   use:tipAction={() => ({
                     ...TIPS.rsi,
@@ -89,7 +89,7 @@
 
                 <!-- 60d drawdown -->
                 <span
-                  class="font-mono text-xs w-20 shrink-0 cursor-default"
+                  class="font-mono text-xs sm:w-20 shrink-0 cursor-default"
                   style="color:{h.roc60 == null ? '#6b7280' : h.roc60 <= -15 ? '#ef4444' : h.roc60 <= -8 ? '#f97316' : '#6b7280'}"
                   use:tipAction={() => ({
                     ...TIPS.roc,
@@ -101,7 +101,7 @@
 
                 <!-- Turn (MACD bullish cross) -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default {comp(h, 'Turn').score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
+                  class="text-[12px] px-1.5 py-0.5 rounded shrink-0 cursor-default {comp(h, 'Turn').score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
                   use:tipAction={() => ({
                     ...TIPS.macd,
                     current: {
@@ -127,7 +127,7 @@
 
                 <!-- OBV divergence -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default {comp(h, 'OBV').score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
+                  class="text-[12px] px-1.5 py-0.5 rounded shrink-0 cursor-default {comp(h, 'OBV').score > 0 ? 'bg-bull-strong/20 text-bull-strong' : 'bg-surface-600 text-text-muted'}"
                   use:tipAction={() => ({
                     ...TIPS.obv,
                     current: { value: comp(h, 'OBV').detail, label: '', color: comp(h, 'OBV').score > 0 ? '#22c55e' : '#6b7280' },
@@ -137,7 +137,7 @@
                 <!-- ADX risk flag -->
                 {#if h.risk.strongDowntrend}
                   <span
-                    class="text-[10px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
+                    class="text-[12px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
                     use:tipAction={() => ({
                       ...TIPS.adx,
                       current: { value: `ADX ${h.risk.adx}`, label: 'Strong, still-accelerating downtrend — capped at WATCH', color: '#ef4444' },
@@ -148,7 +148,7 @@
                 <!-- Support broken flag -->
                 {#if h.support.belowSupport}
                   <span
-                    class="text-[10px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
+                    class="text-[12px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
                     use:tipAction={() => ({
                       ...TIPS.swingLows,
                       current: { value: `below $${h.support.nearestSupport}`, label: 'Last swing-low support already broken', color: '#ef4444' },
@@ -158,7 +158,7 @@
 
                 <!-- Smart money -->
                 <span
-                  class="text-[10px] text-text-secondary shrink-0 cursor-default"
+                  class="text-[12px] text-text-secondary shrink-0 cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.dipSmartMoney,
                     current: {

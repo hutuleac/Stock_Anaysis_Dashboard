@@ -97,17 +97,17 @@
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
     <div class="flex items-center gap-2">
       <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">UCITS ETFs</span>
-      <span class="text-[10px] text-text-muted hidden sm:inline">signals run on US proxy · you buy the UCITS ticker</span>
+      <span class="text-[12px] text-text-muted hidden sm:inline">signals run on US proxy · you buy the UCITS ticker</span>
     </div>
     <div class="flex items-center gap-2">
-      <span class="text-[10px] text-text-muted">sort:</span>
+      <span class="text-[12px] text-text-muted">sort:</span>
       {#each [['rs3m', 'RS 3M'], ['entry', 'Entry'], ['exit', 'Exit']] as [key, label]}
         <button
-          class="text-[10px] px-1.5 py-0.5 rounded {sortBy === key ? 'bg-surface-600 text-text-primary' : 'text-text-muted hover:text-text-secondary'}"
+          class="text-[12px] px-1.5 py-0.5 rounded {sortBy === key ? 'bg-surface-600 text-text-primary' : 'text-text-muted hover:text-text-secondary'}"
           onclick={() => sortBy = key}
         >{label}</button>
       {/each}
-      <button class="text-[10px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary hover:text-text-primary"
+      <button class="text-[12px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary hover:text-text-primary"
         onclick={() => showAdd = !showAdd}>+ Add</button>
     </div>
   </div>
@@ -132,7 +132,7 @@
                   <span class="font-mono font-semibold text-xs text-text-primary">{r.ucits}</span>
                   <span class="text-xs text-text-muted ml-1.5">{r.name}</span>
                 </span>
-                <span class="text-[10px] text-text-muted shrink-0">{r.category} · proxy {r.proxy}{r.added ? ' · added' : ''}</span>
+                <span class="text-[12px] text-text-muted shrink-0">{r.category} · proxy {r.proxy}{r.added ? ' · added' : ''}</span>
               </button>
             {/each}
           </div>
@@ -148,7 +148,7 @@
         <input class="flex-[2] min-w-[140px] bg-surface-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-text-muted focus:outline-none"
           placeholder="Name (optional)" bind:value={newEtf.name} onkeydown={(e) => e.key === 'Enter' && handleAdd()} />
         <button class="text-xs px-3 py-1.5 rounded-lg bg-bull-strong/20 text-bull-strong hover:bg-bull-strong/30 shrink-0" onclick={handleAdd}>Add</button>
-        <button class="text-[10px] text-text-muted hover:text-text-secondary shrink-0" onclick={() => showAddDetails = !showAddDetails}>
+        <button class="text-[12px] text-text-muted hover:text-text-secondary shrink-0" onclick={() => showAddDetails = !showAddDetails}>
           {showAddDetails ? '− fewer fields' : '+ ISIN / TER / category'}
         </button>
       </div>
@@ -166,7 +166,7 @@
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
-        <tr class="text-[10px] uppercase tracking-wider text-text-muted border-b border-border/40">
+        <tr class="text-[12px] uppercase tracking-wider text-text-muted border-b border-border/40">
           <th class="text-left px-2 sm:px-4 py-2">ETF</th>
           <th class="text-left px-2 py-2 hidden md:table-cell">Category</th>
           <th class="text-right px-1.5 sm:px-2 py-2 cursor-default" use:tipAction={TIPS.etfProxy}>Proxy · Price</th>
@@ -186,7 +186,7 @@
           >
             <td class="px-2 sm:px-4 py-2">
               <span class="font-mono font-semibold text-text-primary cursor-help" use:tipAction={() => buildEtfBriefing(etf)}>{etf.ucits}</span>
-              <span class="text-[10px] text-text-muted block">{etf.name}{etf.ter ? ` · TER ${etf.ter}` : ''}</span>
+              <span class="text-[12px] text-text-muted block">{etf.name}{etf.ter ? ` · TER ${etf.ter}` : ''}</span>
             </td>
             <td class="px-2 py-2 text-xs text-text-secondary hidden md:table-cell">{etf.category}</td>
             <td class="px-1.5 sm:px-2 py-2 text-right whitespace-nowrap cursor-default"
@@ -213,11 +213,11 @@
               {#if etf.sig}
                 {@const isBuy = etf.sig.entry.score >= etf.sig.exit.score}
                 {@const sig = isBuy ? etf.sig.entry : etf.sig.exit}
-                <span class="text-[10px] px-1.5 py-0.5 rounded {readinessClass(sig.readiness)}">
+                <span class="text-[12px] px-1.5 py-0.5 rounded {readinessClass(sig.readiness)}">
                   {isBuy ? 'BUY' : 'SELL'} {sig.readiness}
                 </span>
               {:else}
-                <span class="text-[10px] text-text-muted">no data</span>
+                <span class="text-[12px] text-text-muted">no data</span>
               {/if}
             </td>
             <td class="px-2 py-2 text-right">
@@ -237,7 +237,7 @@
                     {@const ind = etf.sig.indicators}
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-xs">
                       {#if ind.trendState}
-                        <span class="px-1.5 py-0.5 rounded font-semibold text-[10px] cursor-default
+                        <span class="px-1.5 py-0.5 rounded font-semibold text-[12px] cursor-default
                           {ind.trendState === 'UPTREND' ? 'bg-bull-strong/20 text-bull-strong'
                             : ind.trendState === 'PULLBACK' ? 'bg-uncertain/20 text-uncertain'
                             : ind.trendState === 'DOWNTREND' ? 'bg-bear-strong/20 text-bear-strong'

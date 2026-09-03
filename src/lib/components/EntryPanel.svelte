@@ -99,7 +99,7 @@
             <p class="text-xs font-semibold {dp >= 5 ? 'text-warning' : 'text-danger'}">
               High-volatility day ({dp > 0 ? '+' : ''}{dp.toFixed(1)}%)
             </p>
-            <p class="text-[10px] text-text-muted">
+            <p class="text-[12px] text-text-muted">
               {dp >= 5 ? 'Chasing a gap-up — consider waiting for the dust to settle.' : 'Entering into a sharp selloff — could bounce or accelerate lower.'}
             </p>
           </div>
@@ -135,7 +135,7 @@
               <p class="text-xs text-text-muted">Position Size ({betaAdj.riskPct}% risk rule)</p>
               {#if beta !== null}
                 {@const betaColor = betaAdj.tier === 'high' ? 'text-danger' : betaAdj.tier === 'elevated' ? 'text-uncertain' : betaAdj.tier === 'low' ? 'text-bull-strong' : 'text-text-muted'}
-                <span class="text-[11px] font-mono {betaColor}" title="Beta {beta.toFixed(2)} → {betaAdj.riskPct}% risk allocation">β {beta.toFixed(2)}</span>
+                <span class="text-[13px] font-mono {betaColor}" title="Beta {beta.toFixed(2)} → {betaAdj.riskPct}% risk allocation">β {beta.toFixed(2)}</span>
               {/if}
             </div>
             {#if recommendedShares !== null}
@@ -202,7 +202,7 @@
               <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
                 1:{rrToTarget.toFixed(1)}
               </p>
-              <p class="text-[10px] text-text-muted mt-0.5">target {formatUSD(upsideTarget)}</p>
+              <p class="text-[12px] text-text-muted mt-0.5">target {formatUSD(upsideTarget)}</p>
             </div>
           {/if}
         </div>

@@ -191,10 +191,6 @@
       } else if (sortBy === 'earnings') {
         aVal = getDaysToEarnings(aData?.earnings) ?? 999;
         bVal = getDaysToEarnings(bData?.earnings) ?? 999;
-      } else if (sortBy === 'sector') {
-        aVal = a.sector || '';
-        bVal = b.sector || '';
-        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }
 
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
@@ -430,7 +426,7 @@
        size 'sm' = mobile (11px, always visible, eta suffix shown); 'xs' = desktop (10px,
        setup chip hidden below md, other chips hidden below lg — matches pre-dedup gates). -->
   {#snippet tickerChips(data, size)}
-    {@const px = size === 'sm' ? 'text-[11px]' : 'text-[10px]'}
+    {@const px = size === 'sm' ? 'text-[13px]' : 'text-[12px]'}
     {@const setupVis = size === 'sm' ? 'inline-block' : 'hidden md:inline-block'}
     {@const chipVis = size === 'sm' ? 'inline-block' : 'hidden lg:inline-block'}
     {#if topSetup(data?.setups)}
@@ -669,9 +665,9 @@
           tabindex="0"
           onkeydown={(e) => e.key === 'Enter' && toggleTicker(ticker.symbol)}
         >
-          <!-- Row 1: ticker + badge + earnings badge -->
-          <div class="flex items-center justify-between mb-1.5">
-            <div class="flex items-center gap-2">
+          <!-- Row 1: ticker + sector + badge + earnings badge -->
+          <div class="flex items-start justify-between mb-1.5">
+            <div class="flex items-center gap-2 flex-wrap min-w-0">
               <span class="font-mono font-bold text-text-primary">{ticker.symbol}</span>
               {#if daysToEarnings !== null && daysToEarnings <= 14}
                 <span class="text-[13px] font-semibold text-warning bg-warning/10 px-1 rounded">E {daysToEarnings}d</span>
@@ -679,8 +675,9 @@
               {#if data?.quote?.stale}
                 <span class="text-warning text-xs" title="Stale data">⚠</span>
               {/if}
+              <span class="text-[13px] text-text-secondary truncate">{ticker.sector || '—'}</span>
             </div>
-            <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badge.bg} {badge.text}">{badge.label}</span>
+            <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold shrink-0 {badge.bg} {badge.text}">{badge.label}</span>
           </div>
 
           <!-- Row 1.5: scrollable chip rail -->
@@ -700,7 +697,7 @@
               {@const ss = scoreStyle(score.score)}
               <div class="flex items-center gap-1.5 cursor-default" use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: ss.label, color: ss.color } })}>
                 <span class="font-mono font-bold text-lg" style="color:{ss.color}">{score.score}</span>
-                <div class="flex flex-col items-start leading-tight text-[11px]">
+                <div class="flex flex-col items-start leading-tight text-[13px]">
                   {#if velocity}
                     <span class="{velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}">
                       {velocity.direction === 'up' ? '↑' : velocity.direction === 'down' ? '↓' : '→'}
@@ -764,9 +761,6 @@
             <th class="px-3 py-3 text-left cursor-pointer hover:text-text-secondary" onclick={() => handleSort('symbol')}>
               Ticker {sortBy === 'symbol' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
-            <th class="px-3 py-3 text-left cursor-pointer hover:text-text-secondary hidden lg:table-cell" onclick={() => handleSort('sector')}>
-              Sector {sortBy === 'sector' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-            </th>
             <th class="px-3 py-3 text-right cursor-pointer hover:text-text-secondary" onclick={() => handleSort('price')}>
               Price {sortBy === 'price' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
@@ -813,10 +807,7 @@
                   {/if}
                   <span class="hidden md:inline-flex items-center gap-2">{@render tickerChips(data, 'xs')}</span>
                 </div>
-                <div class="text-xs text-text-muted truncate max-w-[140px] hidden sm:block lg:hidden">{ticker.sector}</div>
-              </td>
-              <td class="px-3 py-3 hidden lg:table-cell">
-                <span class="text-xs text-text-muted truncate max-w-[160px] block">{ticker.sector || '—'}</span>
+                <div class="text-xs text-text-secondary truncate max-w-[180px]">{ticker.sector || '—'}</div>
               </td>
               <td class="px-3 py-3 text-right font-mono">
                 {formatPrice(quote?.c)}
@@ -877,7 +868,7 @@
                     {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
                       {#if val !== null}
                         <div class="flex items-center gap-0.5" title="{label === 'T' ? `Technical (${Math.round((score.weights?.tech ?? 0.35)*100)}%)` : label === 'F' ? `Fundamental (${Math.round((score.weights?.fund ?? 0.45)*100)}%)` : `Sentiment (${Math.round((score.weights?.sent ?? 0.20)*100)}%)`}: {val}">
-                          <span class="text-[11px] text-text-muted font-mono">{label}</span>
+                          <span class="text-[13px] text-text-muted font-mono">{label}</span>
                           <div class="w-7 h-1 bg-surface-600 rounded-full overflow-hidden">
                             <div
                               class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}"
@@ -918,7 +909,7 @@
             <!-- Inline expansion: Checklist + Entry Panel -->
             {#if isSelected}
               <tr>
-                <td colspan="9" class="p-0">
+                <td colspan="8" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
                     {@render expandedPanel(ticker, data, score, 'desktop')}
                   </div>

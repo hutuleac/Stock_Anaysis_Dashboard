@@ -125,7 +125,7 @@
 {#snippet tileHeader(info, name)}
   <div class="flex items-center gap-1.5">
     <span class="w-1.5 h-1.5 rounded-full shrink-0 {info.dot}"></span>
-    <span class="text-[11px] uppercase tracking-wider text-text-muted truncate">{name}</span>
+    <span class="text-[13px] uppercase tracking-wider text-text-muted truncate">{name}</span>
   </div>
   <div class="flex items-baseline gap-1.5 min-w-0">
     <span class="text-sm font-bold font-mono {info.color}">{info.value}</span>
