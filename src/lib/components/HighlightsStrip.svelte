@@ -55,10 +55,10 @@
 
 {#if items.length}
   <div class="mb-4 flex flex-wrap items-center gap-1.5">
-    <span class="text-[10px] uppercase tracking-wider text-text-muted mr-1">Today</span>
+    <span class="text-[12px] uppercase tracking-wider text-text-muted mr-1">Today</span>
     {#each items as it (it.kind + ':' + it.symbol)}
       <button
-        class="text-[11px] px-2 py-1 rounded-md border transition-colors {chipClass(it)}"
+        class="text-[13px] px-2 py-1 rounded-md border transition-colors {chipClass(it)}"
         onclick={() => onNavigate?.(it)}
       >{it.label} · {it.readiness}</button>
     {/each}

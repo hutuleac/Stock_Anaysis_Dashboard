@@ -38,9 +38,9 @@
     >
       <div class="flex items-center gap-2">
         <span class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.setupRadar}>★ Setup Radar</span>
-        <span class="text-[10px] text-text-muted hidden sm:inline">early entries in great stocks</span>
+        <span class="text-[12px] text-text-muted hidden sm:inline">early entries in great stocks</span>
         {#if hits.length}
-          <span class="text-[10px] bg-bull-strong/20 text-bull-strong px-1.5 py-0.5 rounded font-semibold">{hits.length}</span>
+          <span class="text-[12px] bg-bull-strong/20 text-bull-strong px-1.5 py-0.5 rounded font-semibold">{hits.length}</span>
         {/if}
       </div>
       <span class="text-text-muted text-xs">{collapsed ? '▸' : '▾'}</span>
@@ -50,14 +50,14 @@
       <div class="px-4 pb-3 border-t border-border/40 pt-3">
         {#snippet row(h)}
               <button
-                class="w-full flex items-center gap-3 hover:bg-surface-700/40 rounded px-1.5 py-1.5 transition-colors text-left overflow-x-auto"
+                class="w-full flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1.5 hover:bg-surface-700/40 rounded px-1.5 py-2 transition-colors text-left sm:overflow-x-auto"
                 onclick={() => selectTicker(h.symbol)}
               >
-                <span class="font-mono font-semibold text-sm text-text-primary w-16 shrink-0">{h.symbol}</span>
+                <span class="font-mono font-semibold text-sm text-text-primary sm:w-16 shrink-0">{h.symbol}</span>
 
                 <!-- Setup type + score -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary w-24 shrink-0 text-center cursor-default"
+                  class="text-[12px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary sm:w-24 shrink-0 text-center cursor-default"
                   use:tipAction={() => ({
                     ...(h.setupType === 'PULLBACK' ? TIPS.setupPullback : TIPS.setupMomentum),
                     current: { value: `${h.setupScore.toFixed(1)}/10`, label: h.setupType, color: scoreColor(h.setupScore) },
@@ -66,7 +66,7 @@
 
                 <!-- Readiness -->
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded {readinessColor(h.readiness)} w-14 shrink-0 text-center cursor-default"
+                  class="text-[12px] px-1.5 py-0.5 rounded {readinessColor(h.readiness)} sm:w-14 shrink-0 text-center cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.radarReadiness,
                     current: { value: h.readiness, label: h.etaWeeks != null ? `~${h.etaWeeks}w to full setup` : '', color: readinessCssColor(h.readiness) },
@@ -75,7 +75,7 @@
 
                 <!-- Eta weeks -->
                 <span
-                  class="text-[10px] text-text-muted w-12 shrink-0 cursor-default"
+                  class="text-[12px] text-text-muted sm:w-12 shrink-0 cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.radarReadiness,
                     current: { value: h.etaWeeks != null ? `~${h.etaWeeks}w` : '—', label: 'estimated weeks to full setup', color: '#9ca3af' },
@@ -85,7 +85,7 @@
                 <!-- Weekly RSI (display-only, not scored) -->
                 {#if h.wRsi != null}
                   <span
-                    class="font-mono text-xs w-16 shrink-0 cursor-default text-text-secondary"
+                    class="font-mono text-xs sm:w-16 shrink-0 cursor-default text-text-secondary"
                     use:tipAction={() => ({
                       ...TIPS.rsi,
                       title: 'Weekly RSI(14)',
@@ -101,7 +101,7 @@
 
                 <!-- RS rank -->
                 <span
-                  class="text-xs text-text-secondary w-16 shrink-0 cursor-default"
+                  class="text-xs text-text-secondary sm:w-24 shrink-0 cursor-default"
                   use:tipAction={() => ({
                     ...TIPS.radarRsRank,
                     current: {
@@ -110,11 +110,11 @@
                       color: h.rsRank == null ? '#6b7280' : h.rsRank <= 3 ? '#22c55e' : h.rsRank <= 7 ? '#6b7280' : '#f59e0b',
                     },
                   })}
-                >RS {h.rsRank != null ? `${h.rsRank}/${h.rsTotal}` : '—'}</span>
+                >RS rank {h.rsRank != null ? `#${h.rsRank}/${h.rsTotal}` : '—'}</span>
 
                 <!-- 3M RS % -->
                 <span
-                  class="font-mono text-xs w-16 shrink-0 cursor-default"
+                  class="font-mono text-xs sm:w-36 shrink-0 cursor-default"
                   style="color:{rsCssColor(h.rs3m)}"
                   use:tipAction={() => ({
                     ...TIPS.relativeStrength,
@@ -124,11 +124,11 @@
                       color: rsCssColor(h.rs3m),
                     },
                   })}
-                >{fmtRs(h.rs3m)}</span>
+                >3M vs SPY {fmtRs(h.rs3m)}</span>
 
                 <!-- Revenue growth -->
                 <span
-                  class="font-mono text-xs w-24 shrink-0 cursor-default"
+                  class="font-mono text-xs sm:w-24 shrink-0 cursor-default"
                   style="color:{h.revGrowth > 10 ? '#22c55e' : h.revGrowth > 0 ? '#86efac' : '#ef4444'}"
                   use:tipAction={() => ({
                     ...TIPS.revenueGrowth,
@@ -142,7 +142,7 @@
 
                 <!-- PEG -->
                 <span
-                  class="font-mono text-xs w-20 shrink-0 cursor-default"
+                  class="font-mono text-xs sm:w-20 shrink-0 cursor-default"
                   style="color:{h.peg === null ? '#6b7280' : h.peg < 1 ? '#22c55e' : h.peg < 2 ? '#6b7280' : '#ef4444'}"
                   use:tipAction={() => ({
                     ...TIPS.peg,
@@ -155,7 +155,7 @@
                 <!-- Trend strength (ADX) -->
                 {#if h.adx != null}
                   <span
-                    class="font-mono text-xs w-16 shrink-0 cursor-default"
+                    class="font-mono text-xs sm:w-16 shrink-0 cursor-default"
                     style="color:{h.adx >= 25 ? '#22c55e' : '#6b7280'}"
                     use:tipAction={() => ({
                       ...TIPS.adx,
@@ -167,7 +167,7 @@
                 <!-- Support broken flag -->
                 {#if h.support.belowSupport}
                   <span
-                    class="text-[10px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
+                    class="text-[12px] px-1.5 py-0.5 rounded bg-bear-strong/20 text-bear-strong shrink-0 cursor-default"
                     use:tipAction={() => ({
                       ...TIPS.swingLows,
                       current: { value: `below $${h.support.nearestSupport}`, label: 'Last swing-low support already broken', color: '#ef4444' },
@@ -179,11 +179,11 @@
 
         {#if hits.length}
           {#if accumulation.length}
-            <div class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1.5">Early Accumulation · buy weakness before the wave</div>
+            <div class="text-[12px] font-semibold text-text-muted uppercase tracking-wider mb-1.5">Early Accumulation · buy weakness before the wave</div>
             <div class="space-y-1.5">{#each accumulation as h}{@render row(h)}{/each}</div>
           {/if}
           {#if breakout.length}
-            <div class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1.5 {accumulation.length ? 'mt-3' : ''}">Breakout Confirmation · leaders only</div>
+            <div class="text-[12px] font-semibold text-text-muted uppercase tracking-wider mb-1.5 {accumulation.length ? 'mt-3' : ''}">Breakout Confirmation · leaders only</div>
             <div class="space-y-1.5">{#each breakout as h}{@render row(h)}{/each}</div>
           {/if}
         {:else}

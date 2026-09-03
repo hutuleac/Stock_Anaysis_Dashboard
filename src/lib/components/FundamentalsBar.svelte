@@ -143,7 +143,7 @@
     {#each metrics as metric}
       {@const metricTip = metric.label === 'EMA50' ? TIPS.ema50 : metric.label === 'EMA200' ? TIPS.ema200 : metric.label === 'P/E' ? TIPS.pe : metric.label === 'EPS Growth' ? TIPS.epsGrowth : metric.label === 'Mkt Cap' ? TIPS.mktCap : metric.label === 'Rev Growth' ? TIPS.revenueGrowth : metric.label === 'P/S' ? TIPS.priceToSales : metric.label === 'PEG' ? TIPS.peg : metric.label === 'Div Yield' ? TIPS.dividendYield : null}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={metricTip ?? undefined}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">{metric.label}</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">{metric.label}</span>
         <div class="flex items-baseline gap-1.5 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {metric.color ?? 'text-text-primary'}">{metric.value}</span>
           {#if metric.note}
@@ -162,7 +162,7 @@
       {@const rsiCssColor = rsi < 30 ? '#22c55e' : rsi < 40 ? '#f59e0b' : rsi > 70 ? '#ef4444' : rsi > 60 ? '#f59e0b' : '#9ca3af'}
       {@const rsiLabel = rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}
       <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={() => ({ ...TIPS.rsi, current: { value: rsi.toFixed(1), label: rsiLabel, color: rsiCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {rsiColor}">{rsi.toFixed(1)}</span>
           <span class="text-[13px] text-text-muted">{rsiDir === 'rising' ? '↑' : rsiDir === 'falling' ? '↓' : '→'}</span>
@@ -178,7 +178,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={TIPS.rsi}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
       </div>
@@ -192,7 +192,7 @@
       {@const macdCssColor = macd.histogram > 0 ? '#22c55e' : '#ef4444'}
       {@const macdLabel = cross === 'bullish_cross' ? 'Bull cross' : cross === 'bearish_cross' ? 'Bear cross' : macd.histogram > 0 ? 'Bullish' : 'Bearish'}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.macd, current: { value: (macd.histogram > 0 ? '+' : '') + macd.histogram.toFixed(3), label: macdLabel, color: macdCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">MACD</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">MACD</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {histColor}">{macd.histogram > 0 ? '+' : ''}{macd.histogram.toFixed(2)}</span>
         </div>
@@ -202,7 +202,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={TIPS.macd}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">MACD</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">MACD</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
       </div>
@@ -215,7 +215,7 @@
       {@const adxColor = adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-uncertain' : 'text-text-muted'}
       {@const adxCssColor = adx > 25 ? '#22c55e' : adx > 20 ? '#f59e0b' : '#6b7280'}
       <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={() => ({ ...TIPS.adx, current: { value: adx.toFixed(1), label: adxLabel, color: adxCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {adxColor}">{adx.toFixed(1)}</span>
         </div>
@@ -223,7 +223,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={TIPS.adx}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
       </div>
@@ -238,7 +238,7 @@
       {@const stochCssColor = k < 20 ? '#22c55e' : k > 80 ? '#ef4444' : k < 35 ? '#f59e0b' : '#f3f4f6'}
       {@const stochLabel = cross === 'bullish_cross' ? 'Bull cross' : cross === 'bearish_cross' ? 'Bear cross' : k < 20 ? 'Oversold' : k > 80 ? 'Overbought' : k < 35 ? 'Approaching' : 'Neutral'}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.stoch, current: { value: k.toFixed(1), label: stochLabel, color: stochCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Stoch %K</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Stoch %K</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {stochColor}">{k.toFixed(1)}</span>
           {#if d != null}
@@ -251,7 +251,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={TIPS.stoch}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Stoch %K</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Stoch %K</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
       </div>
@@ -264,7 +264,7 @@
       {@const wS = Math.round((score.weights?.sent ?? 0.20) * 100)}
       {@const isRegime = score.regimeNote != null}
       <div class="flex flex-col sm:min-w-[120px] cursor-default" use:tipAction={TIPS.tfsScore}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">T / F / S</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">T / F / S</span>
         <div class="flex items-center gap-2 mt-1">
           {#each [['T', score.technical, wT], ['F', score.fundamental, wF], ['S', score.sentiment, wS]] as [lbl, val, wt]}
             {#if val !== null}
@@ -286,7 +286,7 @@
       {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-uncertain' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}
       {@const convCssColor = score.convictionLabel === 'HIGH' ? '#22c55e' : score.convictionLabel === 'MODERATE' ? '#f59e0b' : score.convictionLabel === 'MIXED' ? '#ef4444' : '#6b7280'}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.conviction, current: { value: score.conviction + '%', label: score.convictionLabel, color: convCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Conviction</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Conviction</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {convColor}">{score.conviction}%</span>
         </div>
@@ -300,7 +300,7 @@
       {@const szCssColor = scoreZ > 1.5 ? '#22c55e' : scoreZ < -1.5 ? '#ef4444' : '#6b7280'}
       {@const szLabel = scoreZ > 2 ? 'Extended' : scoreZ < -2 ? 'Depressed' : scoreZ > 1 ? 'Above avg' : scoreZ < -1 ? 'Below avg' : 'In range'}
       <div class="flex flex-col sm:min-w-[60px] cursor-default" use:tipAction={() => ({ ...TIPS.scoreZ, current: { value: (scoreZ >= 0 ? '+' : '') + scoreZ.toFixed(1), label: szLabel, color: szCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Score Z</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Score Z</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold mt-0.5 {szColor}">{scoreZ >= 0 ? '+' : ''}{scoreZ.toFixed(1)}</span>
         <span class="text-[12px] {szColor}">{szLabel}</span>
       </div>
@@ -312,7 +312,7 @@
       {@const trendIcon = weekly.trend === 'up' ? '↑' : weekly.trend === 'down' ? '↓' : '→'}
       {@const wTrendCssColor = weekly.trend === 'up' ? '#22c55e' : weekly.trend === 'down' ? '#ef4444' : '#6b7280'}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.weeklyTrend, current: { value: weekly.trend.toUpperCase(), label: weekly.trend === 'up' ? 'Uptrend' : weekly.trend === 'down' ? 'Downtrend' : 'Neutral', color: wTrendCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {trendColor}">{trendIcon} {weekly.trend.toUpperCase()}</span>
         </div>
@@ -335,7 +335,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={TIPS.weeklyTrend}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
       </div>
@@ -345,7 +345,7 @@
     {#if setups}
       {@const su = setups.pullback}
       <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupPullback, current: { value: su.score.toFixed(1) + '/10', label: su.readiness, color: readinessCss(su.readiness) } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Pullback</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Pullback</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {readinessColor(su.readiness)}">{su.score.toFixed(1)}</span>
           <span class="text-[12px] {readinessColor(su.readiness)}">{su.readiness}</span>
@@ -354,7 +354,7 @@
       </div>
       {@const sm = setups.momentum}
       <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupMomentum, current: { value: sm.score.toFixed(1) + '/10', label: sm.readiness, color: readinessCss(sm.readiness) } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Momentum</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Momentum</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {readinessColor(sm.readiness)}">{sm.score.toFixed(1)}</span>
           <span class="text-[12px] {readinessColor(sm.readiness)}">{sm.readiness}</span>
@@ -369,7 +369,7 @@
       {@const rsFmt = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'}
       {@const rsCss = (rs.rs1m ?? rs.rs3m ?? 0) >= 0 ? '#22c55e' : '#ef4444'}
       <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.relativeStrength, current: { value: rsFmt(rs.rs1m), label: (rs.rs1m ?? 0) > 0 ? 'Outperforming' : 'Underperforming', color: rsCss } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">RS vs SPY</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">RS vs SPY</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {rsColor(rs.rs1m)}">{rsFmt(rs.rs1m)}</span>
           <span class="text-[12px] text-text-muted">1M</span>
@@ -383,7 +383,7 @@
       {@const av = anchors.avwap}
       {@const avColor = av.reclaimed ? 'text-bull-strong' : 'text-bear-strong'}
       <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.avwap, current: { value: (av.pctFromPrice >= 0 ? '+' : '') + av.pctFromPrice.toFixed(1) + '%', label: av.reclaimed ? 'Reclaimed' : 'Below', color: av.reclaimed ? '#22c55e' : '#ef4444' } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">AVWAP</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">AVWAP</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {avColor}">{(av.pctFromPrice >= 0 ? '+' : '') + av.pctFromPrice.toFixed(1)}%</span>
         </div>
@@ -396,7 +396,7 @@
       {@const pc = anchors.poc}
       {@const vaLabel = pc.position === 'above' ? 'upper VA' : pc.position === 'below' ? 'lower VA' : 'in VA'}
       <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.poc, current: { value: `$${pc.pocPrice.toFixed(2)}`, label: vaLabel, color: pc.position === 'above' ? '#f59e0b' : pc.position === 'below' ? '#22c55e' : '#9ca3af' } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">POC</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">POC</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-secondary">${pc.pocPrice.toFixed(2)}</span>
         </div>
@@ -412,7 +412,7 @@
       {@const rocFmt = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'}
       {@const accelerating = roc20 != null && roc60 != null && roc20 > roc60}
       <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.roc, current: { value: rocFmt(roc20), label: accelerating ? 'Accelerating' : 'Decelerating', color: accelerating ? '#22c55e' : '#9ca3af' } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">ROC</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">ROC</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {rocColor(roc20)}">{rocFmt(roc20)}</span>
           <span class="text-[12px] text-text-muted">20d</span>
@@ -429,7 +429,7 @@
       {@const obvCssColor = trend === 'rising' ? '#22c55e' : trend === 'falling' ? '#ef4444' : '#9ca3af'}
       {@const obvLabel = trend === 'rising' ? 'Accumulation' : trend === 'falling' ? 'Distribution' : 'Neutral'}
       <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.obv, current: { value: obvLabel, label: obvLabel, color: obvCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">OBV</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">OBV</span>
         <span class="text-sm font-semibold mt-0.5 {obvColor}">{obvLabel}</span>
         <span class="text-[12px] {obvColor}">{trend === 'rising' ? '▲' : trend === 'falling' ? '▼' : '→'} trend</span>
       </div>
@@ -441,15 +441,15 @@
       {@const labels = ['S1', 'S2', 'S3']}
       {@const pctAbove = (p) => price ? Math.round((price - p) / p * 100 * 10) / 10 : null}
       <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.swingLows, current: { value: `$${levels[0].price}`, label: 'Nearest support', color: '#22c55e' } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Support</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Support</span>
         <div class="flex flex-col gap-0.5 mt-0.5">
           {#each levels as lvl, i}
             {@const pct = pctAbove(lvl.price)}
             <div class="flex items-baseline gap-1">
-              <span class="text-[11px] text-text-muted font-mono w-[14px]">{labels[i]}</span>
+              <span class="text-[13px] text-text-muted font-mono w-[14px]">{labels[i]}</span>
               <span class="text-[12px] font-mono text-text-primary">${lvl.price}</span>
               {#if pct !== null}
-                <span class="text-[11px] {pct < 3 ? 'text-uncertain' : 'text-text-muted'}">+{pct}%</span>
+                <span class="text-[13px] {pct < 3 ? 'text-uncertain' : 'text-text-muted'}">+{pct}%</span>
               {/if}
             </div>
           {/each}
@@ -464,7 +464,7 @@
       {@const volCssColor = ratio >= 2 ? '#22c55e' : ratio >= 1.5 ? '#f59e0b' : '#9ca3af'}
       {@const volLabel = ratio >= 2 ? 'Surge' : ratio >= 1.5 ? 'Above avg' : ratio <= 0.5 ? 'Very low' : 'Normal'}
       <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.volume, current: { value: ratio.toFixed(2) + '×', label: volLabel, color: volCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Volume</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Volume</span>
         <div class="flex items-baseline gap-1 mt-0.5">
           <span class="text-[13px] sm:text-sm font-mono font-semibold {volColor}">{fmtVol(tdQuote.volume)}</span>
         </div>
@@ -475,7 +475,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={TIPS.volume}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Volume</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Volume</span>
         <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
         <span class="text-[12px] text-text-muted">—</span>
       </div>
@@ -489,7 +489,7 @@
       {@const bbCssColor = bbPct < 15 ? '#22c55e' : bbPct > 85 ? '#ef4444' : '#9ca3af'}
       {@const bbLabel = bbPct < 15 ? 'Near lower' : bbPct > 85 ? 'Near upper' : 'Mid-band'}
       <div class="flex flex-col sm:min-w-[100px] cursor-default" use:tipAction={() => ({ ...TIPS.bb, current: { value: bbPct.toFixed(0) + '%', label: bbLabel, color: bbCssColor } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">BB Position</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">BB Position</span>
         <div class="flex items-center gap-1.5 mt-1.5">
           <div class="flex-1 relative h-1 bg-surface-600 rounded-full min-w-[60px]">
             <div class="absolute h-2.5 w-0.5 rounded-full -top-[3px] {bbColor === 'text-bull-strong' ? 'bg-bull-strong' : bbColor === 'text-danger' ? 'bg-danger' : 'bg-text-secondary'}" style="left: {Math.max(0, Math.min(100, bbPct))}%"></div>
@@ -500,7 +500,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[100px] cursor-default" use:tipAction={TIPS.bb}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">BB Position</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">BB Position</span>
         <div class="flex items-center gap-1.5 mt-1.5">
           <div class="flex-1 h-1 bg-surface-600 rounded-full min-w-[60px]"></div>
           <span class="text-[13px] font-mono text-text-muted">—</span>
@@ -512,7 +512,7 @@
     <!-- Oversold confluence — RSI < 35 AND price at lower BB -->
     {#if data?.indicators?.oversoldConfluence}
       <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.oversoldConfluence, current: { value: 'Active', label: 'High-conviction oversold', color: '#22c55e' } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">Confluence</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Confluence</span>
         <span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[12px] font-semibold bg-bull-strong/15 text-bull-strong w-fit">OVERSOLD</span>
         <span class="text-[12px] text-bull-strong">RSI + lower BB</span>
       </div>
@@ -522,7 +522,7 @@
     {#if pos52w() !== null}
       {@const p52 = pos52w()}
       <div class="flex flex-col sm:min-w-[120px] cursor-default" use:tipAction={() => ({ ...TIPS.range52w, current: { value: p52.toFixed(0) + '%', label: p52 > 80 ? 'Near high' : p52 < 20 ? 'Near low' : 'Mid-range', color: p52 > 80 ? '#22c55e' : p52 < 20 ? '#ef4444' : '#9ca3af' } })}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
         <div class="flex items-center gap-1.5 mt-1.5">
           <span class="text-[13px] text-text-muted font-mono">${m['52WeekLow']?.toFixed(0)}</span>
           <div class="flex-1 relative h-1 bg-surface-600 rounded-full min-w-[60px]">
@@ -533,7 +533,7 @@
       </div>
     {:else}
       <div class="flex flex-col sm:min-w-[120px] cursor-default" use:tipAction={TIPS.range52w}>
-        <span class="text-[10px] sm:text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
+        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">52W Range</span>
         <div class="flex items-center gap-1.5 mt-1.5">
           <span class="text-[13px] text-text-muted font-mono">—</span>
           <div class="flex-1 h-1 bg-surface-600 rounded-full min-w-[60px]"></div>

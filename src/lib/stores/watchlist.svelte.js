@@ -19,6 +19,7 @@ const HARDCODED_DEFAULTS = [
   { symbol: 'HOOD',  name: 'Robinhood Markets',       sector: 'Financial Services',     sectorETF: 'XLF' },
   { symbol: 'NVDA',  name: 'NVIDIA Corporation',      sector: 'Technology',             sectorETF: 'XLK' },
   { symbol: 'SOFI',  name: 'SoFi Technologies',       sector: 'Financial Services',     sectorETF: 'XLF' },
+  { symbol: 'AOI',   name: 'Applied Optoelectronics',  sector: 'Technology',             sectorETF: 'XLK' },
 ];
 
 // User-configurable defaults — persisted separately from active watchlist
