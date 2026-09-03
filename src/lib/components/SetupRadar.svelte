@@ -114,7 +114,7 @@
 
                 <!-- 3M RS % -->
                 <span
-                  class="font-mono text-xs sm:w-28 shrink-0 cursor-default"
+                  class="font-mono text-xs sm:w-36 shrink-0 cursor-default"
                   style="color:{rsCssColor(h.rs3m)}"
                   use:tipAction={() => ({
                     ...TIPS.relativeStrength,
