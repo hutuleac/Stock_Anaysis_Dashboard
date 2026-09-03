@@ -125,11 +125,11 @@
 {#snippet tileHeader(info, name)}
   <div class="flex items-center gap-1.5">
     <span class="w-1.5 h-1.5 rounded-full shrink-0 {info.dot}"></span>
-    <span class="text-[13px] uppercase tracking-wider text-text-muted truncate">{name}</span>
+    <span class="text-[13px] uppercase tracking-wider text-text-muted sm:truncate">{name}</span>
   </div>
   <div class="flex items-baseline gap-1.5 min-w-0">
     <span class="text-sm font-bold font-mono {info.color}">{info.value}</span>
-    <span class="text-[12px] font-semibold {info.color} truncate">{info.label}</span>
+    <span class="text-[12px] font-semibold {info.color} sm:truncate">{info.label}</span>
   </div>
 {/snippet}
 
@@ -140,7 +140,7 @@
     {#each sectors as s, i}
       <span class="flex items-center gap-1 min-w-0 {i > 0 ? 'hidden md:flex' : ''}">
         <span class="{color} shrink-0">{arrow}</span>
-        <span class="text-text-secondary truncate">{s.name}</span>
+        <span class="text-text-secondary sm:truncate">{s.name}</span>
         <span class="{color} shrink-0">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>
       </span>
     {/each}
@@ -174,14 +174,14 @@
         <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
           use:tipAction={() => ({ ...TIPS.vix, current: vixInfo.level !== 'unknown' ? { value: vixInfo.value, label: vixInfo.label, color: vixInfo.hex } : undefined })}>
           {@render tileHeader(vixInfo, 'Volatility')}
-          <span class="text-[12px] text-text-muted truncate">{vixInfo.sub}</span>
+          <span class="text-[12px] text-text-muted sm:truncate">{vixInfo.sub}</span>
         </div>
 
         <!-- SPY Trend -->
         <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
           use:tipAction={() => ({ ...TIPS.spyTrend, current: spyInfo.sub ? { value: spyInfo.value, label: spyInfo.label, color: spyInfo.hex } : undefined })}>
           {@render tileHeader(spyInfo, 'SPY Trend')}
-          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono truncate">{spyInfo.sub}</span>{/if}
+          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{spyInfo.sub}</span>{/if}
         </div>
 
         <!-- BTC Risk Appetite -->
@@ -189,7 +189,7 @@
           <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
             use:tipAction={() => ({ ...TIPS.btcRisk, current: { value: btcInfo.value, label: btcInfo.label, color: btcInfo.hex } })}>
             {@render tileHeader(btcInfo, 'BTC Risk')}
-            <span class="text-[12px] text-text-muted font-mono truncate">{btcInfo.sub}</span>
+            <span class="text-[12px] text-text-muted font-mono sm:truncate">{btcInfo.sub}</span>
           </div>
         {/if}
 
@@ -198,7 +198,7 @@
           <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
             use:tipAction={() => ({ ...TIPS.macro, current: { value: macroInfo.value, label: macroInfo.label, color: macroInfo.hex } })}>
             {@render tileHeader(macroInfo, 'Macro · 10Y–2Y')}
-            {#if macroInfo.sub}<span class="text-[12px] text-text-muted font-mono truncate">{macroInfo.sub}</span>{/if}
+            {#if macroInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{macroInfo.sub}</span>{/if}
           </div>
         {/if}
 
@@ -233,7 +233,7 @@
           <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
             use:tipAction={TIPS.breadth}>
             {@render tileHeader(breadthInfo, 'Breadth')}
-            <span class="text-[12px] text-text-muted font-mono truncate">
+            <span class="text-[12px] text-text-muted font-mono sm:truncate">
               {breadthInfo.ema50.above}/{breadthInfo.ema50.total} &gt; EMA50 · {breadthInfo.ema200.above}/{breadthInfo.ema200.total} &gt; EMA200
             </span>
           </div>
