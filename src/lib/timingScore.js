@@ -44,16 +44,30 @@ export function computeTimingScore(input = {}) {
   const dOk = !!(dailyCandles?.c?.length && dailyCandles.s === 'ok');
   const dCloses = dOk ? dailyCandles.c : null;
 
+  // Bull regimes (confirmed uptrend, incl. late-cycle) get compressed bands —
+  // pullbacks run shallower and RSI rarely touches bear-market oversold levels,
+  // so the fixed bear/chop bands below would almost never score a bull dip.
+  const regime = marketContext?.regime ?? null;
+  const isBull = regime === 'BULL' || regime === 'BULL_LATE';
+
   // ── Drawdown (max 20) ──
   if (dCloses) {
     const dd = drawdownFrom52wHigh(dCloses);
     if (dd != null) {
       let pts;
-      if (dd <= -40) { pts = 20; warnings.push('Deep drawdown: verify whether the investment thesis changed'); }
-      else if (dd <= -25) pts = 18;
-      else if (dd <= -15) pts = 12;
-      else if (dd <= -10) pts = 6;
-      else pts = 2;
+      if (isBull) {
+        if (dd <= -20) { pts = 20; warnings.push('Deep drawdown: verify whether the investment thesis changed'); }
+        else if (dd <= -12) pts = 18;
+        else if (dd <= -8) pts = 12;
+        else if (dd <= -4) pts = 6;
+        else pts = 2;
+      } else {
+        if (dd <= -40) { pts = 20; warnings.push('Deep drawdown: verify whether the investment thesis changed'); }
+        else if (dd <= -25) pts = 18;
+        else if (dd <= -15) pts = 12;
+        else if (dd <= -10) pts = 6;
+        else pts = 2;
+      }
       components.drawdown = pts;
       signals.push(`Drawdown ${dd.toFixed(1)}% from 52-week high`);
     }
@@ -67,24 +81,30 @@ export function computeTimingScore(input = {}) {
   const mRsi = monthly?.c?.length ? computeRSI(monthly.c) : null;
   if (dRsi != null || wRsi != null || mRsi != null) {
     let pts = 0;
-    if (dRsi != null) pts += dRsi < 30 ? 6 : dRsi <= 35 ? 3 : 0;
-    if (wRsi != null) pts += wRsi < 35 ? 6 : wRsi <= 40 ? 3 : 0;
-    if (mRsi != null) pts += mRsi < 40 ? 8 : mRsi <= 45 ? 4 : 0;
+    if (isBull) {
+      if (dRsi != null) pts += dRsi < 40 ? 6 : dRsi <= 45 ? 3 : 0;
+      if (wRsi != null) pts += wRsi < 42 ? 6 : wRsi <= 48 ? 3 : 0;
+      if (mRsi != null) pts += mRsi < 45 ? 8 : mRsi <= 50 ? 4 : 0;
+    } else {
+      if (dRsi != null) pts += dRsi < 30 ? 6 : dRsi <= 35 ? 3 : 0;
+      if (wRsi != null) pts += wRsi < 35 ? 6 : wRsi <= 40 ? 3 : 0;
+      if (mRsi != null) pts += mRsi < 40 ? 8 : mRsi <= 45 ? 4 : 0;
+    }
     components.oversold = cap(pts, 20);
     const r = (x) => (x == null ? 'n/a' : x.toFixed(0));
     signals.push(`Daily RSI ${r(dRsi)} | Weekly RSI ${r(wRsi)} | Monthly RSI ${r(mRsi)}`);
   }
 
-  // ── Reversal confirmation (max 20) ──
+  // ── Reversal confirmation (max 15) ──
   if (dCloses && dailyCandles.h && dailyCandles.l) {
     let pts = 0;
     const div = detectDivergence(dCloses, dailyCandles.h, dailyCandles.l);
-    if (div?.type === 'BULL') { pts += 8; signals.push('Bullish RSI divergence detected'); }
-    if (emaReclaim(dailyCandles)) { pts += 5; signals.push('Reclaimed the 20-day EMA'); }
-    if (macdHistogramImproving(dCloses)) { pts += 4; signals.push('MACD histogram improving 3 days'); }
+    if (div?.type === 'BULL') { pts += 6; signals.push('Bullish RSI divergence detected'); }
+    if (emaReclaim(dailyCandles)) { pts += 4; signals.push('Reclaimed the 20-day EMA'); }
+    if (macdHistogramImproving(dCloses)) { pts += 3; signals.push('MACD histogram improving 3 days'); }
     const macd = computeMACD(dCloses);
-    if (macd?.crossover === 'bullish_cross') { pts += 3; signals.push('MACD bullish crossover'); }
-    components.reversal = cap(pts, 20);
+    if (macd?.crossover === 'bullish_cross') { pts += 2; signals.push('MACD bullish crossover'); }
+    components.reversal = cap(pts, 15);
   }
 
   // ── Consolidation quality (max 15) ──
@@ -119,7 +139,7 @@ export function computeTimingScore(input = {}) {
     components.volumeBehavior = cap(pts, 15);
   }
 
-  // ── Market context (max 10) ──
+  // ── Market context (max 15) ──
   {
     const mc = marketContext || {};
     let pts = 0, any = false;
@@ -134,7 +154,13 @@ export function computeTimingScore(input = {}) {
       if (vp > 35) warnings.push('Extreme volatility: use staged entries only');
       else if (vp >= 25) pts += 2;
     }
-    if (any) components.marketContext = cap(pts, 10);
+    // Regime bonus: buying a dip inside a confirmed uptrend is the
+    // highest-quality setup this engine can see — reward it directly rather
+    // than relying only on the compressed drawdown/oversold bands above.
+    if (regime === 'BULL') { pts += 4; any = true; }
+    else if (regime === 'BULL_LATE') { pts += 2; any = true; warnings.push('Late-cycle greed: trim position size'); }
+    else if (regime === 'CHOP') { any = true; warnings.push('Mixed market regime: reduce position size'); }
+    if (any) components.marketContext = cap(pts, 15);
   }
 
   // ── Total + label ──
