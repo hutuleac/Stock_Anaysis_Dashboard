@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFredObservations, deriveMacroRegime } from '../src/lib/macro.js';
+import { parseFredObservations, deriveMacroRegime, detectMarketRegime } from '../src/lib/macro.js';
 import { computeScore } from '../src/lib/scoring.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -144,5 +144,67 @@ describe('computeScore macroRegime', () => {
   it('no macro context leaves score and output untouched', () => {
     const r = computeScore(bullishTicker(), {});
     expect(r.macroRegime).toBeNull();
+  });
+});
+
+// ─── detectMarketRegime ───────────────────────────────────────────────────────
+
+function uptrend(n = 260) {
+  return Array.from({ length: n }, (_, i) => 100 + i * 0.3);
+}
+function downtrend(n = 260) {
+  return Array.from({ length: n }, (_, i) => 400 - i * 1.2);
+}
+// A long decline followed by a recent bounce: price reclaims its 50-day
+// average while the 200-day average is still pulled down by the decline —
+// neither a confirmed uptrend nor downtrend.
+function sideways(n = 260) {
+  return Array.from({ length: n }, (_, i) =>
+    i < n - 40 ? 200 - i * 0.3 : (200 - (n - 40) * 0.3) + (i - (n - 40)) * 0.8);
+}
+
+describe('detectMarketRegime', () => {
+  it('returns null with fewer than 200 closes', () => {
+    expect(detectMarketRegime({ spyCloses: uptrend(50) })).toBeNull();
+  });
+
+  it('flags BULL on a steady uptrend with calm vol', () => {
+    const r = detectMarketRegime({ spyCloses: uptrend(), volProxy: 15, fearGreed: 50 });
+    expect(r.regime).toBe('BULL');
+    expect(r.pullbackScale).toBeGreaterThanOrEqual(-1); // near-monotonic, ~0 drawdown
+  });
+
+  it('flags BEAR on a steady downtrend', () => {
+    const r = detectMarketRegime({ spyCloses: downtrend(), volProxy: 20, fearGreed: 30 });
+    expect(r.regime).toBe('BEAR');
+  });
+
+  it('flags CHOP on a sideways tape', () => {
+    const r = detectMarketRegime({ spyCloses: sideways(), volProxy: 18, fearGreed: 50 });
+    expect(r.regime).toBe('CHOP');
+  });
+
+  it('downgrades an uptrend to CHOP when volatility spikes', () => {
+    const r = detectMarketRegime({ spyCloses: uptrend(), volProxy: 35, fearGreed: 50 });
+    expect(r.regime).toBe('CHOP');
+  });
+
+  it('flags BULL_LATE on an uptrend with extreme greed', () => {
+    const r = detectMarketRegime({ spyCloses: uptrend(), volProxy: 15, fearGreed: 82 });
+    expect(r.regime).toBe('BULL_LATE');
+  });
+
+  it('caps a bullish read at CHOP when credit spreads are in STRESS', () => {
+    const r = detectMarketRegime({
+      spyCloses: uptrend(), volProxy: 15, fearGreed: 50, macro: { creditStress: 'STRESS' },
+    });
+    expect(r.regime).toBe('CHOP');
+  });
+
+  it('caps a bullish read at CHOP when the yield curve is inverted', () => {
+    const r = detectMarketRegime({
+      spyCloses: uptrend(), volProxy: 15, fearGreed: 50, macro: { curveInverted: true },
+    });
+    expect(r.regime).toBe('CHOP');
   });
 });

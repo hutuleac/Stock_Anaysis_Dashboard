@@ -44,10 +44,23 @@ describe('computeTimingScore', () => {
     const bare = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
     expect(bare.total).toBe(42);
     expect(bare.label).toBe('NEUTRAL');
-    // +6 market-context = 48 → still NEUTRAL, pinning the WATCHLIST (≥50) cutoff from below.
+    // +6 market-context (spyAboveEma50 3 + sectorOutperforming 3) = 48 → still
+    // NEUTRAL, pinning the WATCHLIST (≥50) cutoff from below.
     const withMc = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: true, sectorOutperforming: true } });
     expect(withMc.total).toBe(48);
     expect(withMc.label).toBe('NEUTRAL');
+  });
+
+  it('scores a shallow bull-regime pullback that the bear/chop bands would miss', () => {
+    // ~8% pullback off the highs — negligible in bear/chop bands, meaningful in BULL.
+    const n = 420;
+    const c = Array.from({ length: n }, (_, i) => (i < n - 20 ? 100 + i * 0.05 : 100 + (n - 20) * 0.05 - (i - (n - 20)) * 0.5));
+    const daily = { s: 'ok', t: Array.from({ length: n }, (_, i) => 1600000000 + i * 86400), o: c, h: c.map(x => x + 1), l: c.map(x => x - 1), c, v: c.map(() => 1000) };
+    const weekly = weeklyFrom(daily);
+    const bearBands = computeTimingScore({ dailyCandles: daily, weeklyCandles: weekly, marketContext: {} });
+    const bullBands = computeTimingScore({ dailyCandles: daily, weeklyCandles: weekly, marketContext: { regime: 'BULL' } });
+    expect(bullBands.components.drawdown).toBeGreaterThan(bearBands.components.drawdown);
+    expect(bullBands.components.marketContext).toBeGreaterThan(0);
   });
 
   it('adds market-context points and a downtrend warning appropriately', () => {

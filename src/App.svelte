@@ -2,6 +2,7 @@
   import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
+  import { detectMarketRegime } from './lib/macro.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeTimingScore } from './lib/timingScore.js';
@@ -188,11 +189,17 @@
           marketContextData.volProxy = volProxy;
           marketContextData.spyBelowEma50 = spyBelowEma50;
         }
+        const fearGreedValue = marketContextData?.fearGreed?.data?.score ?? null;
+        const marketRegime = detectMarketRegime({
+          spyCloses, volProxy, fearGreed: fearGreedValue, macro: macroCtx?.regime ?? null,
+        });
         setMarketContext({
           vixPrice:       volProxy,
           spyDowntrend:   spyBelowEma50 ?? ((marketContextData?.spy?.data?.dp ?? 0) < -0.5),
-          fearGreedValue: marketContextData?.fearGreed?.data?.score ?? null,
+          fearGreedValue,
           macro:          macroCtx?.regime ?? null,
+          regime:         marketRegime?.regime ?? null,
+          pullbackScale:  marketRegime?.pullbackScale ?? null,
         });
       }
 
@@ -474,6 +481,7 @@
       spyDowntrend: spyKnown ? ctx.spyDowntrend : null,
       // sector ETF avg daily % move; > 1 matches scoring.js's positive tier
       sectorOutperforming: Number.isFinite(sectorMomentum) ? sectorMomentum > 1 : null,
+      regime: ctx.regime ?? null,
     };
   }
 
