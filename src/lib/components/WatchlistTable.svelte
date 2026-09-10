@@ -60,17 +60,24 @@
   let bulkStatus = $state('');
   let copyState = $state(null);      // symbol that just copied ('ok') or failed ('fail')
   let copyMenuSymbol = $state(null); // symbol whose template dropdown is open
+  let copyFallback = $state(null);   // { symbol, text } — shown when clipboard write fails, so mobile users can still select+copy manually
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   // Mobile expansion sections — per-session; state carries across ticker opens.
   let openSections = $state({ chart: true, indicators: true, entry: false });
   function toggleSection(k) { openSections[k] = !openSections[k]; }
 
-  async function copyForAI(ticker, templateId) {
+  function buildAiText(ticker, templateId) {
     const tpl = getTemplate(templateId ?? getDefaultId());
-    if (!tpl) return;
+    if (!tpl) return null;
     const d = getTickerData(ticker.symbol);
     const snapshot = buildStockSnapshot(ticker, d, getMarketContext());
-    const text = buildPrompt(tpl.body, snapshot, ticker.symbol);
+    return buildPrompt(tpl.body, snapshot, ticker.symbol);
+  }
+
+  async function copyForAI(ticker, templateId) {
+    const text = buildAiText(ticker, templateId);
+    if (text === null) return;
     let ok = true;
     try {
       await navigator.clipboard.writeText(text);
@@ -89,7 +96,24 @@
     }
     copyState = { symbol: ticker.symbol, ok };
     copyMenuSymbol = null;
+    // Clipboard permissions are commonly blocked in mobile in-app browsers (e.g. Instagram/FB
+    // webviews) with no error surfaced beyond a rejected promise — give those users a manual
+    // select-and-copy escape hatch instead of a dead-end "Copy failed" label.
+    copyFallback = ok ? null : { symbol: ticker.symbol, text };
     setTimeout(() => { copyState = null; }, 1500);
+  }
+
+  // Native share sheet — on mobile this is more reliable than clipboard (works in webviews that
+  // block clipboard access) and drops the prompt directly into the target AI app/Notes/Messages.
+  async function shareForAI(ticker, templateId) {
+    const text = buildAiText(ticker, templateId);
+    if (text === null) return;
+    copyMenuSymbol = null;
+    try {
+      await navigator.share({ title: `${ticker.symbol} — AI analysis prompt`, text });
+    } catch (err) {
+      if (err?.name !== 'AbortError') copyFallback = { symbol: ticker.symbol, text };
+    }
   }
 
   async function handleBulkAdd() {
@@ -594,6 +618,13 @@
           class="text-xs px-3 py-1.5 rounded-lg bg-surface-700 border border-border text-text-secondary hover:text-text-primary transition-colors"
           onclick={() => copyForAI(ticker)}
         >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
+        {#if canShare}
+          <button
+            class="text-xs px-2.5 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
+            title="Share prompt"
+            onclick={() => shareForAI(ticker)}
+          >📤</button>
+        {/if}
         <button
           class="text-xs px-2 py-1.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-text-secondary transition-colors"
           title="Choose prompt template"
@@ -652,6 +683,12 @@
         <button class="flex-1 text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-secondary"
           onclick={() => copyForAI(ticker)}
         >{copyState?.symbol === ticker.symbol ? (copyState.ok ? 'Copied ✓' : 'Copy failed') : '🤖 Copy for AI'}</button>
+        {#if canShare}
+          <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-muted"
+            title="Share prompt"
+            onclick={() => shareForAI(ticker)}
+          >📤</button>
+        {/if}
         <button class="text-xs px-3 py-2.5 rounded-lg bg-surface-700 border border-border text-text-muted hover:text-danger"
           onclick={() => removeTicker(ticker.symbol)}
         >✕</button>
@@ -934,6 +971,27 @@
           {/each}
         </tbody>
       </table>
+    </div>
+  {/if}
+
+  <!-- Manual copy fallback — clipboard writes are silently blocked in some mobile in-app
+       browsers (Instagram/FB webviews etc). Shows the prompt in a selectable textarea so the
+       user can still long-press → Copy even when the Clipboard API is unavailable. -->
+  {#if copyFallback}
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4" onclick={() => { copyFallback = null; }}>
+      <div class="bg-surface-800 border border-border rounded-lg w-full max-w-lg p-4" onclick={(e) => e.stopPropagation()}>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-semibold text-text-primary">Copy prompt for {copyFallback.symbol}</p>
+          <button class="text-text-muted hover:text-text-primary p-1" onclick={() => { copyFallback = null; }}>✕</button>
+        </div>
+        <p class="text-xs text-text-muted mb-2">Automatic copy didn't work here — tap the text below to select it, then copy.</p>
+        <textarea
+          readonly
+          class="w-full h-56 text-xs font-mono bg-surface-900 border border-border rounded p-2 text-text-secondary"
+          onclick={(e) => e.target.select()}
+          value={copyFallback.text}
+        ></textarea>
+      </div>
     </div>
   {/if}
 </div>

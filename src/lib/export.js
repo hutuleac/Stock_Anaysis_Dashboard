@@ -103,7 +103,7 @@ Using this snapshot PLUS current web research (recent news, analyst updates, sec
 2. Cross-check my dashboard's reading: does the score/badge match what fresh data says? Flag any disagreement.
 3. Identify near-term catalysts (next 4-8 weeks) and their likely direction.
 4. Give a swing-trade oriented verdict: buy / wait / avoid, with the key level or event that would change your view.
-Be specific and cite recent sources where you can.`,
+Be specific and cite recent sources where you can. Keep it skimmable — short paragraphs or bullets, I'm often reading this on my phone.`,
   },
   {
     id: 'trade-setup',
@@ -116,7 +116,8 @@ I'm considering a long swing trade (weeks to a few months). Combine this with cu
 1. Validate or challenge the setup: is this a good entry zone right now?
 2. Propose a concrete plan: entry zone, stop-loss (respecting the ATR shown), first target, risk:reward.
 3. List anything happening in the next 2-4 weeks that could invalidate the trade (earnings, macro events, sector news).
-4. Verdict in one line: enter now / wait for a specific trigger / skip.`,
+4. Verdict in one line: enter now / wait for a specific trigger / skip.
+Keep it skimmable — short paragraphs or bullets, I'm often reading this on my phone.`,
   },
   {
     id: 'risk-check',
@@ -129,7 +130,8 @@ Your job is to find what could go WRONG with a long position here. Using current
 1. List the top 3-5 risks (company-specific, sector, macro), each with likelihood and potential impact.
 2. Check recent news for red flags my offline dashboard cannot see (guidance cuts, legal issues, insider selling, competitive threats).
 3. Assess earnings risk if a report is near.
-4. Conclusion: what position size (full / half / none) does this risk profile justify, and what early-warning signal should I watch?`,
+4. Conclusion: what position size (full / half / none) does this risk profile justify, and what early-warning signal should I watch?
+Keep it skimmable — short paragraphs or bullets, I'm often reading this on my phone.`,
   },
   {
     id: 'news-scan',
@@ -142,6 +144,7 @@ Search the web for everything relevant from the last 2 weeks: news, analyst rati
 1. Summarize the news flow — bullish, bearish, or mixed?
 2. Did anything happen that my snapshot (price/indicator data only) would not reflect yet?
 3. Does the fresh information confirm or contradict the dashboard score above?
-4. One-line takeaway: has the story changed, and in which direction?`,
+4. One-line takeaway: has the story changed, and in which direction?
+Keep it skimmable — short paragraphs or bullets, I'm often reading this on my phone.`,
   },
 ];
