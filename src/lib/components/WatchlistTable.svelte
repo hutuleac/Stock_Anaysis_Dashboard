@@ -1,5 +1,5 @@
 <script>
-  import { tick } from 'svelte';
+  import { tick, onMount } from 'svelte';
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory, getMarketContext } from '../scoring.js';
@@ -35,6 +35,17 @@
       }
     }
   }
+
+  // Gates which breakpoint's expandedPanel mounts, so PriceChart/NewsPanel
+  // don't double-mount (one hidden via CSS, one visible) whenever a ticker is selected.
+  let isMobile = $state(false);
+  onMount(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    isMobile = mq.matches;
+    const update = (e) => (isMobile = e.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  });
 
   let searchQuery = $state('');
   let searchResults = $state([]);
@@ -645,8 +656,8 @@
   {/snippet}
 
   <!-- ── Mobile card layout (< sm) ─────────────────────────────────────────── -->
-  {#if getTickers().length > 0}
-    <div class="block sm:hidden space-y-2 mb-4">
+  {#if isMobile && getTickers().length > 0}
+    <div class="space-y-2 mb-4">
       {#each getSortedTickers() as ticker}
         {@const data = getTickerData(ticker.symbol)}
         {@const score = computeScore(data)}
@@ -752,8 +763,8 @@
       <p class="text-lg mb-1">No tickers in watchlist</p>
       <p class="text-sm">Search above to add your first ticker</p>
     </div>
-  {:else}
-    <div class="hidden sm:block overflow-x-auto">
+  {:else if !isMobile}
+    <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
           <tr class="border-b border-border text-xs text-text-muted uppercase tracking-wider">
