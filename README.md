@@ -9,8 +9,8 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.17-blue)
-![Tests](https://img.shields.io/badge/tests-187_passing-brightgreen?logo=vitest&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.23-blue)
+![Tests](https://img.shields.io/badge/tests-458_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -149,7 +149,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-280 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, and `src/lib/chartAnchors.js`:
+458 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, and the tooltip action:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -219,6 +219,45 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.23 (2026-09-11) — AI export: mobile copy & share
+- **Manual-copy fallback** — "Copy for AI" now shows a selectable-text panel when the Clipboard API write silently fails (common in mobile in-app browsers like the Instagram/Facebook webview), so the prompt is never a dead end.
+- **Share sheet button** — a 📤 button (shown only where `navigator.share` is supported) drops the prompt straight into the phone's native share sheet — Messages, Notes, an AI app — skipping the clipboard entirely.
+- **Mobile-skimmable prompts** — all 4 export templates now ask for short paragraphs/bullets, since the AI's reply is usually read on a phone too.
+
+### v0.22 (2026-09-03 → 2026-09-10) — readability, regime-adaptive timing, mobile fit
+- **Readability + contrast pass** — sector moved under the ticker symbol (its own table column dropped), the muted/secondary/border color tokens lifted to meet AA contrast, dense-UI text floor raised from 10/11px to 12/13px.
+- **Setup Radar / Dip Hunter mobile wrap** — rows wrap instead of scrolling sideways on a phone; RS spans are self-labelled ("vs SPY") instead of a bare percentage.
+- **Regime-adaptive Timing Score** — a new composite market-regime detector (`detectMarketRegime` in `macro.js`) widens/narrows the Timing Score's drawdown and oversold bands and adds a market-context bonus, so quality names pulling back in a bull market score higher without loosening the gate in a real downturn.
+- **Mobile perf + polish** — the ETF dashboard gained stacked mobile cards, the ticker-expansion panel now mounts only the active breakpoint's markup (was double-mounting chart/news), and duplicated FundamentalsBar empty-state markup was deduped.
+- **Ticker-search race guard** — typing fast enough to overlap two in-flight searches could show a stale result; a request token now discards out-of-order responses.
+
+### v0.21 (2026-07-20 → 2026-08) — Long-Term Setup UI + ETF/valuation polish
+- **Long-Term Setup card merged into the main expanded row** — previously split across two components, now one card with larger text and a rich hover tooltip on every status badge, score, and chip explaining the underlying thresholds.
+- **Indicator breakdown chips** — timing and quality sub-scores render as labelled, fill-coloured chips (`longTermIndicators.js`); a missing component reads muted grey, distinct from a real 0.
+- **HY credit-spread risk gate** — FRED `BAMLH0A0HYM2` feeds a `creditStress` regime (CALM/ELEVATED/STRESS) that can demote an ACCUMULATE verdict when the broader credit market is stressed, overriding the Fear & Greed panic boost.
+- **Setup Radar split into Accumulation / Breakout** — the "leaders only" (RS > 0) gate no longer suppresses laggards in the buy-the-dip Pullback setup; it still applies to the Momentum/Breakout setup.
+- **Dip Hunter fear-gate fix** — the market-fear score component now only fires when the *stock itself* is oversold, not just because the tape is fearful.
+- **Revenue history mini-chart** — 5-year YoY revenue bars in the Long-Term Setup card, reusing the financials-reported payload already fetched for the Quality Score (zero new API calls).
+- **XDEW added to the ETF catalog** (S&P 500 Equal Weight); every Entry/Exit score component in the ETF expanded row gained a hover tooltip.
+
+### v0.20 (2026-07-18 → 2026-07-20) — Long-Term Dip Buying framework
+- **Timing Score (0–100)** — drawdown, oversold (daily+weekly+monthly RSI), reversal, consolidation, volume, and market-context components computed from candles already fetched.
+- **Quality Score (0–100)** — profitability, cash flow, balance sheet, shareholder return, and earnings quality; fetched lazily on row expand (2 extra Finnhub calls, cached, never on a batch refresh).
+- **Long-Term Setup** — a fixed timing×quality gate matrix producing ACCUMULATE / WATCHLIST / OVERSOLD_BUT_CAUTION / WAIT, with a Fear & Greed panic boost for oversold-but-cautious names.
+- **Data enrichment** — dividend yield, watchlist breadth, and sector momentum surfaced in the Fundamentals Bar and AI export snapshot.
+- **Deep code-review fixes** — Finnhub metric percent-vs-fraction unit bugs and a metric-object unwrap bug (both silently produced wrong scores) found and fixed; stale git worktrees removed from the repo. 424 tests.
+
+### v0.19 (2026-07-12 → 2026-07-15) — mobile pass
+- **Touch tooltips** — tap-to-open on iOS/Android, desktop hover unchanged; one shared expanded-row layout used by both breakpoints for parity.
+- **Mobile card redesign** — collapsible sections (Chart/Indicators open by default, Entry Plan closed), a sticky bottom action bar (Copy for AI · Alert · Remove), and a horizontally scrollable chip rail.
+- **Dedup** — the four duplicated TD-candle-mapping blocks in `App.svelte` became one `candles.js` helper; a shared `scoreStyle`/chip-row snippet replaced separate desktop/mobile copies.
+- **Mobile-fit follow-up** — News, Notes, and score history dropped from the mobile card (desktop-only from here on), 3-column indicator grid, one-line ticker header, the Alerts feature removed entirely, Market Context's rotation tile made readable, and the Entry Panel compacted to a single column.
+
+### v0.18 (2026-07-12) — Copy-for-AI export
+- **Copy for AI** — one click formats a ticker's full dashboard reading (price, score, technicals, weekly setups, fundamentals, relative strength, smart money, dip score, market context) into a plain-text snapshot, merges it into an editable prompt template, and copies it for pasting into any external LLM chat.
+- **4 starter templates** — Deep Dive, Trade Setup Review, Risk Check, News Catalyst Scan — editable and resettable from Settings.
+- Zero new API calls; Stocks view only for now (ETF export is a future round).
 
 ### v0.17 (2026-07-10) — ETF refinement round
 - **UCITS catalog search** — searchable curated catalog (55 funds pre-mapped to US proxies) in the ETF add bar: one-click add, already-added entries disabled, manual entry stays as fallback.

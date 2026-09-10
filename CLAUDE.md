@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.21
+# Project State — Stock Analysis Dashboard v0.23
 
 ## What this is
 
@@ -249,7 +249,8 @@ Display-only, zero new API calls, zero logic changes.
 - `buildPrompt(body, snapshot, symbol)` — substitutes `{{DATA}}`, `{{TICKER}}`, `{{DATE}}` into a template body. Unknown placeholders are left untouched (no silent data loss if a template typos a token).
 - `DEFAULT_TEMPLATES` — 4 shipped presets: deep-dive, trade-setup, risk-check, news-scan.
 - Templates live in `stores/prompts.svelte.js`: localStorage key `promptTemplates` (seeded from `DEFAULT_TEMPLATES` on first load), `promptDefault` holds the default template id. `updateTemplate` / `resetTemplate` / `setDefaultId` are the only mutators.
-- UI: `WatchlistTable.svelte` expanded row has a "🤖 Copy for AI" button + a ▾ template dropdown (click-outside overlay). Copies the merged prompt via `navigator.clipboard` with a `<textarea>` fallback; flashes "Copied ✓" / "Copy failed". `SettingsPanel` has an "AI Prompts" section to edit (textarea, saves on blur), reset to shipped, and pick the default template.
+- UI: `WatchlistTable.svelte` expanded row has a "🤖 Copy for AI" button + a ▾ template dropdown (click-outside overlay). Copies the merged prompt via `navigator.clipboard` with a `<textarea>`/`execCommand` fallback; flashes "Copied ✓" / "Copy failed". `SettingsPanel` has an "AI Prompts" section to edit (textarea, saves on blur), reset to shipped, and pick the default template.
+- **v0.23 mobile copy/share:** when both clipboard paths fail (silently, in mobile in-app browsers like the Instagram/Facebook webview), a `copyFallback` state opens a modal with the prompt in a `<textarea>` the user can tap-to-select and copy manually. A 📤 share button (feature-detected on `navigator.share`, shown next to Copy for AI in both toolbars) sends the prompt through the native share sheet instead — more reliable than clipboard on mobile and drops it straight into Messages/Notes/an AI app. All 4 templates now end with a "keep it skimmable, I'm often on my phone" instruction.
 - Phase 2 (parked, not built): optional Gemini free-tier API key in Settings + an "Analyze" button that sends the same merged prompt and renders the response inline. See `BACKLOG.md`.
 
 ## Known conventions / gotchas
