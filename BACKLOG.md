@@ -27,10 +27,8 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 ### ~~5. Short interest~~ ✗ REMOVED (2026-07)
 - Shipped in v0.15, but the endpoint regressed to premium (403 on free tier) — feature removed in the 2026-07 audit fixes. Restore if Finnhub re-opens `/stock/short-interest`.
 
-### 6. Ticker-search edge cases *(carried over from old TODOS)*
-- Search works, but failure/ambiguity states are undefined: no results, multiple matches (e.g. "META" → Meta + Metavisio), `/search` down, debounce timing, US-exchange filtering.
-- Low effort, UX-only. Spec the behavior, then implement in `WatchlistTable.svelte`.
-- Cost: **0 calls**.
+### ~~6. Ticker-search edge cases~~ ✓ DONE (2026-09-10)
+- No-results, error ("search unavailable"), ambiguous multi-match list, "already in watchlist" dim, and US-exchange filtering were already implemented. The one real gap — an out-of-order-response race when typing fast enough to overlap two in-flight fetches — is now guarded with a request token in `WatchlistTable.svelte`.
 
 ### 7. AI export phase 2: Gemini inline analysis
 - v0.18 shipped "Copy for AI" (`export.js` snapshot + editable prompt templates, clipboard-only). Phase 2: optional Gemini free-tier API key in Settings, an "Analyze" button next to "Copy for AI" that sends the same merged prompt to Gemini and renders the response inline in the expanded row (no external paste step).

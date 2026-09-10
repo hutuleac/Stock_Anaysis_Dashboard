@@ -110,6 +110,7 @@
     setTimeout(() => { bulkOpen = false; bulkStatus = ''; }, 1500);
   }
   let searchTimeout;
+  let searchToken = 0;
   let dragIndex = $state(null);
 
   async function handleSearch() {
@@ -118,16 +119,19 @@
       searchError = false;
       return;
     }
+    const token = ++searchToken;
     searching = true;
     searchError = false;
     try {
       const result = await searchTicker(searchQuery);
+      if (token !== searchToken) return; // stale response — a newer search superseded this one
       searchResults = result.data || result || [];
     } catch {
+      if (token !== searchToken) return;
       searchResults = [];
       searchError = true;
     }
-    searching = false;
+    if (token === searchToken) searching = false;
   }
 
   function debounceSearch() {
