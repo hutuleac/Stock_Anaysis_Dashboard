@@ -138,6 +138,14 @@
   ]);
 </script>
 
+{#snippet emptyMetric(label, minWClass, tip)}
+  <div class="flex flex-col {minWClass} cursor-default" use:tipAction={tip}>
+    <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">{label}</span>
+    <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
+    <span class="text-[12px] text-text-muted">—</span>
+  </div>
+{/snippet}
+
 <div class="bg-surface-800/60 border border-border/50 rounded-lg px-2.5 py-2.5 sm:px-4 sm:py-3">
   <div class="grid grid-cols-3 gap-x-2 gap-y-2 sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
     {#each metrics as metric}
@@ -177,11 +185,7 @@
         </div>
       </div>
     {:else}
-      <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={TIPS.rsi}>
-        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">RSI 14</span>
-        <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
-        <span class="text-[12px] text-text-muted">—</span>
-      </div>
+      {@render emptyMetric('RSI 14', 'sm:min-w-[70px]', TIPS.rsi)}
     {/if}
 
     <!-- MACD — from TwelveData if available -->
@@ -201,11 +205,7 @@
         </span>
       </div>
     {:else}
-      <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={TIPS.macd}>
-        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">MACD</span>
-        <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
-        <span class="text-[12px] text-text-muted">—</span>
-      </div>
+      {@render emptyMetric('MACD', 'sm:min-w-[80px]', TIPS.macd)}
     {/if}
 
     <!-- ADX — trend strength -->
@@ -222,11 +222,7 @@
         <span class="text-[12px] {adxColor}">{adxLabel}</span>
       </div>
     {:else}
-      <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={TIPS.adx}>
-        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
-        <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
-        <span class="text-[12px] text-text-muted">—</span>
-      </div>
+      {@render emptyMetric('ADX 14', 'sm:min-w-[70px]', TIPS.adx)}
     {/if}
 
     <!-- Stochastic %K/%D -->
@@ -250,11 +246,7 @@
         </span>
       </div>
     {:else}
-      <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={TIPS.stoch}>
-        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Stoch %K</span>
-        <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
-        <span class="text-[12px] text-text-muted">—</span>
-      </div>
+      {@render emptyMetric('Stoch %K', 'sm:min-w-[80px]', TIPS.stoch)}
     {/if}
 
     <!-- T/F/S sub-scores + regime weights -->
@@ -334,11 +326,7 @@
         </div>
       </div>
     {:else}
-      <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={TIPS.weeklyTrend}>
-        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">W.Trend</span>
-        <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
-        <span class="text-[12px] text-text-muted">—</span>
-      </div>
+      {@render emptyMetric('W.Trend', 'sm:min-w-[80px]', TIPS.weeklyTrend)}
     {/if}
 
     <!-- Weekly setup signals (leading) — Pullback / Momentum -->
@@ -474,11 +462,7 @@
         </span>
       </div>
     {:else}
-      <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={TIPS.volume}>
-        <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Volume</span>
-        <span class="text-[13px] sm:text-sm font-mono font-semibold text-text-muted">—</span>
-        <span class="text-[12px] text-text-muted">—</span>
-      </div>
+      {@render emptyMetric('Volume', 'sm:min-w-[90px]', TIPS.volume)}
     {/if}
 
     <!-- BB position — from TwelveData if available -->

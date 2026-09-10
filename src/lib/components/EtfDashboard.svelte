@@ -1,10 +1,21 @@
 <script>
+  import { onMount } from 'svelte';
   import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies, getEtfExpandRequest, clearEtfExpandRequest } from '../stores/etflist.svelte.js';
   import { computeEtfSignals, generateEtfThesis } from '../etf.js';
   import { searchCatalog } from '../etfCatalog.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import PriceChart from './PriceChart.svelte';
+
+  // Gates mobile card vs desktop table so the expanded row's PriceChart only mounts once.
+  let isMobile = $state(false);
+  onMount(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    isMobile = mq.matches;
+    const update = (e) => (isMobile = e.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  });
 
   let sortBy = $state('rs3m');          // 'rs3m' | 'entry' | 'exit'
   let expanded = $state(null);           // ucits ticker of the expanded row
@@ -163,6 +174,126 @@
     </div>
   {/if}
 
+  {#snippet expandedContent(etf)}
+    {#if etf.sig}
+      {@const thesis = generateEtfThesis(etf.sig)}
+      {#if thesis}
+        <p class="text-xs text-text-secondary leading-relaxed mb-3 max-w-3xl">{thesis}</p>
+      {/if}
+      {#if etf.sig.indicators}
+        {@const ind = etf.sig.indicators}
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-xs">
+          {#if ind.trendState}
+            <span class="px-1.5 py-0.5 rounded font-semibold text-[12px] cursor-default
+              {ind.trendState === 'UPTREND' ? 'bg-bull-strong/20 text-bull-strong'
+                : ind.trendState === 'PULLBACK' ? 'bg-uncertain/20 text-uncertain'
+                : ind.trendState === 'DOWNTREND' ? 'bg-bear-strong/20 text-bear-strong'
+                : 'bg-surface-600 text-text-secondary'}"
+              use:tipAction={() => ({ ...TIPS.etfTrendState, current: { value: ind.trendState, label: '', color: trendColor(ind.trendState) } })}
+            >{ind.trendState}</span>
+          {/if}
+          {#if ind.wRsi != null}
+            <span class="font-mono text-text-secondary cursor-default"
+              use:tipAction={() => ({ ...TIPS.rsi, title: 'Weekly RSI(14)', current: { value: String(ind.wRsi), label: ind.wRsi < 30 ? 'Oversold' : ind.wRsi > 70 ? 'Overbought' : 'Neutral', color: ind.wRsi < 30 ? '#22c55e' : ind.wRsi > 70 ? '#ef4444' : '#9ca3af' } })}
+            >wRSI {ind.wRsi}</span>
+          {/if}
+          {#if ind.rangePos52w != null}
+            <span class="flex items-center gap-1.5 cursor-default"
+              use:tipAction={() => ({ ...TIPS.etfRangePos, current: { value: `${ind.rangePos52w}%`, label: 'of 52w range', color: '#9ca3af' } })}
+            >
+              <span class="text-text-muted">52w</span>
+              <span class="relative w-16 h-1.5 rounded bg-surface-600 overflow-hidden">
+                <span class="absolute inset-y-0 left-0 rounded bg-text-secondary" style="width:{ind.rangePos52w}%"></span>
+              </span>
+              <span class="font-mono text-text-secondary">{ind.rangePos52w}%</span>
+            </span>
+          {/if}
+          {#if ind.roc13w != null}
+            <span class="font-mono cursor-default" style="color:{ind.roc13w > 0 ? '#22c55e' : '#ef4444'}"
+              use:tipAction={() => ({ ...TIPS.etfRoc13w, current: { value: `${ind.roc13w > 0 ? '+' : ''}${ind.roc13w}%`, label: '13-week change', color: ind.roc13w > 0 ? '#22c55e' : '#ef4444' } })}
+            >13w {ind.roc13w > 0 ? '+' : ''}{ind.roc13w}%</span>
+          {/if}
+        </div>
+      {/if}
+      <div class="grid md:grid-cols-2 gap-4 mb-4 text-xs">
+        <div>
+          <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
+            use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: etf.sig.entry.readiness, color: scoreColor(etf.sig.entry.score) } })}
+          >Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
+          {#each etf.sig.entry.components as c}
+            <div class="flex justify-between py-0.5 cursor-default"
+              use:tipAction={() => ({ ...TIPS[COMPONENT_TIPS[c.label]], current: { value: `${c.score}/${c.max}`, label: '', color: c.score > 0 ? '#22c55e' : '#6b7280' } })}
+            >
+              <span class="text-text-secondary">{c.label}</span>
+              <span class="font-mono" style="color:{c.score > 0 ? '#22c55e' : '#6b7280'}">{c.score}/{c.max} <span class="text-text-muted">· {c.detail}</span></span>
+            </div>
+          {/each}
+        </div>
+        <div>
+          <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
+            use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: etf.sig.exit.readiness, color: scoreColor(etf.sig.exit.score) } })}
+          >Exit {etf.sig.exit.score.toFixed(1)}/10 · {etf.sig.exit.readiness}</div>
+          {#each etf.sig.exit.components as c}
+            <div class="flex justify-between py-0.5 cursor-default"
+              use:tipAction={() => ({ ...TIPS[COMPONENT_TIPS[c.label]], current: { value: `${c.score}/${c.max}`, label: '', color: c.score > 0 ? '#ef4444' : '#6b7280' } })}
+            >
+              <span class="text-text-secondary">{c.label}</span>
+              <span class="font-mono" style="color:{c.score > 0 ? '#ef4444' : '#6b7280'}">{c.score}/{c.max} <span class="text-text-muted">· {c.detail}</span></span>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+    <PriceChart symbol={etf.proxy} />
+  {/snippet}
+
+  {#if isMobile}
+    <div class="space-y-2 p-2">
+      {#each rows as etf (etf.ucits)}
+        {@const isExpanded = expanded === etf.ucits}
+        {@const isBuy = etf.sig ? etf.sig.entry.score >= etf.sig.exit.score : true}
+        {@const sig = etf.sig ? (isBuy ? etf.sig.entry : etf.sig.exit) : null}
+        <div
+          class="bg-surface-800 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors {isExpanded ? 'border-bull-strong/40 bg-surface-700' : 'border-border hover:bg-surface-750'}"
+          onclick={() => expanded = isExpanded ? null : etf.ucits}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => e.key === 'Enter' && (expanded = isExpanded ? null : etf.ucits)}
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <span class="font-mono font-bold text-text-primary">{etf.ucits}</span>
+              <span class="text-[12px] text-text-muted ml-1.5 truncate">{etf.name}</span>
+              <div class="text-[12px] text-text-secondary truncate">{etf.category}</div>
+            </div>
+            <button class="text-text-muted hover:text-danger shrink-0" title="Remove"
+              onclick={(e) => { e.stopPropagation(); removeEtf(etf.ucits); }}>✕</button>
+          </div>
+          <div class="flex items-center justify-between mt-2">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-mono text-text-muted">{etf.proxy}</span>
+              <span class="font-mono text-text-primary">{etf.sig ? `$${etf.sig.price.toFixed(2)}` : '—'}</span>
+              <span class="font-mono" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}">{fmtRs(etf.sig?.rs?.rs3m)} 3M</span>
+            </div>
+            {#if sig}
+              <span class="text-[12px] px-1.5 py-0.5 rounded shrink-0 {readinessClass(sig.readiness)}">{isBuy ? 'BUY' : 'SELL'} {sig.readiness}</span>
+            {:else}
+              <span class="text-[12px] text-text-muted shrink-0">no data</span>
+            {/if}
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 text-[12px]">
+            <span class="text-text-muted">Entry <span class="font-mono" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}">{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</span></span>
+            <span class="text-text-muted">Exit <span class="font-mono" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}">{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</span></span>
+          </div>
+        </div>
+        {#if isExpanded}
+          <div class="bg-surface-800 border border-border/50 rounded-lg px-3 py-3 -mt-1">
+            {@render expandedContent(etf)}
+          </div>
+        {/if}
+      {/each}
+    </div>
+  {:else}
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -228,76 +359,7 @@
           {#if expanded === etf.ucits}
             <tr class="border-b border-border/20 bg-surface-900/40">
               <td colspan="9" class="px-4 py-4">
-                {#if etf.sig}
-                  {@const thesis = generateEtfThesis(etf.sig)}
-                  {#if thesis}
-                    <p class="text-xs text-text-secondary leading-relaxed mb-3 max-w-3xl">{thesis}</p>
-                  {/if}
-                  {#if etf.sig.indicators}
-                    {@const ind = etf.sig.indicators}
-                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-xs">
-                      {#if ind.trendState}
-                        <span class="px-1.5 py-0.5 rounded font-semibold text-[12px] cursor-default
-                          {ind.trendState === 'UPTREND' ? 'bg-bull-strong/20 text-bull-strong'
-                            : ind.trendState === 'PULLBACK' ? 'bg-uncertain/20 text-uncertain'
-                            : ind.trendState === 'DOWNTREND' ? 'bg-bear-strong/20 text-bear-strong'
-                            : 'bg-surface-600 text-text-secondary'}"
-                          use:tipAction={() => ({ ...TIPS.etfTrendState, current: { value: ind.trendState, label: '', color: trendColor(ind.trendState) } })}
-                        >{ind.trendState}</span>
-                      {/if}
-                      {#if ind.wRsi != null}
-                        <span class="font-mono text-text-secondary cursor-default"
-                          use:tipAction={() => ({ ...TIPS.rsi, title: 'Weekly RSI(14)', current: { value: String(ind.wRsi), label: ind.wRsi < 30 ? 'Oversold' : ind.wRsi > 70 ? 'Overbought' : 'Neutral', color: ind.wRsi < 30 ? '#22c55e' : ind.wRsi > 70 ? '#ef4444' : '#9ca3af' } })}
-                        >wRSI {ind.wRsi}</span>
-                      {/if}
-                      {#if ind.rangePos52w != null}
-                        <span class="flex items-center gap-1.5 cursor-default"
-                          use:tipAction={() => ({ ...TIPS.etfRangePos, current: { value: `${ind.rangePos52w}%`, label: 'of 52w range', color: '#9ca3af' } })}
-                        >
-                          <span class="text-text-muted">52w</span>
-                          <span class="relative w-16 h-1.5 rounded bg-surface-600 overflow-hidden">
-                            <span class="absolute inset-y-0 left-0 rounded bg-text-secondary" style="width:{ind.rangePos52w}%"></span>
-                          </span>
-                          <span class="font-mono text-text-secondary">{ind.rangePos52w}%</span>
-                        </span>
-                      {/if}
-                      {#if ind.roc13w != null}
-                        <span class="font-mono cursor-default" style="color:{ind.roc13w > 0 ? '#22c55e' : '#ef4444'}"
-                          use:tipAction={() => ({ ...TIPS.etfRoc13w, current: { value: `${ind.roc13w > 0 ? '+' : ''}${ind.roc13w}%`, label: '13-week change', color: ind.roc13w > 0 ? '#22c55e' : '#ef4444' } })}
-                        >13w {ind.roc13w > 0 ? '+' : ''}{ind.roc13w}%</span>
-                      {/if}
-                    </div>
-                  {/if}
-                  <div class="grid md:grid-cols-2 gap-4 mb-4 text-xs">
-                    <div>
-                      <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
-                        use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: etf.sig.entry.readiness, color: scoreColor(etf.sig.entry.score) } })}
-                      >Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
-                      {#each etf.sig.entry.components as c}
-                        <div class="flex justify-between py-0.5 cursor-default"
-                          use:tipAction={() => ({ ...TIPS[COMPONENT_TIPS[c.label]], current: { value: `${c.score}/${c.max}`, label: '', color: c.score > 0 ? '#22c55e' : '#6b7280' } })}
-                        >
-                          <span class="text-text-secondary">{c.label}</span>
-                          <span class="font-mono" style="color:{c.score > 0 ? '#22c55e' : '#6b7280'}">{c.score}/{c.max} <span class="text-text-muted">· {c.detail}</span></span>
-                        </div>
-                      {/each}
-                    </div>
-                    <div>
-                      <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
-                        use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: etf.sig.exit.readiness, color: scoreColor(etf.sig.exit.score) } })}
-                      >Exit {etf.sig.exit.score.toFixed(1)}/10 · {etf.sig.exit.readiness}</div>
-                      {#each etf.sig.exit.components as c}
-                        <div class="flex justify-between py-0.5 cursor-default"
-                          use:tipAction={() => ({ ...TIPS[COMPONENT_TIPS[c.label]], current: { value: `${c.score}/${c.max}`, label: '', color: c.score > 0 ? '#ef4444' : '#6b7280' } })}
-                        >
-                          <span class="text-text-secondary">{c.label}</span>
-                          <span class="font-mono" style="color:{c.score > 0 ? '#ef4444' : '#6b7280'}">{c.score}/{c.max} <span class="text-text-muted">· {c.detail}</span></span>
-                        </div>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-                <PriceChart symbol={etf.proxy} />
+                {@render expandedContent(etf)}
               </td>
             </tr>
           {/if}
@@ -305,4 +367,5 @@
       </tbody>
     </table>
   </div>
+  {/if}
 </div>
