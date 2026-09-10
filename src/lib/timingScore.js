@@ -20,6 +20,19 @@ import {
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const cap = (v, max) => Math.min(v, max);
 
+// Per-component caps — the single source of truth. longTermIndicators.js imports
+// these for its chip maxes, so changing a cap here cannot drift the UI out of
+// sync again (it did once: the regime round moved reversal 20→15 and market
+// 10→15 and left the chips rendering "Market 14/10"). Must sum to 100.
+export const TIMING_MAX = {
+  drawdown: 20,
+  oversold: 20,
+  reversal: 15,
+  consolidation: 15,
+  volumeBehavior: 15,
+  marketContext: 15,
+};
+
 function labelForTiming(total) {
   if (total == null) return 'WAIT';
   if (total >= 70) return 'STRONG_ACCUMULATION_ZONE';
@@ -68,7 +81,7 @@ export function computeTimingScore(input = {}) {
         else if (dd <= -10) pts = 6;
         else pts = 2;
       }
-      components.drawdown = pts;
+      components.drawdown = cap(pts, TIMING_MAX.drawdown);
       signals.push(`Drawdown ${dd.toFixed(1)}% from 52-week high`);
     }
   }
@@ -90,7 +103,7 @@ export function computeTimingScore(input = {}) {
       if (wRsi != null) pts += wRsi < 35 ? 6 : wRsi <= 40 ? 3 : 0;
       if (mRsi != null) pts += mRsi < 40 ? 8 : mRsi <= 45 ? 4 : 0;
     }
-    components.oversold = cap(pts, 20);
+    components.oversold = cap(pts, TIMING_MAX.oversold);
     const r = (x) => (x == null ? 'n/a' : x.toFixed(0));
     signals.push(`Daily RSI ${r(dRsi)} | Weekly RSI ${r(wRsi)} | Monthly RSI ${r(mRsi)}`);
   }
@@ -104,7 +117,7 @@ export function computeTimingScore(input = {}) {
     if (macdHistogramImproving(dCloses)) { pts += 3; signals.push('MACD histogram improving 3 days'); }
     const macd = computeMACD(dCloses);
     if (macd?.crossover === 'bullish_cross') { pts += 2; signals.push('MACD bullish crossover'); }
-    components.reversal = cap(pts, 15);
+    components.reversal = cap(pts, TIMING_MAX.reversal);
   }
 
   // ── Consolidation quality (max 15) ──
@@ -119,7 +132,7 @@ export function computeTimingScore(input = {}) {
       consolidationHigh = con.high;
       signals.push(`Consolidation: ${con.days} trading days, range ${con.rangePct.toFixed(1)}%${bb ? `, BB Width percentile ${bb.percentile.toFixed(0)}` : ''}`);
     }
-    if (bb || con) components.consolidation = cap(pts, 15);
+    if (bb || con) components.consolidation = cap(pts, TIMING_MAX.consolidation);
   }
 
   // ── Volume behavior (max 15) ──
@@ -136,7 +149,7 @@ export function computeTimingScore(input = {}) {
     if (consolidationHigh != null && breakoutConfirmation(dailyCandles, consolidationHigh)) {
       pts += 3; signals.push('Breakout on above-average volume');
     }
-    components.volumeBehavior = cap(pts, 15);
+    components.volumeBehavior = cap(pts, TIMING_MAX.volumeBehavior);
   }
 
   // ── Market context (max 15) ──
@@ -160,7 +173,7 @@ export function computeTimingScore(input = {}) {
     if (regime === 'BULL') { pts += 4; any = true; }
     else if (regime === 'BULL_LATE') { pts += 2; any = true; warnings.push('Late-cycle greed: trim position size'); }
     else if (regime === 'CHOP') { any = true; warnings.push('Mixed market regime: reduce position size'); }
-    if (any) components.marketContext = cap(pts, 15);
+    if (any) components.marketContext = cap(pts, TIMING_MAX.marketContext);
   }
 
   // ── Total + label ──

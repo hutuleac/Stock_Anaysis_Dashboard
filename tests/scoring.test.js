@@ -103,6 +103,13 @@ describe('scoreNewsHeadlines', () => {
     expect(result).toBeGreaterThan(0.5);
   });
 
+  it('ignores words embedded inside longer words', () => {
+    // "executive" contains "cut", "Armstrong" contains "strong", "brisk"
+    // contains "risk" — substring matching scored all three.
+    const news = { data: [{ headline: 'Chief executive Armstrong reports brisk quarter', summary: '' }] };
+    expect(scoreNewsHeadlines(news)).toBeCloseTo(0.5, 5);
+  });
+
   it('returns a low value for bearish headlines', () => {
     const news = {
       data: [

@@ -47,15 +47,22 @@ export function detectDivergence(closes, highs, lows, lookback = 30, period = 14
   const swingLows = findSwingPivots(wLow, 2, 'low');
   const swingHighs = findSwingPivots(wHigh, 2, 'high');
 
+  // RSI is read at the pivot's ABSOLUTE index in `closes`, not its index in the
+  // lookback window: a windowed prefix shorter than period+1 returns null (which
+  // silently killed divergence for any pivot in the first 14 window bars), and
+  // even when long enough it re-seeds Wilder's average from ~30 bars and drifts
+  // several points away from the real RSI at that bar.
+  const abs = (p) => start + p.index;
+
   // Bullish: price lower-low, RSI higher-low
   if (swingLows.length >= 2) {
     const a = swingLows[swingLows.length - 2];
     const b = swingLows[swingLows.length - 1];
-    const rsi = rsiAtPivots(wClose, [a.index, b.index], period);
-    if (rsi[a.index] != null && rsi[b.index] != null &&
-        b.value < a.value && rsi[b.index] > rsi[a.index]) {
+    const rsi = rsiAtPivots(closes, [abs(a), abs(b)], period);
+    if (rsi[abs(a)] != null && rsi[abs(b)] != null &&
+        b.value < a.value && rsi[abs(b)] > rsi[abs(a)]) {
       const priceDiff = a.value > 0 ? Math.abs(a.value - b.value) / a.value : 0;
-      const rsiDiff = Math.min(1, Math.abs(rsi[b.index] - rsi[a.index]) / 50);
+      const rsiDiff = Math.min(1, Math.abs(rsi[abs(b)] - rsi[abs(a)]) / 50);
       const strength = Math.min(1, (priceDiff + rsiDiff) / 2);
       return { type: 'BULL', strength, barsAgo: wClose.length - 1 - b.index };
     }
@@ -65,11 +72,11 @@ export function detectDivergence(closes, highs, lows, lookback = 30, period = 14
   if (swingHighs.length >= 2) {
     const a = swingHighs[swingHighs.length - 2];
     const b = swingHighs[swingHighs.length - 1];
-    const rsi = rsiAtPivots(wClose, [a.index, b.index], period);
-    if (rsi[a.index] != null && rsi[b.index] != null &&
-        b.value > a.value && rsi[b.index] < rsi[a.index]) {
+    const rsi = rsiAtPivots(closes, [abs(a), abs(b)], period);
+    if (rsi[abs(a)] != null && rsi[abs(b)] != null &&
+        b.value > a.value && rsi[abs(b)] < rsi[abs(a)]) {
       const priceDiff = a.value > 0 ? Math.abs(b.value - a.value) / a.value : 0;
-      const rsiDiff = Math.min(1, Math.abs(rsi[a.index] - rsi[b.index]) / 50);
+      const rsiDiff = Math.min(1, Math.abs(rsi[abs(a)] - rsi[abs(b)]) / 50);
       const strength = Math.min(1, (priceDiff + rsiDiff) / 2);
       return { type: 'BEAR', strength, barsAgo: wClose.length - 1 - b.index };
     }

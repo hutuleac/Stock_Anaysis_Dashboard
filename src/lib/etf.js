@@ -84,7 +84,7 @@ export function scoreEtfExit({ rsiW, extensionPct, rs1m, rs3m, volumeRatio }) {
     else if (r1 < 0 && r3 > 0) rotLoss = 1.0;
   }
   components.push({ label: 'Rotation Loss', score: rotLoss, max: 2.0,
-    detail: r1 === null ? 'n/a' : `RS1m ${r1 > 0 ? '+' : ''}${r1}%, RS3m ${r3 > 0 ? '+' : ''}${r3}%` });
+    detail: (r1 === null || r3 === null) ? 'n/a' : `RS1m ${r1 > 0 ? '+' : ''}${r1}%, RS3m ${r3 > 0 ? '+' : ''}${r3}%` });
 
   const vr = num(volumeRatio);
   const climax = (rsi !== null && rsi >= 60 && vr !== null)

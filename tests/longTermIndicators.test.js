@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { timingChips, qualityChips, chipColor } from '../src/lib/longTermIndicators.js';
+import { TIMING_MAX } from '../src/lib/timingScore.js';
 
 describe('timingChips', () => {
   it('returns all six timing components in display order', () => {
     const chips = timingChips({ drawdown: 12, oversold: 6, reversal: 8, consolidation: 5, volumeBehavior: 6, marketContext: 3 });
     expect(chips.map(c => c.label)).toEqual(['Drawdown', 'Oversold', 'Reversal', 'Base', 'Volume', 'Market']);
-    expect(chips.map(c => c.max)).toEqual([20, 20, 20, 15, 15, 10]);
+    expect(chips.map(c => c.max)).toEqual([20, 20, 15, 15, 15, 15]);
     expect(chips[0].score).toBe(12);
   });
 
@@ -38,5 +39,24 @@ describe('chipColor', () => {
   it('greys a null score or missing max regardless', () => {
     expect(chipColor(null, 20)).toBe('#6b7280');
     expect(chipColor(10, 0)).toBe('#6b7280');
+  });
+});
+
+// The chip maxes are the only place the UI states a component's ceiling. When
+// the regime round moved reversal 20→15 and market 10→15 in the engine, these
+// went stale and the Market chip could render "14/10". Timing now imports the
+// engine's caps; this guards the quality mirror and both totals.
+describe('chip maxes mirror the score engines', () => {
+  it('timing chip maxes are the engine caps and sum to 100', () => {
+    const chips = timingChips({});
+    expect(chips.map(c => c.max)).toEqual([
+      TIMING_MAX.drawdown, TIMING_MAX.oversold, TIMING_MAX.reversal,
+      TIMING_MAX.consolidation, TIMING_MAX.volumeBehavior, TIMING_MAX.marketContext,
+    ]);
+    expect(chips.reduce((s, c) => s + c.max, 0)).toBe(100);
+  });
+
+  it('quality chip maxes sum to 100', () => {
+    expect(qualityChips({}).reduce((s, c) => s + c.max, 0)).toBe(100);
   });
 });

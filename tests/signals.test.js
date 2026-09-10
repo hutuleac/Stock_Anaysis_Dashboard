@@ -76,6 +76,32 @@ describe('detectDivergence', () => {
     const r = detectDivergence(closes, highs, lows);
     expect(r.type).toBe('NONE');
   });
+
+  // Regression: RSI must be read at the pivot's absolute index in `closes`, not
+  // at its index inside the 30-bar lookback window. A pivot in the first 14 bars
+  // of that window has no 15-bar prefix inside it, so the windowed lookup returned
+  // null and the divergence was silently dropped.
+  it('detects a bullish divergence whose older pivot sits early in the lookback window', () => {
+    const closes = [
+      ...Array.from({ length: 200 }, () => 100),
+      100, 96, 92, 87, 82, 77, 73, 70,       // steep decline → low (window index 8)
+      74, 78, 81, 84, 86,                     // bounce
+      84, 82, 80, 78, 76, 74, 72, 70, 69,     // shallow decline → lower low, higher RSI
+      71, 74, 77, 80, 83, 86, 89,             // recovery confirms the pivot
+    ];
+    const highs = closes.map(c => c + 0.5);
+    const lows = closes.map(c => c - 0.5);
+
+    // Precondition: the older of the two swing lows really is at window index < 14.
+    const window = lows.slice(-30);
+    const pivots = findSwingPivots(window, 2, 'low');
+    expect(pivots.length).toBeGreaterThanOrEqual(2);
+    expect(pivots[pivots.length - 2].index).toBeLessThan(14);
+
+    const r = detectDivergence(closes, highs, lows);
+    expect(r.type).toBe('BULL');
+    expect(r.barsAgo).toBe(7);
+  });
 });
 
 // ── detectSqueeze ────────────────────────────────────────────────────────────

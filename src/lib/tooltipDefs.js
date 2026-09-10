@@ -846,14 +846,14 @@ export const TIPS = {
 
   ltReversal: {
     title: 'Reversal',
-    subtitle: 'Timing component · max 20 pts',
+    subtitle: 'Timing component · max 15 pts',
     category: 'Long-Term · Timing',
-    description: 'Early evidence the decline is actually turning, not just paused. Four independent signals, each adds its points if present: bullish RSI divergence (+8), price reclaiming the 20-day EMA (+5), MACD histogram improving for 3 straight days (+4), and a fresh MACD bullish crossover (+3).',
+    description: 'Early evidence the decline is actually turning, not just paused. Four independent signals, each adds its points if present: bullish RSI divergence (+6), price reclaiming the 20-day EMA (+4), MACD histogram improving for 3 straight days (+3), and a fresh MACD bullish crossover (+2).',
     levels: [
-      { range: 'Bull RSI divergence', label: '+8 pts', color: C.green, desc: 'Price made a lower low but RSI made a higher low — selling momentum is fading even as price falls.' },
-      { range: 'Reclaimed 20-EMA',    label: '+5 pts', color: C.green, desc: 'Price back above its 20-day average — short-term trend flipping up.' },
-      { range: 'MACD improving 3d',   label: '+4 pts', color: C.green, desc: 'Momentum histogram has grown 3 sessions in a row.' },
-      { range: 'MACD bull cross',     label: '+3 pts', color: C.green, desc: 'MACD line just crossed above its signal line.' },
+      { range: 'Bull RSI divergence', label: '+6 pts', color: C.green, desc: 'Price made a lower low but RSI made a higher low — selling momentum is fading even as price falls.' },
+      { range: 'Reclaimed 20-EMA',    label: '+4 pts', color: C.green, desc: 'Price back above its 20-day average — short-term trend flipping up.' },
+      { range: 'MACD improving 3d',   label: '+3 pts', color: C.green, desc: 'Momentum histogram has grown 3 sessions in a row.' },
+      { range: 'MACD bull cross',     label: '+2 pts', color: C.green, desc: 'MACD line just crossed above its signal line.' },
     ],
     why: 'Drawdown and Oversold tell you a stock is beaten down; Reversal tells you buyers are starting to actually show up. High Drawdown + high Reversal together is the classic "catching the bottom" combination.',
   },
@@ -887,10 +887,11 @@ export const TIPS = {
 
   ltMarket: {
     title: 'Market',
-    subtitle: 'Timing component · max 10 pts',
+    subtitle: 'Timing component · max 15 pts',
     category: 'Long-Term · Timing',
-    description: 'The only Timing component that looks outside the stock itself — is the broader tape and sector helping or fighting this entry? SPY above its 50-day EMA (+3), the stock\'s sector outperforming (+3), extreme Fear & Greed below 30 (+2), and elevated-but-not-extreme volatility (+2).',
+    description: 'The only Timing component that looks outside the stock itself — is the broader tape and sector helping or fighting this entry? SPY above its 50-day EMA (+3), the stock\'s sector outperforming (+3), extreme Fear & Greed below 30 (+2), elevated-but-not-extreme volatility (+2), and a confirmed bull regime (+4, or +2 late-cycle).',
     levels: [
+      { range: 'Confirmed BULL regime', label: '+4 pts', color: C.green, desc: 'SPY above a rising EMA50/EMA200 stack with calm volatility — buying a dip inside a confirmed uptrend is the best setup this engine can see. Late-cycle (extreme greed) scores +2 instead.' },
       { range: 'SPY above EMA50',       label: '+3 pts', color: C.green, desc: 'Broad market uptrend intact — a tailwind for any long entry.' },
       { range: 'Sector outperforming',  label: '+3 pts', color: C.green, desc: 'This stock\'s sector is leading, not lagging.' },
       { range: 'Fear & Greed < 30',     label: '+2 pts', color: C.green, desc: 'Extreme fear in the broad market — often coincides with capitulation lows.' },

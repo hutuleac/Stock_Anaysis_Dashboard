@@ -428,6 +428,7 @@
             sectorMomentum: d.sectorMomentum ?? null,
             timingScore:  d.timingScore  ?? p?.timingScore  ?? null,
             qualityScore: d.qualityScore ?? p?.qualityScore ?? null,
+            revenueHistory: d.revenueHistory ?? p?.revenueHistory ?? null,
           };
         }
         localStorage.setItem('dashboard_supplement', JSON.stringify({
@@ -452,7 +453,10 @@
   // re-expanding within the cache window costs nothing.
   async function loadQualityScoreForTicker(symbol) {
     const data = getTickerData(symbol);
-    if (!data || data.qualityScore) return;
+    // Both fields come from the same payload; a hydrated qualityScore without a
+    // revenueHistory (pre-v0.24 snapshots) must still fetch, or the revenue chart
+    // never renders again after a reload.
+    if (!data || (data.qualityScore && data.revenueHistory != null)) return;
     try {
       const [finRes, earnRes] = await Promise.all([
         fetchFinancialsReported(symbol).catch(() => null),
@@ -530,6 +534,7 @@
             if (s.sectorMomentum != null) results[sym].sectorMomentum = s.sectorMomentum;
             if (s.timingScore  != null) results[sym].timingScore  = s.timingScore;
             if (s.qualityScore != null) results[sym].qualityScore = s.qualityScore;
+            if (s.revenueHistory != null) results[sym].revenueHistory = s.revenueHistory;
           }
           if (sup.marketContextData) {
             marketContextData = sup.marketContextData;
