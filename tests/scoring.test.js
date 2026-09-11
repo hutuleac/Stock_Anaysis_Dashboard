@@ -399,6 +399,22 @@ describe('storeScoreSnapshot / getScoreHistory / getScoreVelocity', () => {
     storeScoreSnapshot('NVDA', 62);
     expect(computeScoreZScore('NVDA')).toBeNull();
   });
+
+  it('keeps snapshots inside the 90-day window and drops older ones', () => {
+    const now = Date.now();
+    const day = 86400000;
+    localStorage.setItem('sv_AMD', JSON.stringify([
+      { score: 10, ts: now - 95 * day }, // outside window
+      { score: 20, ts: now - 60 * day },
+      { score: 30, ts: now - 30 * day },
+      { score: 40, ts: now - 10 * day },
+      { score: 50, ts: now - 2 * day },
+    ]));
+    storeScoreSnapshot('AMD', 60);
+    const history = getScoreHistory('AMD', 90);
+    expect(history.map(e => e.score)).toEqual([20, 30, 40, 50, 60]);
+    expect(computeScoreZScore('AMD')).not.toBeNull();
+  });
 });
 
 // ─── generateThesis ──────────────────────────────────────────────────────────

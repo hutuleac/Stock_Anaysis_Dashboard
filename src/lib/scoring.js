@@ -307,7 +307,8 @@ export function computeScore(tickerData, marketContext = _marketContext) {
 
 const VELOCITY_KEY = (symbol) => `sv_${symbol}`;
 const THREE_DAYS_MS = 3 * 86400000;
-const SEVEN_DAYS_MS = 7 * 86400000;
+const NINETY_DAYS_MS = 90 * 86400000;
+const MAX_SNAPSHOTS = 300; // ~3/day over 90d; bounds localStorage growth
 
 export function storeScoreSnapshot(symbol, score) {
   if (score === null) return;
@@ -319,13 +320,14 @@ export function storeScoreSnapshot(symbol, score) {
   } catch { /* noop */ }
 
   const now = Date.now();
-  // Prune entries older than 7 days
-  history = history.filter(e => now - e.ts < SEVEN_DAYS_MS);
+  // Prune entries older than 90 days (Score-Z window)
+  history = history.filter(e => now - e.ts < NINETY_DAYS_MS);
   // Don't add a duplicate within 1 hour of the last entry
   const last = history[history.length - 1];
   if (!last || now - last.ts > 3600000) {
     history.push({ score, ts: now });
   }
+  if (history.length > MAX_SNAPSHOTS) history = history.slice(-MAX_SNAPSHOTS);
 
   try {
     localStorage.setItem(key, JSON.stringify(history));
@@ -340,7 +342,7 @@ export function getScoreHistory(symbol, maxPoints = 7) {
     const history = JSON.parse(raw);
     const now = Date.now();
     return history
-      .filter(e => now - e.ts < SEVEN_DAYS_MS)
+      .filter(e => now - e.ts < NINETY_DAYS_MS)
       .slice(-maxPoints);
   } catch { return []; }
 }
@@ -438,9 +440,9 @@ export function computeSectorMomentum(history, todayDp) {
 
 // ─── SCORE Z-SCORE ────────────────────────────────────────────────────────────
 // Returns how many std-devs the current score sits above/below its recent mean.
-// That window is ~7 days, not 90: storeScoreSnapshot prunes to SEVEN_DAYS_MS and
-// getScoreHistory filters to it again, so the maxPoints argument below is only a
-// ceiling on an already-7-day series. Requires prior refreshes to have snapshotted.
+// Window is 90 days: storeScoreSnapshot prunes to NINETY_DAYS_MS (capped at
+// MAX_SNAPSHOTS entries) and getScoreHistory filters to the same window.
+// Requires prior refreshes to have snapshotted; null under 5 points.
 
 export function computeScoreZScore(symbol) {
   const history = getScoreHistory(symbol, 90);

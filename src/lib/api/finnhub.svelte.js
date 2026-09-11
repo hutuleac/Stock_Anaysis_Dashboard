@@ -120,7 +120,7 @@ export function evictStaleCache() {
 // Per-symbol cache key prefixes across Finnhub + TwelveData + score history.
 // Anything after the prefix that isn't one of these tickers is orphaned — left
 // over from a symbol that used to be in the watchlist or ETF proxy list and was
-// later removed. 'sv_' (score-velocity history) is included because its 7-day
+// later removed. 'sv_' (score-velocity history) is included because its 90-day
 // self-trim only runs on write, which stops the moment a ticker is removed —
 // leaving the entry to linger forever otherwise.
 const PRUNE_PREFIXES = [
