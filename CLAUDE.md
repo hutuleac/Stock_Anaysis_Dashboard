@@ -169,6 +169,8 @@ Leading-signal layer on **weekly** candles (adapted from the range-finder crypto
 
 Each returns `{ score, label, components[], readiness: WAIT/WATCH/SOON/ACT, etaWeeks }`. Entry point `computeSetupSignals(weeklyRaw)`; returns null if < 20 weekly bars. Wired into App.svelte on the existing weekly candle fetch (all three paths: TwelveData, Finnhub, cache-hydrate) — zero new API calls. Range position is computed from the weekly candles themselves, not Finnhub 52w metrics, keeping signals.js self-contained.
 
+**Momentum C2 structure ladder (v0.24):** `BREAKOUT 3.0 > RANGE_FORMING 2.0 > STABLE 1.5 > TREND_EXHAUSTION 0.5`. Exhaustion and range-forming previously shared one `else if (Bullish)` branch worth 2.0, which scored a topping trend above a clean one — they mean opposite things to a breakout setup, so they are scored separately. Don't re-merge them.
+
 **Inversions from the crypto source** (grid bots want chop; we want trends): high ADX/trend is positive for momentum, divergence is used long-only (bullish at lows), and everything runs on weekly not 4H. Crypto-only inputs (funding, OI, order-flow CVD) were dropped. Squeeze COMPRESSING is gated on bandwidth percentile (scale-agnostic across tickers), not an absolute bandwidth level.
 
 ## Setup Radar (radar.js)

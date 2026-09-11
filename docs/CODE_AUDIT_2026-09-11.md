@@ -123,12 +123,14 @@ while Finnhub returns the calendar sorted ascending. One-line hardening: take th
 
 ## B. Open questions — deliberately not shipped
 
-**Q1. Momentum setup scores exhaustion above a clean trend.**
-`signals.js` `scoreMomentumSetup` C2: `Bullish + STABLE → 1.5`, but the `else if
-(structure.current === 'Bullish')` fallthrough gives `TREND_EXHAUSTION` and
-`RANGE_FORMING` **2.0**. A breakout setup rewarding trend exhaustion more than an intact
-trend looks inverted, but "coiling before a breakout" is a defensible reading for
-RANGE_FORMING. This changes Momentum scores → Setup Radar readiness → not touched.
+**Q1. Momentum setup scored exhaustion above a clean trend. — RESOLVED, fix shipped.**
+`signals.js` `scoreMomentumSetup` C2 had `Bullish + STABLE → 1.5` while the `else if
+(structure.current === 'Bullish')` fallthrough gave both `TREND_EXHAUSTION` and
+`RANGE_FORMING` **2.0**. Peter's call: the two mean opposite things to a breakout setup,
+so they are now split — `BREAKOUT 3.0 > RANGE_FORMING 2.0 > STABLE 1.5 >
+TREND_EXHAUSTION 0.5`. A converging range is coiling energy; flattening swing highs are
+the move running out, which should read as a warning rather than a near-clean-trend
+score. Momentum scores and Setup Radar readiness move on the next refresh.
 
 **Q2. Score-Z retention.** Extending snapshot retention from 7 to 90 days would make
 `computeScoreZScore` mean what its name says, but every currently displayed Score-Z would

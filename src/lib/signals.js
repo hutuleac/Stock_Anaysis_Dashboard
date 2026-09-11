@@ -295,10 +295,17 @@ export function scoreMomentumSetup({ squeeze, structure, volume, emaReclaim }) {
     detail: `${squeeze.phase} bw ${squeeze.currentBw.toFixed(1)}%` });
 
   // C2: Structure bullish / breakout (max 3.0)
+  // RANGE_FORMING and TREND_EXHAUSTION used to share one `else if (Bullish)`
+  // branch worth 2.0, which scored a topping trend above a clean one (STABLE,
+  // 1.5). They mean opposite things to a breakout setup: a converging range is
+  // coiling energy, flattening swing highs are the move running out. Split.
   let s2 = 0;
   if (structure.signal === 'BREAKOUT') s2 = 3.0;
-  else if (structure.current === 'Bullish' && structure.signal === 'STABLE') s2 = 1.5;
-  else if (structure.current === 'Bullish') s2 = 2.0;
+  else if (structure.current === 'Bullish') {
+    if (structure.signal === 'RANGE_FORMING') s2 = 2.0;        // coiling before the break
+    else if (structure.signal === 'TREND_EXHAUSTION') s2 = 0.5; // topping — a warning, not a setup
+    else s2 = 1.5;                                              // STABLE uptrend
+  }
   components.push({ label: 'Structure Breakout', score: round1(s2), max: 3.0,
     detail: `${structure.current}/${structure.signal}` });
 

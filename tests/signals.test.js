@@ -269,6 +269,25 @@ describe('scoreMomentumSetup', () => {
     expect(scoreMomentumSetup(strong).components).toHaveLength(4);
   });
 
+  // Regression: TREND_EXHAUSTION and RANGE_FORMING used to share one branch
+  // worth 2.0, so a topping trend outscored a clean one.
+  it('ranks structure BREAKOUT > RANGE_FORMING > STABLE > TREND_EXHAUSTION', () => {
+    const base = {
+      squeeze: { phase: 'FLAT', percentile: 50, currentBw: 10, barsToSqueeze: 99 },
+      volume: { state: 'NEUTRAL', slopePct: 0, percentile: 50 },
+      emaReclaim: false,
+    };
+    const c2 = (signal) => scoreMomentumSetup({
+      ...base, structure: { current: 'Bullish', signal, confidence: 0.5 },
+    }).components.find(c => c.label === 'Structure Breakout').score;
+
+    expect(c2('BREAKOUT')).toBe(3.0);
+    expect(c2('RANGE_FORMING')).toBe(2.0);
+    expect(c2('STABLE')).toBe(1.5);
+    expect(c2('TREND_EXHAUSTION')).toBe(0.5);
+    expect(c2('TREND_EXHAUSTION')).toBeLessThan(c2('STABLE'));
+  });
+
   it('squeeze phase bumps readiness', () => {
     const r = scoreMomentumSetup(strong);
     expect(['WATCH', 'SOON', 'ACT']).toContain(r.readiness);
