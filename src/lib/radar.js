@@ -108,10 +108,13 @@ export function computeRadar(list) {
     });
   }
 
+  // ACCUMULATION rows are allowed a null rs3m, so the final tiebreak has to
+  // treat that as "weakest" rather than subtracting into NaN (undefined order).
+  const rsOrNegInf = (v) => (isFiniteNum(v) ? v : -Infinity);
   hits.sort((a, b) =>
     (READINESS_RANK[b.readiness] - READINESS_RANK[a.readiness]) ||
     (b.setupScore - a.setupScore) ||
-    (b.rs3m - a.rs3m)
+    (rsOrNegInf(b.rs3m) - rsOrNegInf(a.rs3m))
   );
   return hits;
 }

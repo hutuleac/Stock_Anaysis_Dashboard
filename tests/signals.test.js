@@ -76,6 +76,32 @@ describe('detectDivergence', () => {
     const r = detectDivergence(closes, highs, lows);
     expect(r.type).toBe('NONE');
   });
+
+  // Regression: RSI must be read at the pivot's absolute index in `closes`, not
+  // at its index inside the 30-bar lookback window. A pivot in the first 14 bars
+  // of that window has no 15-bar prefix inside it, so the windowed lookup returned
+  // null and the divergence was silently dropped.
+  it('detects a bullish divergence whose older pivot sits early in the lookback window', () => {
+    const closes = [
+      ...Array.from({ length: 200 }, () => 100),
+      100, 96, 92, 87, 82, 77, 73, 70,       // steep decline → low (window index 8)
+      74, 78, 81, 84, 86,                     // bounce
+      84, 82, 80, 78, 76, 74, 72, 70, 69,     // shallow decline → lower low, higher RSI
+      71, 74, 77, 80, 83, 86, 89,             // recovery confirms the pivot
+    ];
+    const highs = closes.map(c => c + 0.5);
+    const lows = closes.map(c => c - 0.5);
+
+    // Precondition: the older of the two swing lows really is at window index < 14.
+    const window = lows.slice(-30);
+    const pivots = findSwingPivots(window, 2, 'low');
+    expect(pivots.length).toBeGreaterThanOrEqual(2);
+    expect(pivots[pivots.length - 2].index).toBeLessThan(14);
+
+    const r = detectDivergence(closes, highs, lows);
+    expect(r.type).toBe('BULL');
+    expect(r.barsAgo).toBe(7);
+  });
 });
 
 // ── detectSqueeze ────────────────────────────────────────────────────────────
@@ -241,6 +267,25 @@ describe('scoreMomentumSetup', () => {
 
   it('returns 4 components', () => {
     expect(scoreMomentumSetup(strong).components).toHaveLength(4);
+  });
+
+  // Regression: TREND_EXHAUSTION and RANGE_FORMING used to share one branch
+  // worth 2.0, so a topping trend outscored a clean one.
+  it('ranks structure BREAKOUT > RANGE_FORMING > STABLE > TREND_EXHAUSTION', () => {
+    const base = {
+      squeeze: { phase: 'FLAT', percentile: 50, currentBw: 10, barsToSqueeze: 99 },
+      volume: { state: 'NEUTRAL', slopePct: 0, percentile: 50 },
+      emaReclaim: false,
+    };
+    const c2 = (signal) => scoreMomentumSetup({
+      ...base, structure: { current: 'Bullish', signal, confidence: 0.5 },
+    }).components.find(c => c.label === 'Structure Breakout').score;
+
+    expect(c2('BREAKOUT')).toBe(3.0);
+    expect(c2('RANGE_FORMING')).toBe(2.0);
+    expect(c2('STABLE')).toBe(1.5);
+    expect(c2('TREND_EXHAUSTION')).toBe(0.5);
+    expect(c2('TREND_EXHAUSTION')).toBeLessThan(c2('STABLE'));
   });
 
   it('squeeze phase bumps readiness', () => {

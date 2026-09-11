@@ -4,16 +4,19 @@
 // no API calls. Component sub-scores are already produced by computeTimingScore /
 // computeQualityScore; here we only label, cap, and colour them.
 
-// [componentKey, short label, max] — order = display order. Maxes match the
-// score engines (timingScore.js / qualityScore.js); keep them in sync if a
-// component's cap changes.
+// [componentKey, short label, max] — order = display order. Timing maxes are
+// imported from the engine itself so a cap change can't drift the UI; quality's
+// caps are inline Math.min() literals in qualityScore.js and are mirrored here
+// (tests/longTermIndicators.test.js asserts both sets still sum to 100).
+import { TIMING_MAX } from './timingScore.js';
+
 const TIMING = [
-  ['drawdown', 'Drawdown', 20],
-  ['oversold', 'Oversold', 20],
-  ['reversal', 'Reversal', 20],
-  ['consolidation', 'Base', 15],
-  ['volumeBehavior', 'Volume', 15],
-  ['marketContext', 'Market', 10],
+  ['drawdown', 'Drawdown', TIMING_MAX.drawdown],
+  ['oversold', 'Oversold', TIMING_MAX.oversold],
+  ['reversal', 'Reversal', TIMING_MAX.reversal],
+  ['consolidation', 'Base', TIMING_MAX.consolidation],
+  ['volumeBehavior', 'Volume', TIMING_MAX.volumeBehavior],
+  ['marketContext', 'Market', TIMING_MAX.marketContext],
 ];
 
 const QUALITY = [

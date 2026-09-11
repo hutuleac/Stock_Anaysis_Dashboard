@@ -17,6 +17,13 @@ export function getMarketContext() { return _marketContext; }
 const BULLISH_WORDS = ['beat', 'beats', 'raised', 'upgrade', 'upgraded', 'buy', 'strong', 'record', 'growth', 'profit', 'surge', 'rally', 'bullish', 'outperform', 'exceed', 'exceeded', 'positive', 'boost'];
 const BEARISH_WORDS = ['miss', 'misses', 'missed', 'cut', 'downgrade', 'downgraded', 'sell', 'weak', 'loss', 'decline', 'fall', 'drop', 'bearish', 'underperform', 'concern', 'warning', 'risk', 'negative', 'layoff', 'layoffs'];
 
+// Whole-word matchers, built once. Substring matching (the previous `includes`)
+// fired on the wrong words constantly: "executive" contains "cut", "Armstrong"
+// contains "strong", "brisk" contains "risk", "fallout" contains "fall".
+const wordRe = (w) => new RegExp(`\\b${w}\\b`);
+const BULLISH_RE = BULLISH_WORDS.map(wordRe);
+const BEARISH_RE = BEARISH_WORDS.map(wordRe);
+
 export function scoreNewsHeadlines(newsData) {
   const headlines = newsData?.data?.slice?.(0, 5) || [];
   if (!headlines.length) return null;
@@ -24,8 +31,8 @@ export function scoreNewsHeadlines(newsData) {
   let score = 0;
   for (const item of headlines) {
     const text = ((item.headline || '') + ' ' + (item.summary || '')).toLowerCase();
-    const bull = BULLISH_WORDS.filter(w => text.includes(w)).length;
-    const bear = BEARISH_WORDS.filter(w => text.includes(w)).length;
+    const bull = BULLISH_RE.filter(re => re.test(text)).length;
+    const bear = BEARISH_RE.filter(re => re.test(text)).length;
     score += (bull - bear);
   }
 
@@ -430,8 +437,10 @@ export function computeSectorMomentum(history, todayDp) {
 }
 
 // ─── SCORE Z-SCORE ────────────────────────────────────────────────────────────
-// Returns how many std-devs the current score sits above/below its 90-day mean.
-// Requires storeScoreSnapshot to have been called on prior refreshes.
+// Returns how many std-devs the current score sits above/below its recent mean.
+// That window is ~7 days, not 90: storeScoreSnapshot prunes to SEVEN_DAYS_MS and
+// getScoreHistory filters to it again, so the maxPoints argument below is only a
+// ceiling on an already-7-day series. Requires prior refreshes to have snapshotted.
 
 export function computeScoreZScore(symbol) {
   const history = getScoreHistory(symbol, 90);
@@ -565,10 +574,14 @@ export function getDaysToEarnings(earningsData) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Nearest upcoming date, not the first one listed — Finnhub's calendar order
+  // isn't contractually ascending, and a far-future entry first would silently
+  // push the earnings warning out by months.
+  let nearest = null;
   for (const e of earningsData.data.earningsCalendar) {
     const d = new Date(e.date);
     const diff = Math.ceil((d - today) / 86400000);
-    if (diff >= 0) return diff;
+    if (diff >= 0 && (nearest === null || diff < nearest)) nearest = diff;
   }
-  return null;
+  return nearest;
 }
