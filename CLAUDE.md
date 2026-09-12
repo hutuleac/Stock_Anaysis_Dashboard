@@ -351,4 +351,6 @@ Vitest is scoped to `tests/**` in vite.config.js — do not remove that `include
 
 ## What's next (BACKLOG.md)
 
+Open queue after the v0.24 round: **#7 Gemini inline analysis** (the only item needing a new outbound API), **#11 "distance to next tier"** on the 0–10 scores — including Dip Hunter's hidden ACT condition (score ≥7 *and* a non-zero Fear component) which currently reads as a bug — and **#12 "waiting on"** for Dip Hunter / Setup Radar / ETF, which reuses the `waitingOn()` ranking verbatim once it moves into the shared colour layer.
+
 Dip Hunter's scored-component list is intentionally frozen after the OBV addition — any further ideas (Stochastic cross, EMA stack, volume-confirmation) go into `BACKLOG.md` as risk-context candidates, not new score components, unless a future session decides otherwise. See `BACKLOG.md` for the full queue and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).

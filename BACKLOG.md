@@ -45,6 +45,22 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 ### ~~10. Gate ticker expansion panel to the active breakpoint~~ ✓ DONE (2026-09-10)
 - `WatchlistTable.svelte` now gates the mobile/desktop `expandedPanel` mount behind a `matchMedia('(max-width: 639px)')`-driven `isMobile` state instead of CSS-only `hidden`/`block` — only the active breakpoint mounts, no more duplicate `PriceChart`/`NewsPanel`.
 
+### 11. "Distance to next tier" on every 0–10 score
+Dip Hunter, Setup Radar and the ETF entry/exit scores all use the same tiers — **ACT ≥ 7 · SOON ≥ 5 · WATCH ≥ 3** — but a `6.2 SOON` never says it needs 7.0. Same gap the Long-Term card had before v0.24, and the same fix: one helper alongside `timingHint`/`qualityHint` in the shared colour layer, reused by all three panels. `scoreTone()` in `readiness.js` already owns those tiers, so the thresholds are in one place already.
+
+**Related, and the reason this is worth doing:** Dip Hunter's `ACT` has a *hidden second condition* — score ≥ 7 **and** a non-zero Fear component (`dip.js`, the v0.21 gate). A 7.5 that stays SOON currently reads as a bug. It should say "needs market fear", not leave the user to find that rule in the source.
+
+- Display-only, zero new API calls, zero new math — the tiers and components already exist.
+- Cost: **0 calls**.
+
+### 12. "Waiting on" for the other component-based panels
+`waitingOn()` / `qualityWaitingOn()` in `longTermIndicators.js` rank the components with the most points still on the table and render them as `Label +gap`. Dip Hunter (9 components), Setup Radar (4 per setup) and the ETF entry/exit scores (4 each) all carry `components[]` in the same `{label, score, max}` shape, so the ranking works on them verbatim — it needs to be lifted out of `longTermIndicators.js` into the shared layer and pointed at each panel's own component list.
+
+Highest value on **Dip Hunter**, where 9 components are too many to eyeball for "what's actually missing here".
+
+- Display-only, zero new API calls, zero new math — pure ranking of existing sub-scores.
+- Cost: **0 calls**.
+
 ---
 
 ## ~~Two-view architecture (the larger arc)~~ ✓ DONE (v0.24, 2026-09-12)
