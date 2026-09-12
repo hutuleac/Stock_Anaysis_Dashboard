@@ -9,8 +9,8 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.23-blue)
-![Tests](https://img.shields.io/badge/tests-458_passing-brightgreen?logo=vitest&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.24-blue)
+![Tests](https://img.shields.io/badge/tests-469_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -149,7 +149,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-458 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, and the tooltip action:
+469 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -219,6 +219,12 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.24 (2026-09-12) — two-view playbooks
+- **Trend Setup / Pullback Setup tabs** — the expanded row's indicator bar (~29 cards) now has an `All | Trend Setup | Pullback Setup` toggle that narrows the technical cards to the playbook being considered: Trend shows weekly trend, Momentum setup, RS vs SPY, ADX, ROC, AVWAP, OBV; Pullback shows RSI, Stochastic, BB position, oversold confluence, swing-low support, POC, the Pullback setup. Fundamentals (Mkt Cap, P/E, PEG, growth…) and the score context cards (T/F/S, Conviction, Score Z) stay visible in every tab. `All` is the default — nothing is hidden until a playbook is picked. Same tabs on mobile, inside the Indicators section. Zero new math, zero new API calls.
+
+### v0.23.1 (2026-09-12) — chart no longer hijacks page scroll
+- **Click-to-activate scroll-zoom** — wheel over the candlestick chart used to zoom it while trying to scroll the page. Wheel zoom is now off until the chart is clicked and releases when the pointer leaves (hint badge shown while inactive); on touch, a vertical drag scrolls the page instead of panning the chart. Drag-pan, pinch and double-click reset unchanged.
 
 ### v0.23 (2026-09-11) — AI export: mobile copy & share
 - **Manual-copy fallback** — "Copy for AI" now shows a selectable-text panel when the Clipboard API write silently fails (common in mobile in-app browsers like the Instagram/Facebook webview), so the prompt is never a dead end.

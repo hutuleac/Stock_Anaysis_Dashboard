@@ -47,14 +47,11 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 
 ---
 
-## Two-view architecture (the larger arc)
+## ~~Two-view architecture (the larger arc)~~ ✓ DONE (v0.24, 2026-09-12)
 
-Most queued signals slot into one of two setups. Target: a **detail-panel tab toggle** (preferred over widening the watchlist table, which must stay scannable):
+Shipped as an `All | Trend Setup | Pullback Setup` toggle inside `FundamentalsBar.svelte` — it filters the existing technical cards by a membership set (`VIEW_CARDS`), no new math and no new markup per card. Fundamentals and the score-context cards (`CORE`: T/F/S, Conviction, Score Z) are never filtered; `All` is the default. Same tabs on mobile. `tests/fundamentalsBarViews.test.js` asserts the markup keys and the membership sets stay in sync (a typo would silently hide a card).
 
-- **Trend Setup tab:** RS vs SPY · EMA stack · OBV trend · ROC 20/60 · 52w-high breakout proximity
-- **Pullback Setup tab:** BB+RSI confluence · volume dry-up · ATR stop / R:R · swing lows
-
-Several of these already ship as Fundamentals-Bar cells; this item is the *organizing UI* that groups them into the two named playbooks, not net-new math.
+ATR stop / R:R stayed in `EntryPanel` — it's its own section, not an indicator card.
 
 ### ✓ Dip Hunter card (v0.16, 2026-07)
 - Quality-gated dip-entry card (market fear + oversold + drawdown + smart money). Uses `/stock/recommendation` + `/stock/insider-sentiment` (free, 7d cache, +2 calls/ticker/week). See `docs/superpowers/specs/2026-07-02-dip-hunter-design.md`.
