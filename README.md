@@ -10,7 +10,7 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
 ![Version](https://img.shields.io/badge/version-0.24-blue)
-![Tests](https://img.shields.io/badge/tests-489_passing-brightgreen?logo=vitest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-499_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -149,7 +149,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-489 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, `src/lib/readiness.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
+499 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, `src/lib/readiness.js`, `src/lib/demoData.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -221,6 +221,7 @@ npm run test:watch  # watch mode (dev)
 ## Changelog
 
 ### v0.24 (2026-09-12) — two-view playbooks + dashboard-wide colour ramp
+- **Demo mode shows the whole dashboard** — without API keys, Setup Radar, Dip Hunter, Long-Term Setup and the ETF table were all empty, because they need price history rather than summary fields. Demo mode now generates deterministic synthetic candle series per ticker and ETF proxy and runs them through the real engines, so every panel shows a plausible reading and both Setup Radar buckets, the dip scan and the ETF entry/exit table populate.
 - **A strong SELL no longer looks green** — the ETF table rendered `SELL ACT` and a high Exit score through the same green as a buy signal, so the colour said "good" when the signal said "get out". Sell signals now have their own red/orange ramp, and the Exit score's ramp is inverted.
 - **One readiness ramp** — ACT / SOON / WATCH / WAIT colours were duplicated in four components and had drifted: SOON rendered purple in one place and amber in another, WATCH grey in two panels and near-white in a third. All four now read from one palette (`tone.js` + `readiness.js`), so a colour means the same thing wherever you see it. Same for the class-vs-hex mismatches inside the indicator bar (RSI, ADX, Stochastic, Conviction, Volume).
 - **Long-Term Setup reads at a glance** — one colour ramp across the status badge, the Timing/Quality totals, all 11 chips and the verdict: green = working for you, amber = partly there, orange = caution, slate = not yet (what you're waiting on), grey = no data. ACCUMULATE, WATCHLIST and CHECK QUALITY now have three distinct colours instead of sharing one.
