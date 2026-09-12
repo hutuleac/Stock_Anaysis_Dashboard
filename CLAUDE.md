@@ -319,7 +319,7 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 469 unit tests, ~1s
+npm test          # 480 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
