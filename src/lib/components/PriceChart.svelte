@@ -525,6 +525,17 @@
     loading = false;
   }
 
+  // ─── Wheel-zoom activation ──────────────────────────────────────────────────
+  // Wheel over the chart used to zoom it instead of scrolling the page. Wheel zoom
+  // is off until the chart is clicked, and released again when the pointer leaves.
+  let wheelActive = $state(false);
+
+  function setWheel(on) {
+    if (wheelActive === on) return;
+    wheelActive = on;
+    chart?.applyOptions({ handleScroll: { mouseWheel: on }, handleScale: { mouseWheel: on } });
+  }
+
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
   onMount(() => {
@@ -536,8 +547,8 @@
         crosshair: { vertLine: { color: '#3b4a6b', width: 1, style: 3 }, horzLine: { color: '#3b4a6b', width: 1, style: 3 } },
         rightPriceScale: { borderColor: CHART_COLORS.border },
         timeScale: { borderColor: CHART_COLORS.border, timeVisible: false },
-        handleScroll: true,
-        handleScale: true,
+        handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+        handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
       });
 
       ma50Series  = chart.addSeries(LineSeries, { color: '#f59e0b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
@@ -719,8 +730,19 @@
   {/if}
 
   <!-- Chart area -->
-  <div class="relative" style="height: {chartHeight}px;">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="relative" style="height: {chartHeight}px;"
+    onpointerdown={() => setWheel(true)}
+    onpointerleave={() => setWheel(false)}
+  >
     <div bind:this={container} style="width:100%;height:{chartHeight}px;"></div>
+
+    {#if !wheelActive && !loading && !error}
+      <div class="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-surface-900/80 border border-border text-[12px] text-text-muted pointer-events-none hidden sm:block">
+        click chart to enable scroll-zoom
+      </div>
+    {/if}
 
     <!-- Volume profile SVG (right-anchored horizontal bars — constrained to main pane) -->
     {#if showVolumeProfile && vpBars.length}
