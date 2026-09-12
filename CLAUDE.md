@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.23
+# Project State — Stock Analysis Dashboard v0.24
 
 ## What this is
 
@@ -242,6 +242,17 @@ Display-only, zero new API calls, zero logic changes.
 - **Setup Radar RS spans self-label:** `RS rank #3/12` and `3M vs SPY +4.2%` — the bare `+4.2%` gave no clue what it was relative to.
 - **Long-Term scan panel rows rewritten** (`LongTermScanPanel.svelte`): the plain-English `setup.reasons[0]` verdict is now displayed (it was already produced by `buildLongTermSetup` and thrown away), totals read `Timing 34/100` / `Quality 62/100`, a missing quality reads **"Quality — expand ticker to load"** so a lazy-loaded score is distinguishable from a bad one, and the timing chips show `Label n/max` and wrap instead of scrolling sideways. Quality stays lazy — do not eager-fetch it here.
 - **Mobile (≤ sm):** Setup Radar and Dip Hunter rows use `flex-wrap` with the fixed column widths gated behind `sm:` (`sm:w-16 shrink-0`), so they wrap on a phone and keep desktop column alignment. `MarketContextBar` sub-lines are `sm:truncate` — they wrap at ~180px tile width instead of ellipsing mid-sentence. Verified by rendering at 402x874 (iPhone 17): page `scrollWidth === clientWidth`, no horizontal overflow.
+
+## Two-view playbooks (v0.24 — FundamentalsBar.svelte)
+
+The expanded row's indicator bar carries ~29 cards. An `All | Trend Setup | Pullback Setup` toggle filters the **technical** cards down to the playbook being considered — display-only, zero new math, zero new API calls.
+
+- Membership is two string sets in the component: `VIEW_CARDS.trend` / `VIEW_CARDS.pullback`, plus `CORE` (T/F/S, Conviction, Score Z) which is shown in every tab because it's score context, not setup-specific. Cards in both playbooks (MACD, OBV, Volume, 52W Range) are simply listed in both sets.
+- Each card block is wrapped in `{#if show('<key>')}`; the key is the card's identity. **`tests/fundamentalsBarViews.test.js` parses the source** and asserts every rendered key is declared and every declared key is rendered — a typo would otherwise hide a card from a tab forever with no error.
+- Fundamentals (`{#each metrics}`) live in their own grid above the toggle and are never filtered — quality context applies to both playbooks.
+- `view` defaults to `'all'`, so the panel looks exactly as it did before a tab is picked. Mobile gets the same toggle for free (same component, rendered inside the collapsible Indicators section).
+- The weekly-setups block was split into two `{#if setups}` blocks so the Pullback and Momentum cards can be tagged separately.
+- ATR stop / R:R stayed in `EntryPanel` — deliberately not pulled into the Pullback tab; it's its own section.
 
 ## AI export (export.js)
 

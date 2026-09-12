@@ -220,6 +220,12 @@ npm run test:watch  # watch mode (dev)
 
 ## Changelog
 
+### v0.24 (2026-09-12) — two-view playbooks
+- **Trend Setup / Pullback Setup tabs** — the expanded row's indicator bar (~29 cards) now has an `All | Trend Setup | Pullback Setup` toggle that narrows the technical cards to the playbook being considered: Trend shows weekly trend, Momentum setup, RS vs SPY, ADX, ROC, AVWAP, OBV; Pullback shows RSI, Stochastic, BB position, oversold confluence, swing-low support, POC, the Pullback setup. Fundamentals (Mkt Cap, P/E, PEG, growth…) and the score context cards (T/F/S, Conviction, Score Z) stay visible in every tab. `All` is the default — nothing is hidden until a playbook is picked. Same tabs on mobile, inside the Indicators section. Zero new math, zero new API calls.
+
+### v0.23.1 (2026-09-12) — chart no longer hijacks page scroll
+- **Click-to-activate scroll-zoom** — wheel over the candlestick chart used to zoom it while trying to scroll the page. Wheel zoom is now off until the chart is clicked and releases when the pointer leaves (hint badge shown while inactive); on touch, a vertical drag scrolls the page instead of panning the chart. Drag-pan, pinch and double-click reset unchanged.
+
 ### v0.23 (2026-09-11) — AI export: mobile copy & share
 - **Manual-copy fallback** — "Copy for AI" now shows a selectable-text panel when the Clipboard API write silently fails (common in mobile in-app browsers like the Instagram/Facebook webview), so the prompt is never a dead end.
 - **Share sheet button** — a 📤 button (shown only where `navigator.share` is supported) drops the prompt straight into the phone's native share sheet — Messages, Notes, an AI app — skipping the clipboard entirely.
