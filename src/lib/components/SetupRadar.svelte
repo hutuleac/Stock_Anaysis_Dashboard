@@ -1,4 +1,6 @@
 <script>
+  import { readinessColor, readinessStyle } from '../readiness.js';
+  import { toneColor } from '../tone.js';
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { computeRadar } from '../radar.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
@@ -13,21 +15,11 @@
   const accumulation = $derived(hits.filter(h => h.category === 'ACCUMULATION'));
   const breakout = $derived(hits.filter(h => h.category === 'BREAKOUT'));
 
-  function readinessColor(r) {
-    if (r === 'ACT')  return 'bg-bull-strong/20 text-bull-strong';
-    if (r === 'SOON') return 'bg-uncertain/20 text-uncertain';
-    return 'bg-surface-600 text-text-secondary'; // WATCH
-  }
-  function readinessCssColor(r) {
-    if (r === 'ACT')  return '#22c55e';
-    if (r === 'SOON') return '#f59e0b';
-    return '#6b7280';
-  }
   const fmtPct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
   const fmtRs = (v) => (v == null ? '—' : fmtPct(v)); // laggards in Accumulation may have null/negative RS
   const rsCssColor = (v) => (v == null ? '#6b7280' : v > 5 ? '#22c55e' : v > 0 ? '#86efac' : '#ef4444');
   const fmtPeg = (v) => (v === null ? '—' : `${v.toFixed(2)}x`);
-  const scoreColor = (s) => s >= 7 ? '#22c55e' : s >= 4.5 ? '#f59e0b' : '#6b7280';
+  const scoreColor = (s) => toneColor(s >= 7 ? 'good' : s >= 4.5 ? 'partial' : 'waiting');
 </script>
 
 {#if getTickers().length}
@@ -66,10 +58,10 @@
 
                 <!-- Readiness -->
                 <span
-                  class="text-[12px] px-1.5 py-0.5 rounded {readinessColor(h.readiness)} sm:w-14 shrink-0 text-center cursor-default"
+                  class="text-[12px] px-1.5 py-0.5 rounded sm:w-14 shrink-0 text-center cursor-default" style={readinessStyle(h.readiness)}
                   use:tipAction={() => ({
                     ...TIPS.radarReadiness,
-                    current: { value: h.readiness, label: h.etaWeeks != null ? `~${h.etaWeeks}w to full setup` : '', color: readinessCssColor(h.readiness) },
+                    current: { value: h.readiness, label: h.etaWeeks != null ? `~${h.etaWeeks}w to full setup` : '', color: readinessColor(h.readiness) },
                   })}
                 >{h.readiness}</span>
 

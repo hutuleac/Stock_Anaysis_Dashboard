@@ -1,7 +1,8 @@
 <script>
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
-  import { timingChips, chipStyle, statusStyle, timingTone, qualityTone, toneColor, timingHint } from '../longTermIndicators.js';
+  import { timingChips, chipStyle, statusStyle, timingTone, qualityTone, timingHint } from '../longTermIndicators.js';
+  import { toneColor } from '../tone.js';
 
   let { marketContextData = null } = $props();
   let collapsed = $state(false);
