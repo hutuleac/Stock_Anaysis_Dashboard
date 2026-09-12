@@ -9,8 +9,8 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.23-blue)
-![Tests](https://img.shields.io/badge/tests-458_passing-brightgreen?logo=vitest&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.24-blue)
+![Tests](https://img.shields.io/badge/tests-469_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -149,7 +149,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-458 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, and the tooltip action:
+469 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
 
 | Suite | What's tested |
 |-------|---------------|

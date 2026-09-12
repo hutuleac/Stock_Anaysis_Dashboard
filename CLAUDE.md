@@ -138,7 +138,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     notes.svelte.js / tooltip.svelte.js
-tests/                — 20 files, 449 tests (~1s). One test file per lib module, same basename.
+tests/                — 21 files, 469 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -308,7 +308,7 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 449 unit tests, ~1s
+npm test          # 469 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
