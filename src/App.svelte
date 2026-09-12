@@ -10,7 +10,7 @@
   import { computeChartAnchors } from './lib/chartAnchors.js';
   import { tdValuesToCandles } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
-  import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT } from './lib/demoData.js';
+  import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT, DEMO_CANDLES, DEMO_QUALITY, DEMO_REVENUE_HISTORY } from './lib/demoData.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext, getMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
@@ -489,6 +489,48 @@
     };
   }
 
+  // Demo mode runs the synthetic candle series in demoData.js through the same
+  // engines as live data — setups, weekly trend, timing score and RS are computed,
+  // not faked, so every panel shows a real (if fictional) reading instead of an
+  // empty state. Quality and revenue history are the exception: they normally come
+  // from a lazy financials-reported fetch, so the computed results are fixtures.
+  function buildDemoMarketData() {
+    const spyCloses = DEMO_CANDLES.SPY.c;
+    const out = {};
+    for (const { symbol } of DEMO_TICKERS) {
+      const daily = DEMO_CANDLES[symbol];
+      const weekly = daily ? resampleWeekly(daily) : null;
+      const d = { ...DEMO_MARKET_DATA[symbol] };
+      if (daily) {
+        d._candles = daily;
+        const anchors = computeChartAnchors(daily);
+        if (anchors) d.anchors = anchors;
+        const rs = computeRelativeStrength(daily.c, spyCloses);
+        if (rs.rs1m !== null || rs.rs3m !== null) d.rs = rs;
+      }
+      if (weekly) {
+        d._candlesWeekly = weekly;
+        const wt = computeWeeklyTrend(weekly);   if (wt) d.weekly = wt;
+        const st = computeSetupSignals(weekly);  if (st) d.setups = st;
+      }
+      d.timingScore = computeTimingScore({
+        dailyCandles: daily, weeklyCandles: weekly, marketContext: timingMarketContext(d.sectorMomentum),
+      });
+      if (DEMO_QUALITY[symbol]) d.qualityScore = DEMO_QUALITY[symbol];
+      if (DEMO_REVENUE_HISTORY[symbol]) d.revenueHistory = DEMO_REVENUE_HISTORY[symbol];
+      out[symbol] = d;
+    }
+    return out;
+  }
+
+  function hydrateDemoEtfs() {
+    setEtfSpyCloses(DEMO_CANDLES.SPY.c);
+    for (const proxy of getUniqueProxies()) {
+      const daily = DEMO_CANDLES[proxy];
+      if (daily) setEtfProxyData(proxy, { weeklyRaw: resampleWeekly(daily), dailyCloses: daily.c });
+    }
+  }
+
   // On startup: merge Finnhub cache + supplement into one object, then set once.
   // Calling setMarketData twice causes the second call to replace (not merge)
   // per-ticker objects, losing fields from the first call.
@@ -496,9 +538,10 @@
     // No API key — show demo dashboard instead of blank screen
     if (!getApiKey()) {
       loadDemoTickers(DEMO_TICKERS);
-      setMarketData(DEMO_MARKET_DATA);
       marketContextData = DEMO_MARKET_CONTEXT;
       setMarketContext({ vixPrice: 22.4, spyDowntrend: true, fearGreedValue: 38 });
+      setMarketData(buildDemoMarketData());
+      hydrateDemoEtfs();
       isDemoMode = true;
       return;
     }

@@ -111,7 +111,7 @@ src/lib/
   qualityScore.js     — Quality Score (0–100) from Finnhub metrics + financials-reported + earnings history
   longTermSetup.js    — buildLongTermSetup: timing×quality gate matrix → ACCUMULATE/WATCHLIST/…; F&G<30 panic boost
   macro.js            — FRED parsing + macro regime derivation (pure)
-  demoData.js         — no-API-key demo dashboard fixtures
+  demoData.js         — no-API-key demo fixtures: seeded synthetic OHLCV per ticker + ETF proxy, run through the real engines
   tone.js             — the one colour palette (good/partial/caution/danger/waiting/none)
   readiness.js        — ACT/SOON/WATCH/WAIT + direction-aware BUY/SELL tones on top of tone.js
   tooltipDefs.js      — TIPS.* rich tooltip definitions
@@ -140,7 +140,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     notes.svelte.js / tooltip.svelte.js
-tests/                — 22 files, 489 tests (~1s). One test file per lib module, same basename.
+tests/                — 23 files, 499 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -290,6 +290,17 @@ The expanded row's indicator bar carries ~29 cards. An `All | Trend Setup | Pull
 - **v0.23 mobile copy/share:** when both clipboard paths fail (silently, in mobile in-app browsers like the Instagram/Facebook webview), a `copyFallback` state opens a modal with the prompt in a `<textarea>` the user can tap-to-select and copy manually. A 📤 share button (feature-detected on `navigator.share`, shown next to Copy for AI in both toolbars) sends the prompt through the native share sheet instead — more reliable than clipboard on mobile and drops it straight into Messages/Notes/an AI app. All 4 templates now end with a "keep it skimmable, I'm often on my phone" instruction.
 - Phase 2 (parked, not built): optional Gemini free-tier API key in Settings + an "Analyze" button that sends the same merged prompt and renders the response inline. See `BACKLOG.md`.
 
+## Demo mode (demoData.js)
+
+Shown when no API key is set. It used to be static quote/metric literals only, which left Setup Radar, Dip Hunter, Long-Term Setup and the whole ETF table empty — about a third of the dashboard — because those panels need candle series, not summary fields.
+
+- **`DEMO_CANDLES`** generates ~260 daily bars per demo ticker and per ETF proxy from a seeded mulberry32 PRNG (deterministic: same series every load, so screenshots and `tests/demoData.test.js` are stable). `App.svelte`'s demo branch runs them through the **real** engines — `resampleWeekly` → `computeSetupSignals` / `computeWeeklyTrend` / `computeTimingScore` / `computeRelativeStrength` / `computeChartAnchors` — so demo mode exercises production code paths rather than faked outputs.
+- **`SHAPES`** bends the per-bar drift (uptrend / pullback / dip / downtrend / range) so the panels show *different* states side by side. **`TAILS`** then overwrites the last 120 bars of two shapes with a scripted pattern: `dip` ends in a lower low on drying volume (bullish divergence + dry-up → Pullback setup), `uptrend` ends in a tight range that breaks out on expanding volume (squeeze + structure → Momentum setup). A plain random walk produces neither, and every ticker reads `WAIT 0.0`.
+- **`end` rescales the finished series** so the last close lands on the price in `DEMO_MARKET_DATA` — otherwise the chart disagrees with the quote above it, and an uptrend shape walks a proxy to 3× its starting price.
+- **SPY carries `noTail: true`.** It is the RS benchmark; giving it the same breakout tail as the uptrend names cancels every ticker's relative strength to ~0 and the leaders gates then filter the whole watchlist out.
+- `DEMO_QUALITY` / `DEMO_REVENUE_HISTORY` are the exception — they'd normally come from the lazy financials-reported fetch, so the *computed* results are hardcoded rather than a fake XBRL payload.
+- Timing tops out around 44 (WEAK) on the dip name, so demo never reaches ACCUMULATE. Deliberate stopping point: pushing further is tuning a synthetic market, not building the product.
+
 ## Known conventions / gotchas
 
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
@@ -332,7 +343,7 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 489 unit tests, ~1s
+npm test          # 499 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
