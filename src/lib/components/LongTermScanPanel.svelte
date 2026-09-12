@@ -1,7 +1,7 @@
 <script>
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
-  import { timingChips, chipColor } from '../longTermIndicators.js';
+  import { timingChips, chipStyle, statusStyle, timingTone, qualityTone, toneColor, timingHint } from '../longTermIndicators.js';
 
   let { marketContextData = null } = $props();
   let collapsed = $state(false);
@@ -24,13 +24,6 @@
 
   const primaryRows = $derived(rows.filter(r => r.setup.status === 'ACCUMULATE' || r.setup.status === 'OVERSOLD_BUT_CAUTION'));
   let showAll = $state(false);
-
-  function statusStyle(status) {
-    if (status === 'ACCUMULATE') return 'bg-bull-strong/20 text-bull-strong';
-    if (status === 'OVERSOLD_BUT_CAUTION') return 'bg-uncertain/20 text-uncertain';
-    if (status === 'WATCHLIST') return 'bg-uncertain/20 text-uncertain';
-    return 'bg-surface-600 text-text-secondary'; // NEUTRAL / WAIT / INSUFFICIENT_DATA
-  }
 
   function statusLabel(status) {
     if (status === 'OVERSOLD_BUT_CAUTION') return 'CHECK QUALITY';
@@ -68,17 +61,20 @@
                 <!-- Line 1: ticker + status + the two totals -->
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-sm font-mono font-semibold text-text-primary">{row.symbol}</span>
-                  <span class="text-[13px] px-1.5 py-0.5 rounded font-semibold {statusStyle(row.setup.status)}">{statusLabel(row.setup.status)}</span>
-                  <span class="text-[13px] font-mono" style="color:{chipColor(row.setup.timingScore?.total, 100)}">
+                  <span class="text-[13px] px-1.5 py-0.5 rounded font-semibold" style={statusStyle(row.setup.status)}>{statusLabel(row.setup.status)}</span>
+                  <span class="text-[13px] font-mono" style="color:{toneColor(timingTone(row.setup.timingScore?.total ?? null))}">
                     Timing {row.setup.timingScore?.total ?? '–'}/100
                   </span>
-                  <span class="text-[13px] font-mono text-text-muted">
+                  <span class="text-[13px] font-mono" style="color:{row.setup.qualityScore?.total == null ? '#6b7280' : toneColor(qualityTone(row.setup.qualityScore.total))}">
                     {#if row.setup.qualityScore?.total != null}
                       Quality {row.setup.qualityScore.total}/100
                     {:else}
                       Quality — expand ticker to load
                     {/if}
                   </span>
+                  {#if timingHint(row.setup.timingScore?.total ?? null)}
+                    <span class="text-[12px] text-text-muted">{timingHint(row.setup.timingScore.total)}</span>
+                  {/if}
                 </div>
 
                 <!-- Line 2: plain-English verdict, straight from buildLongTermSetup -->
@@ -90,8 +86,8 @@
                 {#if row.setup.timingScore?.components}
                   <div class="flex flex-wrap gap-1">
                     {#each timingChips(row.setup.timingScore.components) as c}
-                      <span class="text-[12px] px-1.5 py-0.5 rounded bg-surface-600 font-mono"
-                        style="color:{chipColor(c.score, c.max)}"
+                      <span class="text-[12px] px-1.5 py-0.5 rounded font-mono"
+                        style={chipStyle(c.score, c.max)}
                         title={c.score == null ? `${c.label}: no data` : `${c.label}: ${c.score} of ${c.max}`}
                       >{c.label} {c.score ?? '–'}/{c.max}</span>
                     {/each}

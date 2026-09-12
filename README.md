@@ -10,7 +10,7 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
 ![Version](https://img.shields.io/badge/version-0.24-blue)
-![Tests](https://img.shields.io/badge/tests-469_passing-brightgreen?logo=vitest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-480_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -149,7 +149,7 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode (dev)
 ```
 
-469 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
+480 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
 
 | Suite | What's tested |
 |-------|---------------|
@@ -220,7 +220,11 @@ npm run test:watch  # watch mode (dev)
 
 ## Changelog
 
-### v0.24 (2026-09-12) — two-view playbooks
+### v0.24 (2026-09-12) — two-view playbooks + Long-Term Setup colour coding
+- **Long-Term Setup reads at a glance** — one colour ramp across the status badge, the Timing/Quality totals, all 11 chips and the verdict: green = working for you, amber = partly there, orange = caution, slate = not yet (what you're waiting on), grey = no data. ACCUMULATE, WATCHLIST and CHECK QUALITY now have three distinct colours instead of sharing one.
+- **"X pts to the next band"** — a bare `Timing: 42` now reads `42 (WEAK) · 8 pts to watchlist timing (50+)`, so the gap to a better entry is explicit.
+- **"Waiting on"** — the components with the most points still on the table, shown as `Oversold +18 · Drawdown +16`. When the quality total is below the ≥60 gate it names the quality components instead, since that's what's actually blocking. Hidden on ACCUMULATE.
+- A five-dot legend at the bottom of the card explains the ramp.
 - **Trend Setup / Pullback Setup tabs** — the expanded row's indicator bar (~29 cards) now has an `All | Trend Setup | Pullback Setup` toggle that narrows the technical cards to the playbook being considered: Trend shows weekly trend, Momentum setup, RS vs SPY, ADX, ROC, AVWAP, OBV; Pullback shows RSI, Stochastic, BB position, oversold confluence, swing-low support, POC, the Pullback setup. Fundamentals (Mkt Cap, P/E, PEG, growth…) and the score context cards (T/F/S, Conviction, Score Z) stay visible in every tab. `All` is the default — nothing is hidden until a playbook is picked. Same tabs on mobile, inside the Indicators section. Zero new math, zero new API calls.
 
 ### v0.23.1 (2026-09-12) — chart no longer hijacks page scroll
