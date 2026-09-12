@@ -112,6 +112,7 @@ src/lib/
   longTermSetup.js    — buildLongTermSetup: timing×quality gate matrix → ACCUMULATE/WATCHLIST/…; F&G<30 panic boost
   macro.js            — FRED parsing + macro regime derivation (pure)
   demoData.js         — no-API-key demo fixtures: seeded synthetic OHLCV per ticker + ETF proxy, run through the real engines
+  longTermIndicators.js — timing/quality chips, band hints, waiting-on ranking (pure formatting)
   tone.js             — the one colour palette (good/partial/caution/danger/waiting/none)
   readiness.js        — ACT/SOON/WATCH/WAIT + direction-aware BUY/SELL tones on top of tone.js
   tooltipDefs.js      — TIPS.* rich tooltip definitions
@@ -139,7 +140,7 @@ src/lib/
     portfolio.svelte.js     — trade log, FIFO P&L
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
-    notes.svelte.js / tooltip.svelte.js
+    tooltip.svelte.js
 tests/                — 23 files, 499 tests (~1s). One test file per lib module, same basename.
 ```
 
@@ -218,11 +219,13 @@ Entry point `computeEtfSignals(list, spyCloses)` — per proxy `{ price, rs, gro
 
 Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, localStorage key `etfList`, user-editable (add needs UCITS ticker + US proxy). Proxy candles fetched in `handleRefresh` per unique proxy (SPY/QQQ usually cache hits) and hydrated on startup from `td_ts_1day_<proxy>_1day_250`.
 
-**v0.17 additions (all display-only, zero new API calls):** per-proxy `indicators { trendState, wRsi, rangePos52w, roc13w }` + `generateEtfThesis()` in `etf.js` (expanded row); `meta.wRsi` on `computeSetupSignals` shown in Setup Radar; `highlights.js` (`computeHighlights` ACT/SOON digest + `computeNotifications` diff, localStorage `notifySeen`, opt-in toggle `notifyEnabled` in Settings) rendered by `HighlightsStrip.svelte`; curated ~55-fund UCITS catalog with client-side search in `etfCatalog.js` (search bar in the ETF add panel); tooltip overlay clamps to viewport using measured height and closes on scroll.
+Each proxy also carries display-only `indicators { trendState, wRsi, rangePos52w, roc13w }` feeding `generateEtfThesis()` in the expanded row. The add panel searches a curated ~55-fund UCITS catalog (`etfCatalog.js`). `highlights.js` turns the ACT/SOON rows from here and from the stock setups into the cross-view "Today" digest (`computeHighlights`) plus a notification diff (`computeNotifications`, localStorage `notifySeen`, opt-in `notifyEnabled` in Settings), rendered by `HighlightsStrip.svelte`.
 
-**v0.21 additions:** `XDEW` (Xtrackers S&P 500 Equal Weight, Ireland-domiciled Acc, proxy RSP — the RSP-equivalent European traders were missing) added to `HARDCODED_ETFS` in `etflist.svelte.js`; existing users need to re-add it manually via the catalog search (their `localStorage['etfList']` predates the change and isn't migrated). Each of the 8 Entry/Exit score components in the expanded row (Oversold, Rotation, Turn, Drawdown, Overbought, Extension, Rotation Loss, Climax Vol) plus the Entry/Exit section headers got a `tipAction` hover tooltip (`TIPS.etf*Comp` in `tooltipDefs.js`, mapped via `EtfDashboard.svelte`'s `COMPONENT_TIPS` const) — same "what it measures / exact point thresholds / why it matters" pattern as the Long-Term Setup chips.
+**`HARDCODED_ETFS` additions are not migrated into existing installs** — `localStorage['etfList']` is written once and never reconciled, so a user from before the change (e.g. `XDEW`, added Aug 2026) has to re-add the fund via catalog search. Keep that in mind before assuming a catalog entry is visible to everyone.
 
-## Long-Term Dip Buying framework (v0.20 — timingScore.js / qualityScore.js / longTermSetup.js)
+All 8 Entry/Exit components and both section headers have `tipAction` tooltips (`TIPS.etf*Comp`, mapped via `EtfDashboard.svelte`'s `COMPONENT_TIPS`) — the same "what it measures / exact thresholds / why it matters" pattern as the Long-Term chips.
+
+## Long-Term Dip Buying framework (timingScore.js / qualityScore.js / longTermSetup.js)
 
 Three-slice framework for long-horizon accumulation, all display-only:
 
@@ -230,22 +233,19 @@ Three-slice framework for long-horizon accumulation, all display-only:
 - **Quality Score** `computeQualityScore({ metric, marketCap, financials, earnings })` → 0–100 across profitability 30 / cashFlow 25 / balanceSheet 25 / shareholderReturn 10 / earningsQuality 10. Label INSUFFICIENT_DATA under 3 non-null components. Fetched **lazily on row expand** (`loadQualityScoreForTicker`, 2 extra cached Finnhub calls: financials-reported 7d + earnings 24h) — never on batch refresh. `parseFinancials` extracts FCF/buyback/diluted shares from the raw financials-reported payload by concept substring.
 - **Revenue history (v0.21):** `parseRevenueHistory(reported, years=5)` in `qualityScore.js` reuses the exact same financials-reported payload as `parseFinancials` (zero new API calls) to extract annual revenue + YoY growth per fiscal year, oldest→newest. Revenue concept tag varies by filer/era, tried in priority order (`REVENUE_CONCEPTS`: ASC 606 tags → `salesrevenuenet` → generic `revenues`) via the same `findConcept` substring-match helper. Stored as `data.revenueHistory` alongside `qualityScore` in `loadQualityScoreForTicker` (App.svelte). Rendered as a 5-bar mini chart (green/red by YoY sign, hover tooltip per bar) in the WatchlistTable Long-Term Setup card, right after the Quality chips — answers "is growth accelerating or decelerating", which the single YoY number in FundamentalsBar's `revenueGrowthTTMYoy` chip can't show on its own. Not surfaced in `LongTermScanPanel` (quality data stays lazy there too).
 - **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed, creditStress })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
-- **Indicator breakdown (v0.21):** `longTermIndicators.js` (`timingChips`/`qualityChips`/`chipColor`) maps the timing & quality component sub-scores into labeled fill-coloured chips — pure formatting, zero new compute. Expanded card shows both chip rows + the concrete timing `signals[]` (Daily/Weekly/Monthly RSI, drawdown %, consolidation days, capitulation/breakout) and `warnings[]`; scan-panel rows show T/Q totals + timing chips (quality stays lazy). Null component (missing input) reads muted grey, distinct from a real 0. Timing chip maxes are imported from `TIMING_MAX`; the quality ones are still mirrored literals — `tests/longTermIndicators.test.js` asserts both sets sum to 100.
+- **Indicator breakdown:** `longTermIndicators.js` (`timingChips` / `qualityChips`) maps the component sub-scores into labelled chips — pure formatting, zero new compute; colours come from the shared ramp (see Colour system). The expanded card shows both chip rows plus the concrete timing `signals[]` and `warnings[]`; scan-panel rows show T/Q totals + timing chips (quality stays lazy). Timing chip maxes are imported from `TIMING_MAX`; the quality ones are mirrored literals — `tests/longTermIndicators.test.js` asserts both sets sum to 100.
 - **HY credit-stress gate (FRED `BAMLH0A0HYM2`):** `deriveMacroRegime` adds `creditStress` — STRESS when HY spread > 5% or Δ ≥ +0.5pp over ~20 sessions, ELEVATED 4–5%, CALM below. STRESS demotes ACCUMULATE → OVERSOLD_BUT_CAUTION and overrides the panic boost (systemic risk, not a dip); ELEVATED appends a staged-entries reason. This is the **only macro input that changes classification** — everything else in the Macro tile is context-only. Deliberately rejected as redundant/YAGNI (Jul 2026): T10Y3M, DFF, ICSA, Alpha Vantage fallback, CBOE vol indices, direct SEC EDGAR (Finnhub financials-reported *is* EDGAR data).
-- **v0.21 UI consolidation (Aug 2026):** the Long-Term Setup card and the `ThesisSummary`/Trade-Window/ATR block (previously split — the latter three lived inside `EntryPanel`'s right column) are now one visual card in `WatchlistTable.svelte`'s `expandedPanel` snippet, with larger text (`text-xs`/`text-sm` in place of `text-[10px]`/`text-[11px]`) for readability on large screens. `EntryPanel.svelte` lost its two-column grid (R:R to Target moved to the bottom of the single remaining column) and no longer imports `ThesisSummary` — that component is now only rendered from `WatchlistTable`. Every element in the merged card (status badge, Timing/Quality totals, all 11 timing/quality chips) got a rich `tipAction` hover tooltip (`TIPS.lt*` in `tooltipDefs.js`) explaining what it measures, the exact point thresholds, and why it matters — aimed at making the section readable without knowing the underlying formulas. The chip→tooltip mapping lives in `WatchlistTable.svelte`'s `LT_CHIP_TIPS` const; keep it in sync with `longTermIndicators.js`'s component keys.
+- **Where it renders:** the Long-Term Setup card and the `ThesisSummary` / Trade-Window / ATR block are **one** card in `WatchlistTable.svelte`'s `expandedPanel` snippet. `ThesisSummary` is rendered only from there — `EntryPanel.svelte` does not import it. Every element in the card (status badge, both totals, all 11 chips) has a `TIPS.lt*` tooltip; the chip→tooltip mapping is `WatchlistTable.svelte`'s `LT_CHIP_TIPS` — keep it in sync with `longTermIndicators.js`'s component keys.
 
-## v0.22 readability + mobile round
+## UI conventions
 
-Display-only, zero new API calls, zero logic changes.
+- **Text sizing.** `html { font-size: 130% }` in `app.css` stays, which makes `1rem = 20.8px` — so `text-xs` is 15.6px and `text-sm` 18.2px, too large for dense rows. Dense UI (table rows, scan panels, chips) uses absolute-px literals with a floor of **`text-[12px]` / `text-[13px]`**; prose and cards use the rem scale. Do not sweep the literals to `text-xs`: it's a 1.56x jump that blows out every `sm:w-*` column.
+- **Token ramp is AA-calibrated:** `text-muted #94a3b8`, `text-secondary #cbd5e1`, `border #2b3a4f`. The earlier muted (#64748b) was ~4.1:1 on `surface-900` and failed AA. Move the three together or the hierarchy collapses.
+- **Mobile (≤ sm):** dense rows use `flex-wrap` with fixed column widths gated behind `sm:` (`sm:w-16 shrink-0`) so they wrap on a phone and keep desktop alignment; `MarketContextBar` sub-lines are `sm:truncate` so they wrap rather than ellipsing mid-sentence. The bar for any mobile change: rendered at 402x874, `scrollWidth === clientWidth`.
+- **Version badge is derived** from `package.json` `version` — App.svelte renders `v{major.minor}`. Bump the minor for a feature round; patch bumps don't move the badge. Never hardcode a version string.
+- **Tooltips:** every indicator uses the rich `tipAction` card, not a native `title=`. Labels and colours that appear both inline and in a tooltip are single-sourced from one const (RSI bands, Score-Z) — the class/hex pairs drifting apart is a recurring bug in this codebase.
 
-- **Text sizing rule:** `html { font-size: 130% }` in `app.css` stays. That makes `1rem = 20.8px`, so `text-xs` is 15.6px and `text-sm` is 18.2px — too large for dense rows, which is why the codebase uses absolute-px literals there. The floor is now **`text-[12px]` / `text-[13px]`** (was 10/11px). Do not sweep those to `text-xs`: it's a 1.56x jump that blows out every `sm:w-*` column in the scan panels. New dense UI uses the 12/13px literals; prose and cards use the rem scale.
-- **Token ramp lifted for AA contrast:** `text-muted #64748b → #94a3b8`, `text-secondary #94a3b8 → #cbd5e1`, `border #1e293b → #2b3a4f`. The old muted was ~4.1:1 on `surface-900` and failed AA. The ramp moved as a unit so the three-level hierarchy survives.
-- **Sector moved under the ticker** in both the desktop table and the mobile card; the separate Sector column, its `<th>`/`<td>` and its sort branch are gone (`colspan` 9 → 8). Sector is still in the CSV export.
-- **Setup Radar RS spans self-label:** `RS rank #3/12` and `3M vs SPY +4.2%` — the bare `+4.2%` gave no clue what it was relative to.
-- **Long-Term scan panel rows rewritten** (`LongTermScanPanel.svelte`): the plain-English `setup.reasons[0]` verdict is now displayed (it was already produced by `buildLongTermSetup` and thrown away), totals read `Timing 34/100` / `Quality 62/100`, a missing quality reads **"Quality — expand ticker to load"** so a lazy-loaded score is distinguishable from a bad one, and the timing chips show `Label n/max` and wrap instead of scrolling sideways. Quality stays lazy — do not eager-fetch it here.
-- **Mobile (≤ sm):** Setup Radar and Dip Hunter rows use `flex-wrap` with the fixed column widths gated behind `sm:` (`sm:w-16 shrink-0`), so they wrap on a phone and keep desktop column alignment. `MarketContextBar` sub-lines are `sm:truncate` — they wrap at ~180px tile width instead of ellipsing mid-sentence. Verified by rendering at 402x874 (iPhone 17): page `scrollWidth === clientWidth`, no horizontal overflow.
-
-## Colour ramp (v0.24 — tone.js / readiness.js)
+## Colour system (tone.js / readiness.js / longTermIndicators.js)
 
 `tone.js` holds **the** palette — `good` green · `partial` amber · `caution` orange · `danger` red · `waiting` slate · `none` grey — plus `toneColor()` / `toneStyle()`. Everything that colours a state imports from here; nothing redefines a hex locally for a shared state.
 
@@ -256,7 +256,7 @@ Display-only, zero new API calls, zero logic changes.
 - **Per-engine score bands stay per-engine.** Setup Radar's 4.5 cutoff mirrors `signals.js`'s own FORMING band and is deliberately *not* the 5.0 that Dip/ETF use — only the colour resolution is shared, not the thresholds.
 - Class-vs-hex disagreements inside `FundamentalsBar` (RSI, ADX, Stoch, Conviction, Volume, support proximity) and `EtfDashboard` (PULLBACK trend state) were the same defect in miniature — the inline text said purple `uncertain`, the tooltip hex said amber, for the same condition. The class now follows the hex. `uncertain` (purple) is no longer used for a "middle" state anywhere.
 
-## Long-Term Setup colour coding (v0.24 — longTermIndicators.js)
+### Long-Term Setup card
 
 One colour ramp across the whole card so a colour means the same thing on every element — status badge, Timing/Quality totals, all 11 chips, the verdict line, and the scan-panel rows. Display-only, zero new math.
 
@@ -267,7 +267,7 @@ One colour ramp across the whole card so a colour means the same thing on every 
 - **`waitingOn` / `qualityWaitingOn`** rank the components with the most points still on the table and are shown as `Label +gap`. The card picks which set to show: **when the quality total is under the ≥60 gate, the timing gaps aren't the answer** — it names the quality components instead ("Waiting on quality: Profit +26 …"). Null components are skipped (nothing is known, so nothing is being waited on). Hidden entirely on ACCUMULATE.
 - A five-dot legend closes the card so the ramp is self-explanatory.
 
-## Two-view playbooks (v0.24 — FundamentalsBar.svelte)
+## Two-view playbooks (FundamentalsBar.svelte)
 
 The expanded row's indicator bar carries ~29 cards. An `All | Trend Setup | Pullback Setup` toggle filters the **technical** cards down to the playbook being considered — display-only, zero new math, zero new API calls.
 
@@ -287,7 +287,7 @@ The expanded row's indicator bar carries ~29 cards. An `All | Trend Setup | Pull
 - `DEFAULT_TEMPLATES` — 4 shipped presets: deep-dive, trade-setup, risk-check, news-scan.
 - Templates live in `stores/prompts.svelte.js`: localStorage key `promptTemplates` (seeded from `DEFAULT_TEMPLATES` on first load), `promptDefault` holds the default template id. `updateTemplate` / `resetTemplate` / `setDefaultId` are the only mutators.
 - UI: `WatchlistTable.svelte` expanded row has a "🤖 Copy for AI" button + a ▾ template dropdown (click-outside overlay). Copies the merged prompt via `navigator.clipboard` with a `<textarea>`/`execCommand` fallback; flashes "Copied ✓" / "Copy failed". `SettingsPanel` has an "AI Prompts" section to edit (textarea, saves on blur), reset to shipped, and pick the default template.
-- **v0.23 mobile copy/share:** when both clipboard paths fail (silently, in mobile in-app browsers like the Instagram/Facebook webview), a `copyFallback` state opens a modal with the prompt in a `<textarea>` the user can tap-to-select and copy manually. A 📤 share button (feature-detected on `navigator.share`, shown next to Copy for AI in both toolbars) sends the prompt through the native share sheet instead — more reliable than clipboard on mobile and drops it straight into Messages/Notes/an AI app. All 4 templates now end with a "keep it skimmable, I'm often on my phone" instruction.
+- **Mobile copy/share:** when both clipboard paths fail (silently, in mobile in-app browsers like the Instagram/Facebook webview), a `copyFallback` state opens a modal with the prompt in a `<textarea>` the user can tap-to-select and copy manually. A 📤 share button (feature-detected on `navigator.share`, shown next to Copy for AI in both toolbars) sends the prompt through the native share sheet instead — more reliable than clipboard on mobile and drops it straight into Messages/Notes/an AI app. All 4 templates now end with a "keep it skimmable, I'm often on my phone" instruction.
 - Phase 2 (parked, not built): optional Gemini free-tier API key in Settings + an "Analyze" button that sends the same merged prompt and renders the response inline. See `BACKLOG.md`.
 
 ## Demo mode (demoData.js)
@@ -313,30 +313,12 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 - **profile2 marketCapitalization is in millions USD** — qualityScore multiplies by 1e6 for FCF yield.
 - **Relative Strength (v0.11)** needs SPY history: App.svelte fetches SPY daily closes once per refresh (TD or Finnhub path, cached) and passes them to `computeRelativeStrength` per ticker → `data.rs = { rs1m, rs3m }`. RS = stock return − SPY return over ~21/63 trading bars. Candle sources are both oldest-first ascending (TD uses `order=ASC`).
 - **Valuation metric keys (Finnhub):** `revenueGrowthTTMYoy`, `psTTM`/`psAnnual`. PEG is computed client-side from existing pe + epsGrowth (`valuation.js`), null when growth ≤ 0 or P/E ≤ 0. All four (RS, Rev growth, P/S, PEG) are **display-only** — they do NOT feed `computeScore` or the setups (deliberate, to keep the calibrated engine stable).
+- **RSI on a flat/halted series returns 50, not 100.** `computeRSI` / `computeRSISeries`: `avgLoss === 0 && avgGain === 0` → neutral 50. The genuine all-gains case (`avgLoss === 0, avgGain > 0`) still returns 100. Without this a frozen ticker reads "Overbought".
+- **`chartAnchors.js` `MIN_BARS` is 30**, aligned with `computeIndicatorsFromCandles`' floor so AVWAP/POC/Fib/FVG never silently vanish while RSI/MACD still render off the same daily set. Don't raise it to 60.
+- **`pct52wRange(price, low, high)`** clamps 0–100 (null on `high <= low` or falsy inputs). A live price can exceed the 7-day-cached 52w high on a breakout; this keeps the marker inside the bar.
+- **Cache self-heals under quota pressure.** `writeCache` in both `finnhub.svelte.js` and `twelvedata.svelte.js` catches `QuotaExceededError`, calls the shared `evictStaleCache()` (exported from finnhub, one-way dependency) and retries once before raising the storage-full banner. Eviction is expired-only, not LRU — it won't reclaim space if everything is fresh.
+- **`pruneOrphanedCache` also prunes `sv_` score history** for removed symbols; the 90-day self-trim only runs on write, which stops at removal. It never touches macro/watchlist/portfolio/API keys.
 - All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>` (90-day retention, max 300 snapshots — Score-Z window). Trade log: `tradeLog`. Refresh snapshot: `dashboard_supplement`. (Paper trades, price alerts, and the News UI were removed in the post-v0.19 mobile-fit round — don't re-document them.)
-
-## v0.17 patch round (post-release fixes)
-
-Small correctness + robustness fixes landed after the v0.17 feature round. All display-only or infra; zero new API calls.
-
-- **Version badge is now derived, not hardcoded.** `package.json` `version` (bumped to `0.17.0`) is the single source of truth. App.svelte imports `{ version }` (named import, tree-shaken) and renders `v{major.minor}` → "v0.17". Bump the minor for a new feature round; patch bumps don't change the badge. Don't reintroduce a hardcoded version string.
-- **Chart anchors gate lowered:** `chartAnchors.js` `MIN_BARS` is **30** (was 60), aligned with `computeIndicatorsFromCandles`' floor so AVWAP/POC/Fib/FVG never silently vanish while RSI/MACD still render (they share the daily candle set). Don't raise it back to 60 without re-introducing that divergence.
-- **RSI flat/halted series returns 50, not 100.** `computeRSI` + `computeRSISeries`: `avgLoss===0 && avgGain===0` (perfectly flat / halted ticker) → neutral **50** (no momentum). The genuine all-gains case (`avgLoss===0, avgGain>0`) still returns 100. Prevents mislabeling a frozen ticker "Overbought" and mis-scoring it 0.25 in the technical engine.
-- **`pct52wRange(price, low, high)`** in `indicators.js` — clamped 0–100 (null on `high<=low` or falsy inputs). Live price can exceed the 7-day-cached 52w high on a breakout; this keeps the 52W-range marker inside the bar. FundamentalsBar's `pos52w` uses it. `low52w` of 0 is treated as invalid (`!low52w`), same as the original guard.
-- **Cache self-heals under quota pressure.** `writeCache` in **both** `finnhub.svelte.js` and `twelvedata.svelte.js` catches `QuotaExceededError`, calls the shared **`evictStaleCache()`** (exported from finnhub; deletes TTL-expired + junk entries via the `EVICT_TTL` prefix table), and retries the write once before raising the storage-full banner. Inert on the happy path. TD imports the evictor from finnhub (one-way dependency; no cycle). Eviction is expired-only, not LRU — won't reclaim space if everything is fresh (a genuinely oversized watchlist).
-- **`pruneOrphanedCache` now also prunes `sv_` score history** for removed symbols (its 90-day self-trim only runs on write, which stops at removal). `sv_` is written only by `scoring.js`; no collision. Still never touches macro/notes/watchlist/portfolio/API keys.
-- **RSI label/color single-sourced** in FundamentalsBar: one `rsiLabel` const matching the 5 color bands (Oversold <30 / Mild OS 30–40 / Neutral 40–60 / Extended 60–70 / Overbought >70), used in both the inline text and the tooltip `current`. The `TIPS.rsi` levels table was reconciled to match. Score-Z label also single-sourced.
-- **Hover coverage complete:** every FundamentalsBar indicator uses the rich `tipAction` card. AVWAP, POC (were native `title=`) and 52W Range (had none) now have `TIPS.avwap` / `TIPS.poc` / `TIPS.range52w` defs with live `current` values.
-- **TD→synthetic-candle mapping is centralized.** The block that was duplicated verbatim ×4 in App.svelte is now `tdValuesToCandles(vals)` in `candles.js`, imported at all four former call sites (v0.19 slice 2). A date-parse/NaN fix now touches one place.
-
-## v0.19 mobile pass
-
-Three-slice mobile redesign round, all display-only, zero new API calls. Desktop layout and behavior are unchanged throughout.
-
-- **Slice 1 (PR #31) — touch tooltips.** `actions/tooltip.js` gained a click listener, gated per-event on `matchMedia('(hover: none)')` so desktop hover behavior is untouched; `stopPropagation` on handled taps; a module-level `openedBy` node tracks the single open tooltip (tap the same element to close, tap a different one to replace in one tap — no double-tap needed). Also: one shared `{#snippet expandedPanel(ticker, data, score, variant)}` in `WatchlistTable.svelte` used by both layouts — mobile expansion gained NewsPanel, score history, price-alert management, Copy for AI, and remove-from-watchlist (parity with desktop).
-- **Slice 2 (PR #32) — dedup.** `candles.js` `tdValuesToCandles(vals)` replaced the 4 duplicated synthetic-candle blocks in App.svelte (see the resolved maintenance-smell note above). `WatchlistTable.svelte` also gained a `scoreStyle(s)` helper and a `tickerChips(data, size)` snippet shared by both layouts — desktop keeps its mixed md/lg gates and omits the eta suffix via the `size` param.
-- **Slice 3 (this branch) — mobile card redesign.** Chips render in a horizontally scrollable rail (hidden entirely when there are no chips); score is a colored right-aligned anchor using `scoreStyle`. Mobile expansion is now collapsible sections (Chart + Indicators open by default; Entry Plan / News / Notes collapsed) via a `sectionHeader` snippet + per-session `openSections` `$state`, plus a sticky bottom action bar (Copy for AI · 🔔 Alert — opens both the gated add-form and the Notes section · ✕ remove). Mobile uses the default AI template only (no chevron dropdown); desktop stays flat and unchanged.
-- **Tests:** 306 → 319 (`tooltip.test.js` +9, `candles.test.js` +4).
 
 ## Running locally
 
@@ -351,6 +333,6 @@ Vitest is scoped to `tests/**` in vite.config.js — do not remove that `include
 
 ## What's next (BACKLOG.md)
 
-Open queue after the v0.24 round: **#7 Gemini inline analysis** (the only item needing a new outbound API), **#11 "distance to next tier"** on the 0–10 scores — including Dip Hunter's hidden ACT condition (score ≥7 *and* a non-zero Fear component) which currently reads as a bug — and **#12 "waiting on"** for Dip Hunter / Setup Radar / ETF, which reuses the `waitingOn()` ranking verbatim once it moves into the shared colour layer.
+Open queue, renumbered after the v0.24 cleanup: **#1 Gemini inline analysis** (the only item needing a new outbound API call), **#2 "distance to next tier"** on the shared 0–10 scores — including Dip Hunter's hidden ACT condition (score ≥ 7 *and* a non-zero Fear component), which currently reads as a bug — and **#3 "waiting on"** for Dip Hunter / Setup Radar / ETF, which reuses the `waitingOn()` ranking verbatim once it moves into the shared colour layer.
 
-Dip Hunter's scored-component list is intentionally frozen after the OBV addition — any further ideas (Stochastic cross, EMA stack, volume-confirmation) go into `BACKLOG.md` as risk-context candidates, not new score components, unless a future session decides otherwise. See `BACKLOG.md` for the full queue and the per-iteration workflow rules (one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge).
+`BACKLOG.md` also carries the parked/rejected decisions and the per-iteration rules: one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge.

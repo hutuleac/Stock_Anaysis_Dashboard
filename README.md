@@ -34,7 +34,7 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 **Fundamentals bar + score history** — valuation (P/E, EPS & rev growth, P/S, PEG), the full indicator suite (RSI, MACD, ADX, Stochastic, BB, EMAs), RS, momentum, weekly trend, conviction, and a 90-day score-history sparkline — each with a plain-English "so what" tooltip.
 ![Fundamentals bar](docs/screenshots/03-fundamentals-bar.png)
 
-**Price chart + news** — TradingView candlesticks with EMA50/200, Bollinger Bands, RSI/Volume/MACD sub-panes, and drawing tools, beside a sentiment-tagged 7-day news feed.
+**Price chart** — TradingView candlesticks with EMA50/200, Bollinger Bands, RSI/Volume/MACD sub-panes, and drawing tools. Scroll-zoom activates on click, so the wheel scrolls the page until you ask the chart for it.
 ![Price chart and news](docs/screenshots/04-chart-news.png)
 
 ---
@@ -56,10 +56,9 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 - Search and add tickers via Finnhub search API
 - Bulk import — paste comma/newline-separated list
 - Drag-and-drop reorder
-- Sort by: score · price · change · earnings · sector · symbol
+- Sort by: score · price · change · earnings · symbol
 - Score sparkline — tiny SVG trend line of last 7 score snapshots per ticker
 - Score velocity arrow (↑↓→) — 3-day delta
-- Price alerts — set above/below targets, notified on next refresh
 - CSV export — all tickers with score, sub-scores, price, sector, earnings countdown
 
 ### Scoring Engine (up to 12 signals)
@@ -104,10 +103,11 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 - Dynamic chart height adjusts to active sub-panes
 
 **Data panels**
-- News panel — last 6 headlines with bull/bear/neutral sentiment dots + timeAgo
-- Fundamentals bar — Mkt Cap · P/E · EPS Growth · EMA50 · MA200 · 52w range bar · RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · Score Z · Weekly trend · Volume ratio · Conviction %
+- Fundamentals bar — Mkt Cap · P/E · PEG · EPS & Revenue growth · P/S · Div yield · EMA50/200, then the technical cards: RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · 52w range · Score Z · Weekly trend · Volume ratio · Conviction % · RS vs SPY · AVWAP · POC · ROC · OBV · swing-low support · the two weekly setups
+- **Trend Setup / Pullback Setup tabs** — narrow those technical cards to the playbook you're considering; `All` is the default, fundamentals and the score-context cards stay visible in every tab
+- **Long-Term Setup card** — Timing and Quality totals with the distance to the next band, colour-coded component chips, a "waiting on" line naming what still has to improve, the plain-English verdict, and a 5-year revenue mini chart
 - **"So what" tooltips** — hover any indicator for plain-English interpretation (e.g. RSI 38 → "approaching oversold; potential base forming")
-- Score history chart — full-width SVG with area fill, delta header, 50-point reference line
+- **🤖 Copy for AI** — the full reading as a plain-text prompt, merged into an editable template, with a share-sheet button on mobile
 
 **Entry Panel** (always visible)
 - Thesis Summary — 2–4 plain-English bullets explaining exactly why the score is what it is (positives ▲, negatives ▼, warnings ⚠)
@@ -118,11 +118,6 @@ Most retail tools either drown you in raw numbers or hide the math behind a blac
 - R:R to swing-high target (chartAnchors AVWAP swing high)
 - Position sizing — 2% rule: recommended shares, cost, % of portfolio, max loss
 - Scenario table — Base (1:2 R:R), Extended (1:3), Stop-out
-
-**Notes**
-- Free-text note field per ticker — auto-saves on every keystroke
-- 📝 badge on table row when notes exist
-- Survives cache clear, persists indefinitely in localStorage
 
 ### Market Context Bar
 - VIX with plain-English interpretation (CALM → EXTREME)
@@ -226,9 +221,9 @@ npm run test:watch  # watch mode (dev)
 - **One readiness ramp** — ACT / SOON / WATCH / WAIT colours were duplicated in four components and had drifted: SOON rendered purple in one place and amber in another, WATCH grey in two panels and near-white in a third. All four now read from one palette (`tone.js` + `readiness.js`), so a colour means the same thing wherever you see it. Same for the class-vs-hex mismatches inside the indicator bar (RSI, ADX, Stochastic, Conviction, Volume).
 - **Long-Term Setup reads at a glance** — one colour ramp across the status badge, the Timing/Quality totals, all 11 chips and the verdict: green = working for you, amber = partly there, orange = caution, slate = not yet (what you're waiting on), grey = no data. ACCUMULATE, WATCHLIST and CHECK QUALITY now have three distinct colours instead of sharing one.
 - **"X pts to the next band"** — a bare `Timing: 42` now reads `42 (WEAK) · 8 pts to watchlist timing (50+)`, so the gap to a better entry is explicit.
-- **"Waiting on"** — the components with the most points still on the table, shown as `Oversold +18 · Drawdown +16`. When the quality total is below the ≥60 gate it names the quality components instead, since that's what's actually blocking. Hidden on ACCUMULATE.
-- A five-dot legend at the bottom of the card explains the ramp.
-- **Trend Setup / Pullback Setup tabs** — the expanded row's indicator bar (~29 cards) now has an `All | Trend Setup | Pullback Setup` toggle that narrows the technical cards to the playbook being considered: Trend shows weekly trend, Momentum setup, RS vs SPY, ADX, ROC, AVWAP, OBV; Pullback shows RSI, Stochastic, BB position, oversold confluence, swing-low support, POC, the Pullback setup. Fundamentals (Mkt Cap, P/E, PEG, growth…) and the score context cards (T/F/S, Conviction, Score Z) stay visible in every tab. `All` is the default — nothing is hidden until a playbook is picked. Same tabs on mobile, inside the Indicators section. Zero new math, zero new API calls.
+- **"Waiting on"** — the components with the most points still on the table, shown as `Oversold +18 · Drawdown +16`. When the quality total is below the ≥60 gate it names the quality components instead, since that's what's actually blocking. Hidden on ACCUMULATE. A five-dot legend at the bottom of the card explains the ramp.
+- **Trend Setup / Pullback Setup tabs** — the expanded row's indicator bar (~29 cards) now has an `All | Trend Setup | Pullback Setup` toggle that narrows the technical cards to the playbook being considered: Trend shows weekly trend, Momentum setup, RS vs SPY, ADX, ROC, AVWAP, OBV; Pullback shows RSI, Stochastic, BB position, oversold confluence, swing-low support, POC, the Pullback setup. Fundamentals and the score-context cards (T/F/S, Conviction, Score Z) stay visible in every tab. `All` is the default — nothing is hidden until a playbook is picked. Same tabs on mobile.
+- **Docs + dead-code sweep** — `BACKLOG.md` holds only open items (shipped ones live here), `CLAUDE.md` dropped its per-release narrative for durable rules, the README's feature list now matches the app (the News panel, price alerts and the Notes field it still advertised were removed rounds ago), and the orphaned `stores/notes.svelte.js` was deleted.
 
 ### v0.23.1 (2026-09-12) — chart no longer hijacks page scroll
 - **Click-to-activate scroll-zoom** — wheel over the candlestick chart used to zoom it while trying to scroll the page. Wheel zoom is now off until the chart is clicked and releases when the pointer leaves (hint badge shown while inactive); on touch, a vertical drag scrolls the page instead of panning the chart. Drag-pan, pinch and double-click reset unchanged.
