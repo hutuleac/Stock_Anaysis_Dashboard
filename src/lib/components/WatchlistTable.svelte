@@ -8,7 +8,8 @@
   import { TIPS } from '../tooltipDefs.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
-  import { timingChips, qualityChips, chipColor, chipStyle, statusStyle as ltStatusStyle, statusColor, timingHint, qualityHint, timingTone, qualityTone, toneColor, waitingOn, qualityWaitingOn } from '../longTermIndicators.js';
+  import { timingChips, qualityChips, chipColor, chipStyle, statusStyle as ltStatusStyle, statusColor, timingHint, qualityHint, timingTone, qualityTone, waitingOn, qualityWaitingOn } from '../longTermIndicators.js';
+  import { toneColor } from '../tone.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import ThesisSummary from './ThesisSummary.svelte';

@@ -1,4 +1,5 @@
 <script>
+  import { readinessColor } from '../readiness.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeScore, computeScoreZScore } from '../scoring.js';
   import { computePEG } from '../valuation.js';
@@ -43,12 +44,6 @@
   const score    = $derived(computeScore(data));
   const scoreZ   = $derived(computeScoreZScore(symbol));
 
-  function readinessColor(r) {
-    return r === 'ACT' ? 'text-bull-strong' : r === 'SOON' ? 'text-uncertain' : r === 'WATCH' ? 'text-text-primary' : 'text-text-muted';
-  }
-  function readinessCss(r) {
-    return r === 'ACT' ? '#22c55e' : r === 'SOON' ? '#f59e0b' : r === 'WATCH' ? '#e5e7eb' : '#9ca3af';
-  }
 
   function fmtVol(v) {
     if (!v) return '—';
@@ -194,7 +189,7 @@
         {@const rsi = data.indicators.rsi}
         {@const rsiDir = data.indicators.rsiDirection}
         {@const rsiZ = data.indicators.rsiZScore}
-        {@const rsiColor = rsi < 30 ? 'text-bull-strong' : rsi < 40 ? 'text-uncertain' : rsi > 70 ? 'text-danger' : rsi > 60 ? 'text-warning' : 'text-text-primary'}
+        {@const rsiColor = rsi < 30 ? 'text-bull-strong' : rsi < 40 ? 'text-warning' : rsi > 70 ? 'text-danger' : rsi > 60 ? 'text-warning' : 'text-text-primary'}
         {@const rsiCssColor = rsi < 30 ? '#22c55e' : rsi < 40 ? '#f59e0b' : rsi > 70 ? '#ef4444' : rsi > 60 ? '#f59e0b' : '#9ca3af'}
         {@const rsiLabel = rsi < 30 ? 'Oversold' : rsi < 40 ? 'Mild OS' : rsi > 70 ? 'Overbought' : rsi > 60 ? 'Extended' : 'Neutral'}
         <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={() => ({ ...TIPS.rsi, current: { value: rsi.toFixed(1), label: rsiLabel, color: rsiCssColor } })}>
@@ -244,7 +239,7 @@
       {#if data?.indicators?.adx != null}
         {@const adx = data.indicators.adx}
         {@const adxLabel = adx > 40 ? 'Strong' : adx > 25 ? 'Trending' : adx > 20 ? 'Emerging' : 'Ranging'}
-        {@const adxColor = adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-uncertain' : 'text-text-muted'}
+        {@const adxColor = adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-warning' : 'text-text-muted'}
         {@const adxCssColor = adx > 25 ? '#22c55e' : adx > 20 ? '#f59e0b' : '#6b7280'}
         <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={() => ({ ...TIPS.adx, current: { value: adx.toFixed(1), label: adxLabel, color: adxCssColor } })}>
           <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
@@ -264,7 +259,7 @@
         {@const k = data.indicators.stochK}
         {@const d = data.indicators.stochD}
         {@const cross = data.indicators.stochCross}
-        {@const stochColor = k < 20 ? 'text-bull-strong' : k > 80 ? 'text-danger' : k < 35 ? 'text-uncertain' : 'text-text-primary'}
+        {@const stochColor = k < 20 ? 'text-bull-strong' : k > 80 ? 'text-danger' : k < 35 ? 'text-warning' : 'text-text-primary'}
         {@const stochCssColor = k < 20 ? '#22c55e' : k > 80 ? '#ef4444' : k < 35 ? '#f59e0b' : '#f3f4f6'}
         {@const stochLabel = cross === 'bullish_cross' ? 'Bull cross' : cross === 'bearish_cross' ? 'Bear cross' : k < 20 ? 'Oversold' : k > 80 ? 'Overbought' : k < 35 ? 'Approaching' : 'Neutral'}
         <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.stoch, current: { value: k.toFixed(1), label: stochLabel, color: stochCssColor } })}>
@@ -313,7 +308,7 @@
     {#if show('conviction')}
       <!-- Conviction — signal agreement score -->
       {#if score.conviction != null}
-        {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-uncertain' : score.convictionLabel === 'MIXED' ? 'text-bear-weak' : 'text-text-muted'}
+        {@const convColor = score.convictionLabel === 'HIGH' ? 'text-bull-strong' : score.convictionLabel === 'MODERATE' ? 'text-warning' : score.convictionLabel === 'MIXED' ? 'text-danger' : 'text-text-muted'}
         {@const convCssColor = score.convictionLabel === 'HIGH' ? '#22c55e' : score.convictionLabel === 'MODERATE' ? '#f59e0b' : score.convictionLabel === 'MIXED' ? '#ef4444' : '#6b7280'}
         <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={() => ({ ...TIPS.conviction, current: { value: score.conviction + '%', label: score.convictionLabel, color: convCssColor } })}>
           <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Conviction</span>
@@ -376,11 +371,11 @@
       <!-- Weekly Pullback setup (leading) -->
       {#if setups}
         {@const su = setups.pullback}
-        <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupPullback, current: { value: su.score.toFixed(1) + '/10', label: su.readiness, color: readinessCss(su.readiness) } })}>
+        <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupPullback, current: { value: su.score.toFixed(1) + '/10', label: su.readiness, color: readinessColor(su.readiness) } })}>
           <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Pullback</span>
           <div class="flex items-baseline gap-1 mt-0.5">
-            <span class="text-[13px] sm:text-sm font-mono font-semibold {readinessColor(su.readiness)}">{su.score.toFixed(1)}</span>
-            <span class="text-[12px] {readinessColor(su.readiness)}">{su.readiness}</span>
+            <span class="text-[13px] sm:text-sm font-mono font-semibold" style="color:{readinessColor(su.readiness)}">{su.score.toFixed(1)}</span>
+            <span class="text-[12px]" style="color:{readinessColor(su.readiness)}">{su.readiness}</span>
           </div>
           <span class="text-[12px] text-text-muted">{su.label}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}</span>
         </div>
@@ -391,11 +386,11 @@
       <!-- Weekly Momentum setup (leading) -->
       {#if setups}
         {@const sm = setups.momentum}
-        <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupMomentum, current: { value: sm.score.toFixed(1) + '/10', label: sm.readiness, color: readinessCss(sm.readiness) } })}>
+        <div class="flex flex-col sm:min-w-[95px] cursor-default" use:tipAction={() => ({ ...TIPS.setupMomentum, current: { value: sm.score.toFixed(1) + '/10', label: sm.readiness, color: readinessColor(sm.readiness) } })}>
           <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">Momentum</span>
           <div class="flex items-baseline gap-1 mt-0.5">
-            <span class="text-[13px] sm:text-sm font-mono font-semibold {readinessColor(sm.readiness)}">{sm.score.toFixed(1)}</span>
-            <span class="text-[12px] {readinessColor(sm.readiness)}">{sm.readiness}</span>
+            <span class="text-[13px] sm:text-sm font-mono font-semibold" style="color:{readinessColor(sm.readiness)}">{sm.score.toFixed(1)}</span>
+            <span class="text-[12px]" style="color:{readinessColor(sm.readiness)}">{sm.readiness}</span>
           </div>
           <span class="text-[12px] text-text-muted">{sm.label}{sm.etaWeeks ? ` · ~${sm.etaWeeks}w` : ''}</span>
         </div>
@@ -499,7 +494,7 @@
                 <span class="text-[13px] text-text-muted font-mono w-[14px]">{labels[i]}</span>
                 <span class="text-[12px] font-mono text-text-primary">${lvl.price}</span>
                 {#if pct !== null}
-                  <span class="text-[13px] {pct < 3 ? 'text-uncertain' : 'text-text-muted'}">+{pct}%</span>
+                  <span class="text-[13px] {pct < 3 ? 'text-warning' : 'text-text-muted'}">+{pct}%</span>
                 {/if}
               </div>
             {/each}
@@ -512,7 +507,7 @@
       <!-- Volume ratio — from TwelveData live quote -->
       {#if tdQuote?.volume && tdQuote?.avgVolume}
         {@const ratio = tdQuote.volumeRatio}
-        {@const volColor = ratio >= 2 ? 'text-bull-strong' : ratio >= 1.5 ? 'text-uncertain' : ratio <= 0.4 ? 'text-text-muted' : 'text-text-primary'}
+        {@const volColor = ratio >= 2 ? 'text-bull-strong' : ratio >= 1.5 ? 'text-warning' : ratio <= 0.4 ? 'text-text-muted' : 'text-text-primary'}
         {@const volCssColor = ratio >= 2 ? '#22c55e' : ratio >= 1.5 ? '#f59e0b' : '#9ca3af'}
         {@const volLabel = ratio >= 2 ? 'Surge' : ratio >= 1.5 ? 'Above avg' : ratio <= 0.5 ? 'Very low' : 'Normal'}
         <div class="flex flex-col sm:min-w-[90px] cursor-default" use:tipAction={() => ({ ...TIPS.volume, current: { value: ratio.toFixed(2) + '×', label: volLabel, color: volCssColor } })}>

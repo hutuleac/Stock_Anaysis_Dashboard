@@ -9,6 +9,7 @@
 // caps are inline Math.min() literals in qualityScore.js and are mirrored here
 // (tests/longTermIndicators.test.js asserts both sets still sum to 100).
 import { TIMING_MAX } from './timingScore.js';
+import { toneColor, toneStyle } from './tone.js';
 
 const TIMING = [
   ['drawdown', 'Drawdown', TIMING_MAX.drawdown],
@@ -40,16 +41,8 @@ export const timingChips = (components) => chips(TIMING, components);
 export const qualityChips = (components) => chips(QUALITY, components);
 
 // ─── Colour coding ──────────────────────────────────────────────────────────
-// One ramp across the whole Long-Term Setup card so a colour means the same thing
-// everywhere: green = this is working in your favour, amber = partly there,
-// slate = not contributing yet (what you're waiting on), dim grey = no data.
-const TONE = {
-  good:    { color: '#22c55e', bg: 'rgba(34, 197, 94, 0.12)' },   // bull-strong
-  partial: { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },  // warning
-  caution: { color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' },  // bear-weak
-  waiting: { color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.10)' }, // neutral slate
-  none:    { color: '#6b7280', bg: 'rgba(107, 114, 128, 0.08)' }, // no data
-};
+// The ramp itself lives in tone.js — shared with every readiness badge on the
+// dashboard so a colour means the same thing here as it does in Setup Radar.
 
 // Fill ratio → tone. A null component (missing input) is 'none', visibly distinct
 // from a real zero, which is 'waiting' — a zero is information, a null is not.
@@ -61,14 +54,11 @@ export function chipTone(score, max) {
   return 'waiting';
 }
 
-export const chipColor = (score, max) => TONE[chipTone(score, max)].color;
+export const chipColor = (score, max) => toneColor(chipTone(score, max));
 
 // Inline style for a chip: text colour plus a matching background tint, so the
 // row is scannable without reading each number.
-export function chipStyle(score, max) {
-  const t = TONE[chipTone(score, max)];
-  return `color:${t.color};background:${t.bg}`;
-}
+export const chipStyle = (score, max) => toneStyle(chipTone(score, max));
 
 // Status → tone. ACCUMULATE is the only "act" state; WATCHLIST is a good name
 // waiting on timing; OVERSOLD_BUT_CAUTION is the opposite (timing is there, the
@@ -83,11 +73,8 @@ const STATUS_TONE = {
 };
 
 export const statusTone = (status) => STATUS_TONE[status] ?? 'none';
-export const statusColor = (status) => TONE[statusTone(status)].color;
-export const statusStyle = (status) => {
-  const t = TONE[statusTone(status)];
-  return `color:${t.color};background:${t.bg}`;
-};
+export const statusColor = (status) => toneColor(statusTone(status));
+export const statusStyle = (status) => toneStyle(statusTone(status));
 
 // ─── Band hints: what the score has to reach next ───────────────────────────
 // The gate thresholds live in longTermSetup.js (timingBand / qualityBand). These
@@ -110,7 +97,6 @@ export const qualityHint = (total) => bandHint(total, QUALITY_BANDS);
 // and 60 the quality gate, so a 62 quality is 'partial' rather than 'waiting'.
 export const timingTone  = (total) => total == null ? 'none' : total >= 70 ? 'good' : total >= 50 ? 'partial' : 'waiting';
 export const qualityTone = (total) => total == null ? 'none' : total >= 65 ? 'good' : total >= 60 ? 'partial' : 'caution';
-export const toneColor   = (tone) => (TONE[tone] ?? TONE.none).color;
 
 // ─── What to wait for ───────────────────────────────────────────────────────
 // The components with the most points still on the table — i.e. what has to

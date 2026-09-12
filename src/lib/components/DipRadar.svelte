@@ -1,4 +1,6 @@
 <script>
+  import { readinessColor, readinessStyle } from '../readiness.js';
+  import { toneColor } from '../tone.js';
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { computeDipRadar } from '../dip.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
@@ -15,17 +17,7 @@
     });
   });
 
-  function readinessColor(r) {
-    if (r === 'ACT')  return 'bg-bull-strong/20 text-bull-strong';
-    if (r === 'SOON') return 'bg-uncertain/20 text-uncertain';
-    return 'bg-surface-600 text-text-secondary'; // WATCH
-  }
-  function readinessCssColor(r) {
-    if (r === 'ACT')  return '#22c55e';
-    if (r === 'SOON') return '#f59e0b';
-    return '#6b7280';
-  }
-  const scoreColor = (s) => s >= 7 ? '#22c55e' : s >= 5 ? '#f59e0b' : '#6b7280';
+  const scoreColor = (s) => toneColor(s >= 7 ? 'good' : s >= 5 ? 'partial' : 'waiting');
   const componentSummary = (h) => h.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
   const comp = (h, label) => h.components.find(c => c.label === label);
 </script>
@@ -68,10 +60,10 @@
 
                 <!-- Readiness -->
                 <span
-                  class="text-[12px] px-1.5 py-0.5 rounded {readinessColor(h.readiness)} sm:w-14 shrink-0 text-center cursor-default"
+                  class="text-[12px] px-1.5 py-0.5 rounded sm:w-14 shrink-0 text-center cursor-default" style={readinessStyle(h.readiness)}
                   use:tipAction={() => ({
                     ...TIPS.radarReadiness,
-                    current: { value: h.readiness, label: h.readiness === 'ACT' ? 'fear + oversold + quality aligned' : '', color: readinessCssColor(h.readiness) },
+                    current: { value: h.readiness, label: h.readiness === 'ACT' ? 'fear + oversold + quality aligned' : '', color: readinessColor(h.readiness) },
                   })}
                 >{h.readiness}</span>
 

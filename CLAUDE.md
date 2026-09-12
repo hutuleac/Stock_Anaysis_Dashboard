@@ -112,6 +112,8 @@ src/lib/
   longTermSetup.js    — buildLongTermSetup: timing×quality gate matrix → ACCUMULATE/WATCHLIST/…; F&G<30 panic boost
   macro.js            — FRED parsing + macro regime derivation (pure)
   demoData.js         — no-API-key demo dashboard fixtures
+  tone.js             — the one colour palette (good/partial/caution/danger/waiting/none)
+  readiness.js        — ACT/SOON/WATCH/WAIT + direction-aware BUY/SELL tones on top of tone.js
   tooltipDefs.js      — TIPS.* rich tooltip definitions
   actions/tooltip.js  — Svelte action: desktop hover + mobile tap-to-open (touchend on iOS)
   api/
@@ -138,7 +140,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     notes.svelte.js / tooltip.svelte.js
-tests/                — 21 files, 480 tests (~1s). One test file per lib module, same basename.
+tests/                — 22 files, 489 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -243,11 +245,22 @@ Display-only, zero new API calls, zero logic changes.
 - **Long-Term scan panel rows rewritten** (`LongTermScanPanel.svelte`): the plain-English `setup.reasons[0]` verdict is now displayed (it was already produced by `buildLongTermSetup` and thrown away), totals read `Timing 34/100` / `Quality 62/100`, a missing quality reads **"Quality — expand ticker to load"** so a lazy-loaded score is distinguishable from a bad one, and the timing chips show `Label n/max` and wrap instead of scrolling sideways. Quality stays lazy — do not eager-fetch it here.
 - **Mobile (≤ sm):** Setup Radar and Dip Hunter rows use `flex-wrap` with the fixed column widths gated behind `sm:` (`sm:w-16 shrink-0`), so they wrap on a phone and keep desktop column alignment. `MarketContextBar` sub-lines are `sm:truncate` — they wrap at ~180px tile width instead of ellipsing mid-sentence. Verified by rendering at 402x874 (iPhone 17): page `scrollWidth === clientWidth`, no horizontal overflow.
 
+## Colour ramp (v0.24 — tone.js / readiness.js)
+
+`tone.js` holds **the** palette — `good` green · `partial` amber · `caution` orange · `danger` red · `waiting` slate · `none` grey — plus `toneColor()` / `toneStyle()`. Everything that colours a state imports from here; nothing redefines a hex locally for a shared state.
+
+`readiness.js` maps the ACT / SOON / WATCH / WAIT tiers onto it (`readinessTone/Color/Style`), used by Setup Radar, Dip Hunter, the ETF table and the FundamentalsBar setup cards. Before this it was four near-copies that had drifted: SOON was purple in a badge class and amber in the hex variant *of the same file*, and WATCH was grey in two panels and near-white in a third. **Don't reintroduce a local readiness ramp** — one state, one colour.
+
+- **`signalTone(readiness, isBuy)`** — a SELL never borrows the buy green. `SELL ACT` is red, `SELL SOON` orange. `EtfDashboard` rendered both directions through the same class before, so a strong exit signal read as "good to buy".
+- **`scoreTone(score, direction)`** — the shared ACT ≥7 / SOON ≥5 tiers, inverted for `'exit'`: a high exit score is sell pressure, so it renders red, not green. `EtfDashboard` calls it through local `entryColor` / `exitColor` aliases.
+- **Per-engine score bands stay per-engine.** Setup Radar's 4.5 cutoff mirrors `signals.js`'s own FORMING band and is deliberately *not* the 5.0 that Dip/ETF use — only the colour resolution is shared, not the thresholds.
+- Class-vs-hex disagreements inside `FundamentalsBar` (RSI, ADX, Stoch, Conviction, Volume, support proximity) and `EtfDashboard` (PULLBACK trend state) were the same defect in miniature — the inline text said purple `uncertain`, the tooltip hex said amber, for the same condition. The class now follows the hex. `uncertain` (purple) is no longer used for a "middle" state anywhere.
+
 ## Long-Term Setup colour coding (v0.24 — longTermIndicators.js)
 
 One colour ramp across the whole card so a colour means the same thing on every element — status badge, Timing/Quality totals, all 11 chips, the verdict line, and the scan-panel rows. Display-only, zero new math.
 
-- **`TONE`** (in `longTermIndicators.js`) is the single source: `good` #22c55e (working for you) · `partial` #f59e0b (partly there) · `caution` #f97316 (timing is there, quality gate is not) · `waiting` #94a3b8 (not contributing yet — what you're waiting on) · `none` #6b7280 (no data). A real **0 is `waiting`, a null is `none`** — a zero is information, a missing input is not. Both components render the tint via `chipStyle()` / `statusStyle()`, which return inline `color:…;background:…` strings, not Tailwind classes, so the ramp can't drift between the two panels.
+- **`TONE`** (now in `tone.js`, shared with every readiness badge) is the single source: `good` #22c55e (working for you) · `partial` #f59e0b (partly there) · `caution` #f97316 (timing is there, quality gate is not) · `waiting` #94a3b8 (not contributing yet — what you're waiting on) · `none` #6b7280 (no data). A real **0 is `waiting`, a null is `none`** — a zero is information, a missing input is not. Both components render the tint via `chipStyle()` / `statusStyle()`, which return inline `color:…;background:…` strings, not Tailwind classes, so the ramp can't drift between the two panels.
 - **`statusTone`** gives ACCUMULATE / WATCHLIST / OVERSOLD_BUT_CAUTION three different colours. They used to share one purple `uncertain`, which hid the most important distinction in the matrix: a good name waiting on timing vs a cheap name that failed the quality gate.
 - **Totals use the gate bands, not the fill ratio** (`timingTone` / `qualityTone`): 70 is the timing gate, 60 the quality gate, so a 62 quality reads `partial`, not `waiting`. These mirror `timingBand`/`qualityBand` in `longTermSetup.js` — if those thresholds move, move these.
 - **`timingHint` / `qualityHint`** render "8 pts to watchlist timing (50+)" next to a total, so a bare 42 reads as a distance to the next band. Null at the top band.
@@ -319,7 +332,7 @@ Three-slice mobile redesign round, all display-only, zero new API calls. Desktop
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 480 unit tests, ~1s
+npm test          # 489 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 

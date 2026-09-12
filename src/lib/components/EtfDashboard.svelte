@@ -1,4 +1,5 @@
 <script>
+  import { scoreColor, signalStyle, signalColor } from '../readiness.js';
   import { onMount } from 'svelte';
   import { getEtfs, addEtf, removeEtf, getEtfProxyData, getEtfSpyCloses, getUniqueProxies, getEtfExpandRequest, clearEtfExpandRequest } from '../stores/etflist.svelte.js';
   import { computeEtfSignals, generateEtfThesis } from '../etf.js';
@@ -45,15 +46,12 @@
     });
   });
 
-  const scoreColor = (s) => s >= 7 ? '#22c55e' : s >= 5 ? '#f59e0b' : '#6b7280';
+  // Entry and exit are scored on the same 0–10 tiers but mean opposite things:
+  // a high exit score is sell pressure, so it must not render green.
+  const entryColor = (v) => scoreColor(v, 'entry');
+  const exitColor  = (v) => scoreColor(v, 'exit');
   const rsColor = (v) => v > 0 ? '#22c55e' : v < 0 ? '#ef4444' : '#6b7280';
   const trendColor = (t) => t === 'UPTREND' ? '#22c55e' : t === 'PULLBACK' ? '#f59e0b' : t === 'DOWNTREND' ? '#ef4444' : '#6b7280';
-  function readinessClass(r) {
-    if (r === 'ACT')  return 'bg-bull-strong/20 text-bull-strong';
-    if (r === 'SOON') return 'bg-uncertain/20 text-uncertain';
-    if (r === 'WATCH') return 'bg-surface-600 text-text-secondary';
-    return 'text-text-muted';
-  }
   const fmtRs = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`;
   const compSummary = (score) => score.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
   const COMPONENT_TIPS = {
@@ -186,7 +184,7 @@
           {#if ind.trendState}
             <span class="px-1.5 py-0.5 rounded font-semibold text-[12px] cursor-default
               {ind.trendState === 'UPTREND' ? 'bg-bull-strong/20 text-bull-strong'
-                : ind.trendState === 'PULLBACK' ? 'bg-uncertain/20 text-uncertain'
+                : ind.trendState === 'PULLBACK' ? 'bg-warning/20 text-warning'
                 : ind.trendState === 'DOWNTREND' ? 'bg-bear-strong/20 text-bear-strong'
                 : 'bg-surface-600 text-text-secondary'}"
               use:tipAction={() => ({ ...TIPS.etfTrendState, current: { value: ind.trendState, label: '', color: trendColor(ind.trendState) } })}
@@ -218,7 +216,7 @@
       <div class="grid md:grid-cols-2 gap-4 mb-4 text-xs">
         <div>
           <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
-            use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: etf.sig.entry.readiness, color: scoreColor(etf.sig.entry.score) } })}
+            use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: etf.sig.entry.readiness, color: entryColor(etf.sig.entry.score) } })}
           >Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
           {#each etf.sig.entry.components as c}
             <div class="flex justify-between py-0.5 cursor-default"
@@ -231,7 +229,7 @@
         </div>
         <div>
           <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
-            use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: etf.sig.exit.readiness, color: scoreColor(etf.sig.exit.score) } })}
+            use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: etf.sig.exit.readiness, color: exitColor(etf.sig.exit.score) } })}
           >Exit {etf.sig.exit.score.toFixed(1)}/10 · {etf.sig.exit.readiness}</div>
           {#each etf.sig.exit.components as c}
             <div class="flex justify-between py-0.5 cursor-default"
@@ -276,14 +274,14 @@
               <span class="font-mono" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}">{fmtRs(etf.sig?.rs?.rs3m)} 3M</span>
             </div>
             {#if sig}
-              <span class="text-[12px] px-1.5 py-0.5 rounded shrink-0 {readinessClass(sig.readiness)}">{isBuy ? 'BUY' : 'SELL'} {sig.readiness}</span>
+              <span class="text-[12px] px-1.5 py-0.5 rounded shrink-0" style={signalStyle(sig.readiness, isBuy)}>{isBuy ? 'BUY' : 'SELL'} {sig.readiness}</span>
             {:else}
               <span class="text-[12px] text-text-muted shrink-0">no data</span>
             {/if}
           </div>
           <div class="flex items-center gap-3 mt-1.5 text-[12px]">
-            <span class="text-text-muted">Entry <span class="font-mono" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}">{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</span></span>
-            <span class="text-text-muted">Exit <span class="font-mono" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}">{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</span></span>
+            <span class="text-text-muted">Entry <span class="font-mono" style="color:{entryColor(etf.sig?.entry?.score ?? null)}">{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</span></span>
+            <span class="text-text-muted">Exit <span class="font-mono" style="color:{exitColor(etf.sig?.exit?.score ?? null)}">{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</span></span>
           </div>
         </div>
         {#if isExpanded}
@@ -332,19 +330,19 @@
             <td class="px-1.5 sm:px-2 py-2 text-right font-mono text-xs cursor-default" style="color:{rsColor(etf.sig?.rs?.rs3m ?? 0)}"
               use:tipAction={() => ({ ...TIPS.relativeStrength, current: { value: fmtRs(etf.sig?.rs?.rs3m), label: '3M vs SPY', color: rsColor(etf.sig?.rs?.rs3m ?? 0) } })}
             >{fmtRs(etf.sig?.rs?.rs3m)}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{scoreColor(etf.sig?.entry?.score ?? 0)}"
-              use:tipAction={etf.sig ? () => ({ ...TIPS.etfEntry, current: { value: String(etf.sig.entry.score), label: etf.sig.entry.readiness, color: scoreColor(etf.sig.entry.score) }, description: compSummary(etf.sig.entry) }) : undefined}
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{entryColor(etf.sig?.entry?.score ?? null)}"
+              use:tipAction={etf.sig ? () => ({ ...TIPS.etfEntry, current: { value: String(etf.sig.entry.score), label: etf.sig.entry.readiness, color: entryColor(etf.sig.entry.score) }, description: compSummary(etf.sig.entry) }) : undefined}
             >{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</td>
-            <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{scoreColor(etf.sig?.exit?.score ?? 0)}"
-              use:tipAction={etf.sig ? () => ({ ...TIPS.etfExit, current: { value: String(etf.sig.exit.score), label: etf.sig.exit.readiness, color: scoreColor(etf.sig.exit.score) }, description: compSummary(etf.sig.exit) }) : undefined}
+            <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{exitColor(etf.sig?.exit?.score ?? null)}"
+              use:tipAction={etf.sig ? () => ({ ...TIPS.etfExit, current: { value: String(etf.sig.exit.score), label: etf.sig.exit.readiness, color: exitColor(etf.sig.exit.score) }, description: compSummary(etf.sig.exit) }) : undefined}
             >{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</td>
             <td class="px-1.5 sm:px-2 py-2 text-center whitespace-nowrap cursor-default"
-              use:tipAction={etf.sig ? () => { const isBuy = etf.sig.entry.score >= etf.sig.exit.score; const sig = isBuy ? etf.sig.entry : etf.sig.exit; return { ...TIPS.etfSignal, current: { value: `${isBuy ? 'BUY' : 'SELL'} ${sig.readiness}`, label: '', color: isBuy ? '#22c55e' : '#ef4444' } }; } : undefined}
+              use:tipAction={etf.sig ? () => { const isBuy = etf.sig.entry.score >= etf.sig.exit.score; const sig = isBuy ? etf.sig.entry : etf.sig.exit; return { ...TIPS.etfSignal, current: { value: `${isBuy ? 'BUY' : 'SELL'} ${sig.readiness}`, label: '', color: signalColor(sig.readiness, isBuy) } }; } : undefined}
             >
               {#if etf.sig}
                 {@const isBuy = etf.sig.entry.score >= etf.sig.exit.score}
                 {@const sig = isBuy ? etf.sig.entry : etf.sig.exit}
-                <span class="text-[12px] px-1.5 py-0.5 rounded {readinessClass(sig.readiness)}">
+                <span class="text-[12px] px-1.5 py-0.5 rounded" style={signalStyle(sig.readiness, isBuy)}>
                   {isBuy ? 'BUY' : 'SELL'} {sig.readiness}
                 </span>
               {:else}
