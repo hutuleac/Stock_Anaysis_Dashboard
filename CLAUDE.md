@@ -138,7 +138,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     notes.svelte.js / tooltip.svelte.js
-tests/                — 21 files, 469 tests (~1s). One test file per lib module, same basename.
+tests/                — 21 files, 480 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -242,6 +242,17 @@ Display-only, zero new API calls, zero logic changes.
 - **Setup Radar RS spans self-label:** `RS rank #3/12` and `3M vs SPY +4.2%` — the bare `+4.2%` gave no clue what it was relative to.
 - **Long-Term scan panel rows rewritten** (`LongTermScanPanel.svelte`): the plain-English `setup.reasons[0]` verdict is now displayed (it was already produced by `buildLongTermSetup` and thrown away), totals read `Timing 34/100` / `Quality 62/100`, a missing quality reads **"Quality — expand ticker to load"** so a lazy-loaded score is distinguishable from a bad one, and the timing chips show `Label n/max` and wrap instead of scrolling sideways. Quality stays lazy — do not eager-fetch it here.
 - **Mobile (≤ sm):** Setup Radar and Dip Hunter rows use `flex-wrap` with the fixed column widths gated behind `sm:` (`sm:w-16 shrink-0`), so they wrap on a phone and keep desktop column alignment. `MarketContextBar` sub-lines are `sm:truncate` — they wrap at ~180px tile width instead of ellipsing mid-sentence. Verified by rendering at 402x874 (iPhone 17): page `scrollWidth === clientWidth`, no horizontal overflow.
+
+## Long-Term Setup colour coding (v0.24 — longTermIndicators.js)
+
+One colour ramp across the whole card so a colour means the same thing on every element — status badge, Timing/Quality totals, all 11 chips, the verdict line, and the scan-panel rows. Display-only, zero new math.
+
+- **`TONE`** (in `longTermIndicators.js`) is the single source: `good` #22c55e (working for you) · `partial` #f59e0b (partly there) · `caution` #f97316 (timing is there, quality gate is not) · `waiting` #94a3b8 (not contributing yet — what you're waiting on) · `none` #6b7280 (no data). A real **0 is `waiting`, a null is `none`** — a zero is information, a missing input is not. Both components render the tint via `chipStyle()` / `statusStyle()`, which return inline `color:…;background:…` strings, not Tailwind classes, so the ramp can't drift between the two panels.
+- **`statusTone`** gives ACCUMULATE / WATCHLIST / OVERSOLD_BUT_CAUTION three different colours. They used to share one purple `uncertain`, which hid the most important distinction in the matrix: a good name waiting on timing vs a cheap name that failed the quality gate.
+- **Totals use the gate bands, not the fill ratio** (`timingTone` / `qualityTone`): 70 is the timing gate, 60 the quality gate, so a 62 quality reads `partial`, not `waiting`. These mirror `timingBand`/`qualityBand` in `longTermSetup.js` — if those thresholds move, move these.
+- **`timingHint` / `qualityHint`** render "8 pts to watchlist timing (50+)" next to a total, so a bare 42 reads as a distance to the next band. Null at the top band.
+- **`waitingOn` / `qualityWaitingOn`** rank the components with the most points still on the table and are shown as `Label +gap`. The card picks which set to show: **when the quality total is under the ≥60 gate, the timing gaps aren't the answer** — it names the quality components instead ("Waiting on quality: Profit +26 …"). Null components are skipped (nothing is known, so nothing is being waited on). Hidden entirely on ACCUMULATE.
+- A five-dot legend closes the card so the ramp is self-explanatory.
 
 ## Two-view playbooks (v0.24 — FundamentalsBar.svelte)
 

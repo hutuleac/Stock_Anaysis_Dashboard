@@ -8,7 +8,7 @@
   import { TIPS } from '../tooltipDefs.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
-  import { timingChips, qualityChips, chipColor } from '../longTermIndicators.js';
+  import { timingChips, qualityChips, chipColor, chipStyle, statusStyle as ltStatusStyle, statusColor, timingHint, qualityHint, timingTone, qualityTone, toneColor, waitingOn, qualityWaitingOn } from '../longTermIndicators.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import ThesisSummary from './ThesisSummary.svelte';
@@ -341,13 +341,6 @@
     shareholderReturn: 'ltPayout', earningsQuality: 'ltEarnings',
   };
 
-  function longTermStatusStyle(status) {
-    if (status === 'ACCUMULATE') return 'bg-bull-strong/20 text-bull-strong';
-    if (status === 'OVERSOLD_BUT_CAUTION' || status === 'WATCHLIST') return 'bg-uncertain/20 text-uncertain';
-    if (status === 'INSUFFICIENT_DATA') return 'bg-surface-600 text-text-muted';
-    return 'bg-surface-600 text-text-secondary'; // NEUTRAL / WAIT
-  }
-
   function handleDragStart(e, index) {
     dragIndex = index;
     e.dataTransfer.effectAllowed = 'move';
@@ -504,16 +497,26 @@
     {@const atrPct = atr !== null && currentPrice ? (atr / currentPrice) * 100 : null}
     <div class="mb-3 px-3 py-3 rounded-lg bg-surface-800/60 border border-border/40 space-y-3">
       {#if setup}
+        {@const tTotal = data.timingScore?.total ?? null}
+        {@const qTotal = data.qualityScore?.total ?? null}
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.ltStatus}>Long-Term Setup</span>
-            <span class="text-xs px-1.5 py-0.5 rounded font-semibold cursor-default {longTermStatusStyle(setup.status)}"
+            <span class="text-xs px-1.5 py-0.5 rounded font-semibold cursor-default" style={ltStatusStyle(setup.status)}
               use:tipAction={() => ({ ...TIPS.ltStatus, current: { value: setup.status.replace(/_/g, ' '), label: '', color: 'inherit' } })}
             >{setup.status.replace(/_/g, ' ')}</span>
           </div>
-          <div class="flex gap-3 text-sm text-text-secondary mb-1.5">
-            <span class="cursor-default" use:tipAction={() => ({ ...TIPS.ltTiming, current: { value: data.timingScore?.total ?? 'n/a', label: data.timingScore?.label ?? 'n/a', color: 'inherit' } })}>Timing: {data.timingScore?.total ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})</span>
-            <span class="cursor-default" use:tipAction={() => ({ ...TIPS.ltQuality, current: { value: data.qualityScore?.total ?? 'not checked', label: data.qualityScore?.label ?? '', color: 'inherit' } })}>Quality: {data.qualityScore?.total ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}</span>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-1.5">
+            <span class="cursor-default" style="color:{toneColor(timingTone(tTotal))}"
+              use:tipAction={() => ({ ...TIPS.ltTiming, current: { value: tTotal ?? 'n/a', label: data.timingScore?.label ?? 'n/a', color: toneColor(timingTone(tTotal)) } })}
+            >Timing: {tTotal ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})
+              {#if timingHint(tTotal)}<span class="text-text-muted font-normal"> · {timingHint(tTotal)}</span>{/if}
+            </span>
+            <span class="cursor-default" style="color:{qTotal == null ? 'var(--color-text-muted)' : toneColor(qualityTone(qTotal))}"
+              use:tipAction={() => ({ ...TIPS.ltQuality, current: { value: qTotal ?? 'not checked', label: data.qualityScore?.label ?? '', color: qTotal == null ? '#6b7280' : toneColor(qualityTone(qTotal)) } })}
+            >Quality: {qTotal ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}
+              {#if qualityHint(qTotal)}<span class="text-text-muted font-normal"> · {qualityHint(qTotal)}</span>{/if}
+            </span>
           </div>
 
           <!-- Timing indicator breakdown (the components feeding the 0–100 score) -->
@@ -521,12 +524,28 @@
             <div class="flex flex-wrap gap-1.5 mb-1.5">
               <span class="text-xs text-text-muted uppercase tracking-wider self-center mr-0.5">Timing</span>
               {#each timingChips(data.timingScore.components) as c}
-                <span class="text-xs px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
-                  style="color:{chipColor(c.score, c.max)}"
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono cursor-default"
+                  style={chipStyle(c.score, c.max)}
                   use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}
                 >{c.label} {c.score ?? '–'}/{c.max}</span>
               {/each}
             </div>
+          {/if}
+
+          <!-- What has to improve before the entry gets better — the timing components
+               with the most points still on the table. Ranking only, no new math. -->
+          {#if setup.status !== 'ACCUMULATE' && setup.status !== 'INSUFFICIENT_DATA'}
+            <!-- When the quality gate is what's blocking, the timing gaps aren't the
+                 answer — name the quality components instead. -->
+            {@const qBlocks = qTotal != null && qTotal < 60}
+            {@const gaps = qBlocks ? qualityWaitingOn(data.qualityScore.components) : waitingOn(data.timingScore?.components)}
+            {#if gaps.length}
+              <p class="text-xs mb-1.5" style="color:{toneColor('partial')}">
+                <span class="uppercase tracking-wider text-text-muted">Waiting on {qBlocks ? 'quality' : 'timing'}</span>
+                {#each gaps as g, i}<span>{i ? ' · ' : ' '}{g.label} +{g.gap}</span>{/each}
+                <span class="text-text-muted"> pts</span>
+              </p>
+            {/if}
           {/if}
 
           <!-- Quality indicator breakdown (lazy — only after the row's fundamentals fetch) -->
@@ -534,8 +553,8 @@
             <div class="flex flex-wrap gap-1.5 mb-1.5">
               <span class="text-xs text-text-muted uppercase tracking-wider self-center mr-0.5">Quality</span>
               {#each qualityChips(data.qualityScore.components) as c}
-                <span class="text-xs px-1.5 py-0.5 rounded bg-surface-700 font-mono cursor-default"
-                  style="color:{chipColor(c.score, c.max)}"
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono cursor-default"
+                  style={chipStyle(c.score, c.max)}
                   use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}
                 >{c.label} {c.score ?? '–'}/{c.max}</span>
               {/each}
@@ -574,9 +593,16 @@
             </div>
           {/if}
 
-          {#each setup.reasons as reason}
-            <p class="text-sm text-text-muted">{reason}</p>
+          {#each setup.reasons as reason, i}
+            <p class="text-sm" style={i === 0 ? `color:${statusColor(setup.status)}` : 'color:var(--color-text-muted)'}>{reason}</p>
           {/each}
+
+          <!-- Colour legend — the ramp means the same thing on every element above -->
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-border/30 text-[12px] text-text-muted">
+            {#each [['#22c55e', 'working for you'], ['#f59e0b', 'partly there'], ['#f97316', 'caution'], ['#94a3b8', 'not yet — what to wait for'], ['#6b7280', 'no data']] as [c, label]}
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:{c}"></span>{label}</span>
+            {/each}
+          </div>
         </div>
       {/if}
 
