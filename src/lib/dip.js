@@ -5,6 +5,7 @@
 // Reads data already on the ticker object — no API calls, no scoring changes.
 import { computeScore } from './scoring.js';
 import { computePEG } from './valuation.js';
+import { scoreTierHint, rankGaps } from './readiness.js';
 
 const READINESS_RANK = { ACT: 3, SOON: 2, WATCH: 1 };
 
@@ -178,10 +179,19 @@ export function computeDipRadar(list, marketCtx) {
       : score >= 7 && hasFear ? 'ACT'
       : score >= 5 ? 'SOON' : 'WATCH';
 
+    // Mirrors the readiness gate above: a strong downtrend caps it at WATCH
+    // no matter the score, so that reason wins outright; otherwise the only
+    // other hidden gate is the fear requirement for ACT.
+    const tierHint = risk.strongDowntrend
+      ? 'capped by downtrend'
+      : scoreTierHint(score, { blocked: !hasFear ? 'needs market fear' : null });
+
     hits.push({
       symbol: item.symbol,
       score,
       readiness,
+      tierHint,
+      waitingOn: rankGaps(components),
       components,
       risk,
       support: supportStatus(data),

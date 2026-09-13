@@ -2,6 +2,7 @@
 // Signals run on the US-listed proxy of each UCITS ETF (see etflist store).
 import { computeRSI, emaArray, computeMACD, computeRelativeStrength } from './indicators.js';
 import { detectDivergence } from './signals.js';
+import { scoreTierHint, rankGaps } from './readiness.js';
 
 const round1 = (v) => Math.round(v * 10) / 10;
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -61,7 +62,7 @@ export function scoreEtfEntry({ rsiW, belowLowerBB, rs3m, groupMedianRs3m, macdC
     detail: dd === null ? 'n/a' : `−${Math.round(dd)}% off 52w high` });
 
   const score = round1(components.reduce((s, c) => s + c.score, 0));
-  return { score, components, readiness: readinessFor(score) };
+  return { score, components, readiness: readinessFor(score), tierHint: scoreTierHint(score), waitingOn: rankGaps(components) };
 }
 
 export function scoreEtfExit({ rsiW, extensionPct, rs1m, rs3m, volumeRatio }) {
@@ -93,7 +94,7 @@ export function scoreEtfExit({ rsiW, extensionPct, rs1m, rs3m, volumeRatio }) {
     detail: vr === null ? 'n/a' : `${vr.toFixed(1)}× avg wVol` });
 
   const score = round1(components.reduce((s, c) => s + c.score, 0));
-  return { score, components, readiness: readinessFor(score) };
+  return { score, components, readiness: readinessFor(score), tierHint: scoreTierHint(score), waitingOn: rankGaps(components) };
 }
 
 // list: [{ proxy, weeklyRaw: {s,t,o,h,l,c,v}, dailyCloses: number[] }]

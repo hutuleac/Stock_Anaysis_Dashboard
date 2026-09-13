@@ -45,3 +45,32 @@ export function scoreTone(score, direction = 'entry') {
 }
 
 export const scoreColor = (score, direction) => toneColor(scoreTone(score, direction));
+
+// ─── Distance to next tier ──────────────────────────────────────────────────
+// Same ACT ≥7 / SOON ≥5 / WATCH ≥3 bands `scoreTone` uses. A 6.2 SOON should
+// say "+0.8 to ACT", not leave the user to guess the gap.
+const SCORE_BANDS = [[7, 'ACT'], [5, 'SOON'], [3, 'WATCH']];
+const round1 = (v) => Math.round(v * 10) / 10;
+
+// `blocked`: a reason string when a hidden non-score gate (e.g. Dip Hunter's
+// fear requirement) is what's actually holding the badge back at the top
+// band — shown instead of "already there" so a 7.5 stuck at SOON explains why.
+export function scoreTierHint(score, { blocked = null } = {}) {
+  if (score == null || !Number.isFinite(score)) return null;
+  if (score >= 7) return blocked;
+  const [need, name] = SCORE_BANDS.filter(([n]) => n > score).pop();
+  return `+${round1(need - score)} to ${name}`;
+}
+
+// ─── "Waiting on" ────────────────────────────────────────────────────────────
+// Ranks a panel's own `components[]` ({label, score, max}) by points still on
+// the table — what has to improve before the score gets better. Pure ranking
+// of numbers the caller already computed; a null score means the input isn't
+// known, not that it's zero, so it's skipped rather than counted as a gap.
+export function rankGaps(components, limit = 3) {
+  return (components ?? [])
+    .filter(c => c.score != null && c.score < c.max)
+    .map(c => ({ ...c, gap: round1(c.max - c.score) }))
+    .sort((a, b) => b.gap - a.gap || a.label.localeCompare(b.label))
+    .slice(0, limit);
+}

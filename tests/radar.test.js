@@ -7,11 +7,11 @@ function ticker(symbol, o = {}) {
     readiness = 'SOON', setupType = 'pullback', setupScore = 6, etaWeeks = 2,
     rs3m = 5, revGrowth = 20, pe = 20, epsGrowth = 30,
     hasMetrics = true, hasRs = true, hasSetups = true, anchors = undefined,
-    price = 80, adx = null, swingLows = [],
+    price = 80, adx = null, swingLows = [], components = null,
   } = o;
   const data = { quote: { data: { c: price } }, indicators: { adx, swingLows } };
   if (hasSetups) {
-    const active = { score: setupScore, readiness, etaWeeks };
+    const active = { score: setupScore, readiness, etaWeeks, components };
     const idle = { score: 0, readiness: 'WAIT', etaWeeks: null };
     data.setups = {
       pullback: setupType === 'pullback' ? active : idle,
@@ -106,6 +106,20 @@ describe('computeRadar', () => {
   it('passes through ADX', () => {
     const out = computeRadar([ticker('AAA', { adx: 28 })]);
     expect(out[0].adx).toBe(28);
+  });
+
+  it('ranks the active setup\'s own components by points left, ignoring the idle setup', () => {
+    const components = [
+      { label: 'Bullish Divergence', score: 1, max: 3.5 },
+      { label: 'Volume Dry-Up', score: 2, max: 2.0 }, // maxed
+    ];
+    const out = computeRadar([ticker('AAA', { components })]);
+    expect(out[0].waitingOn).toEqual([{ label: 'Bullish Divergence', score: 1, max: 3.5, gap: 2.5 }]);
+  });
+
+  it('waitingOn is empty when the active setup carries no components', () => {
+    const out = computeRadar([ticker('AAA')]);
+    expect(out[0].waitingOn).toEqual([]);
   });
 
   it('flags when price has broken the most recent swing-low support', () => {

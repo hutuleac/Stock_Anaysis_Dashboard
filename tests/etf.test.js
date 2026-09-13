@@ -54,6 +54,15 @@ describe('scoreEtfEntry', () => {
     expect(r.score).toBe(0);
     expect(r.readiness).toBe('WAIT');
   });
+
+  it('tierHint is null at ACT, and reports the gap plus ranked components below it', () => {
+    expect(scoreEtfEntry(ENTRY_MAX).tierHint).toBeNull();
+    // Oversold 1.5/3, Rotation 1.5/3, Turn 1/2 (divergence only), Drawdown maxed → score 6.0
+    const r = scoreEtfEntry({ ...ENTRY_MAX, rsiW: 33, belowLowerBB: false, rs3m: -4, groupMedianRs3m: 1, macdCross: null });
+    expect(r.score).toBe(6);
+    expect(r.tierHint).toBe('+1 to ACT');
+    expect(r.waitingOn[0].label).toBe('Oversold'); // tied gap with Rotation, alphabetical tiebreak
+  });
 });
 
 const EXIT_MAX = { rsiW: 76, extensionPct: 26, rs1m: -3, rs3m: 8, volumeRatio: 2.2 };

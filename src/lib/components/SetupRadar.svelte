@@ -20,6 +20,8 @@
   const rsCssColor = (v) => (v == null ? '#6b7280' : v > 5 ? '#22c55e' : v > 0 ? '#86efac' : '#ef4444');
   const fmtPeg = (v) => (v === null ? '—' : `${v.toFixed(2)}x`);
   const scoreColor = (s) => toneColor(s >= 7 ? 'good' : s >= 4.5 ? 'partial' : 'waiting');
+  const waitingOnText = (h) => h.waitingOn?.length
+    ? `Waiting on: ${h.waitingOn.map(c => `${c.label} +${c.gap}`).join(', ')}` : null;
 </script>
 
 {#if getTickers().length}
@@ -52,7 +54,7 @@
                   class="text-[12px] px-1.5 py-0.5 rounded bg-surface-600 text-text-secondary sm:w-24 shrink-0 text-center cursor-default"
                   use:tipAction={() => ({
                     ...(h.setupType === 'PULLBACK' ? TIPS.setupPullback : TIPS.setupMomentum),
-                    current: { value: `${h.setupScore.toFixed(1)}/10`, label: h.setupType, color: scoreColor(h.setupScore) },
+                    current: { value: `${h.setupScore.toFixed(1)}/10`, label: waitingOnText(h) ?? h.setupType, color: scoreColor(h.setupScore) },
                   })}
                 >{h.setupType} <span style="color:{scoreColor(h.setupScore)}">{h.setupScore.toFixed(1)}</span></span>
 

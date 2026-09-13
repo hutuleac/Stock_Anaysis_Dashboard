@@ -20,6 +20,8 @@
   const scoreColor = (s) => toneColor(s >= 7 ? 'good' : s >= 5 ? 'partial' : 'waiting');
   const componentSummary = (h) => h.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
   const comp = (h, label) => h.components.find(c => c.label === label);
+  const waitingOnText = (h) => h.waitingOn?.length
+    ? `Waiting on: ${h.waitingOn.map(c => `${c.label} +${c.gap}`).join(', ')}` : null;
 </script>
 
 {#if getTickers().length}
@@ -63,7 +65,12 @@
                   class="text-[12px] px-1.5 py-0.5 rounded sm:w-14 shrink-0 text-center cursor-default" style={readinessStyle(h.readiness)}
                   use:tipAction={() => ({
                     ...TIPS.radarReadiness,
-                    current: { value: h.readiness, label: h.readiness === 'ACT' ? 'fear + oversold + quality aligned' : '', color: readinessColor(h.readiness) },
+                    current: {
+                      value: h.readiness,
+                      label: h.readiness === 'ACT' ? 'fear + oversold + quality aligned'
+                        : [h.tierHint, waitingOnText(h)].filter(Boolean).join(' — '),
+                      color: readinessColor(h.readiness),
+                    },
                   })}
                 >{h.readiness}</span>
 

@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.24
+# Project State — Stock Analysis Dashboard v0.25
 
 ## What this is
 
@@ -141,7 +141,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 23 files, 499 tests (~1s). One test file per lib module, same basename.
+tests/                — 23 files, 514 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -184,6 +184,8 @@ Watchlist-wide surface for the weekly setups above (`computeSetupSignals`), disp
 
 Both buckets still require revenue growth > 0 and PEG < 3 (quality). `SetupRadar.svelte` renders the two as separate labelled sections; null/negative RS is guarded in the UI. AVWAP-reclaimed + POC-not-below nudges readiness one tier (never demotes). Rejected (Jul 2026, deliberate): A) an overbought/extension guard on Momentum and B) relaxing the leaders gate globally — Peter watches entries manually instead. The split (C) + Dip fear gate (D) shipped; A/B did not.
 
+Each hit carries **`waitingOn`** (v0.25) — the active setup's own `components[]` ranked by points left (`rankGaps` in `readiness.js`), e.g. `Bullish Divergence +2.5`. No score-based `tierHint` here: readiness is gated on `score + urgencyBonus` in `signals.js` (its own 8/6/3.5 bands, not the shared 7/5/3) and then can be nudged a tier by AVWAP/POC above — the displayed `setupScore` alone doesn't determine the badge, so a distance-to-tier hint on it would mislead. `etaWeeks` already covers "when" for this panel.
+
 ## Dip Hunter (dip.js)
 
 Watchlist-wide scan for early entries in quality names on sale — display-only, does not feed `computeScore`. Two stages, entry point `computeDipRadar(list, marketCtx)`:
@@ -207,6 +209,8 @@ Watchlist-wide scan for early entries in quality names on sale — display-only,
 
 Readiness: `ACT` needs score ≥ 7 **and** a non-zero Fear component — which now (v0.21) requires *both* a fearful market **and** this ticker being genuinely down, so ACT never fires on a greedy market or on a name that isn't itself on sale · `SOON` ≥ 5 · `WATCH` ≥ 3 (below 3, excluded entirely). All inputs are already computed elsewhere on the ticker object (`data.indicators`, `data.rs`, `data.smartMoney`, `data.metrics`) — zero new API calls.
 
+Each hit also carries **`tierHint`** and **`waitingOn`** (v0.25, `readiness.js`'s `scoreTierHint`/`rankGaps`): a `6.2 SOON` shows `+0.8 to ACT`; a score ≥ 7 stuck below ACT names the actual reason — `needs market fear` or, taking precedence since it wins the readiness gate outright, `capped by downtrend` (mirrors the risk-context caps above) — instead of leaving the gate to be reverse-engineered from the source.
+
 ## ETF section (etf.js)
 
 Dedicated `Stocks | ETFs` header-toggle view for Ireland-domiciled accumulating UCITS ETFs, months-to-a-year horizon. **Key decision:** Finnhub/TwelveData free tiers have no European-exchange candles, so every UCITS ETF is mapped to a US-listed proxy tracking the same index (CSPX/VUAA→SPY, CNDX/EQQQ→QQQ, SMGB→SMH, AIAI→THNQ, AIRO→BOTZ, IUES→XLE, INRG→ICLN); all math runs on the proxy — zero new APIs. Displayed price is the proxy's (USD). Spec: `docs/superpowers/specs/2026-07-06-etf-section-design.md`.
@@ -215,7 +219,7 @@ Entry point `computeEtfSignals(list, spyCloses)` — per proxy `{ price, rs, gro
 
 - **Entry** (buy weakness): Oversold 3.0 (weekly RSI tiers + weekly BB touch) · Rotation 3.0 (mild RS3m lag vs SPY + vs group median; **0 if rs3m < −25** — falling knife) · Turn 2.0 (weekly MACD bull cross + bull divergence) · Drawdown 2.0 (off 52w daily high).
 - **Exit** (sell exhaustion): Overbought 3.0 (weekly RSI ≥65/70/75) · Extension 3.0 (% above weekly EMA30) · Rotation Loss 2.0 (rs1m negative while rs3m positive = capital rotating out) · Climax Vol 2.0 (weekly volume ≥1.5×/2× avg, only when wRSI ≥ 60).
-- Readiness both: ACT ≥ 7 · SOON ≥ 5 · WATCH ≥ 3 · else WAIT (no filtering — table shows all).
+- Readiness both: ACT ≥ 7 · SOON ≥ 5 · WATCH ≥ 3 · else WAIT (no filtering — table shows all). Both scores also carry **`tierHint`**/**`waitingOn`** (v0.25) — these bands match the shared `scoreTone()` exactly, so unlike Setup Radar there's no rank/nudge divergence to worry about.
 
 Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, localStorage key `etfList`, user-editable (add needs UCITS ticker + US proxy). Proxy candles fetched in `handleRefresh` per unique proxy (SPY/QQQ usually cache hits) and hydrated on startup from `td_ts_1day_<proxy>_1day_250`.
 
@@ -325,7 +329,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 499 unit tests, ~1s
+npm test          # 514 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
@@ -333,6 +337,6 @@ Vitest is scoped to `tests/**` in vite.config.js — do not remove that `include
 
 ## What's next (BACKLOG.md)
 
-Open queue, renumbered after the v0.24 cleanup: **#1 Gemini inline analysis** (the only item needing a new outbound API call), **#2 "distance to next tier"** on the shared 0–10 scores — including Dip Hunter's hidden ACT condition (score ≥ 7 *and* a non-zero Fear component), which currently reads as a bug — and **#3 "waiting on"** for Dip Hunter / Setup Radar / ETF, which reuses the `waitingOn()` ranking verbatim once it moves into the shared colour layer.
+Open queue: **#1 Gemini inline analysis** (the only item needing a new outbound API call) — the only item left after v0.25 shipped distance-to-next-tier and "waiting on" for Dip Hunter, Setup Radar and ETF.
 
 `BACKLOG.md` also carries the parked/rejected decisions and the per-iteration rules: one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge.

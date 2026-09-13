@@ -5,6 +5,7 @@
 // Both still require real revenue growth + PEG<3. Display-only; reads data already
 // on the ticker object — no API calls, no scoring changes.
 import { computePEG } from './valuation.js';
+import { rankGaps } from './readiness.js';
 
 const READINESS_RANK = { ACT: 3, SOON: 2, WATCH: 1 };
 
@@ -34,6 +35,7 @@ function activeSetup(setups) {
         readiness: s.readiness,
         score: isFiniteNum(s.score) ? s.score : 0,
         etaWeeks: s.etaWeeks ?? null,
+        components: s.components ?? null,
       });
     }
   }
@@ -97,6 +99,7 @@ export function computeRadar(list) {
       readiness,
       setupScore: setup.score,
       etaWeeks: setup.etaWeeks,
+      waitingOn: rankGaps(setup.components),
       rs3m,
       rsRank: rankMap.get(item.symbol) ?? null,
       rsTotal,
