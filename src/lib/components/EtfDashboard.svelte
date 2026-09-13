@@ -54,6 +54,11 @@
   const trendColor = (t) => t === 'UPTREND' ? '#22c55e' : t === 'PULLBACK' ? '#f59e0b' : t === 'DOWNTREND' ? '#ef4444' : '#6b7280';
   const fmtRs = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`;
   const compSummary = (score) => score.components.map(c => `${c.label} ${c.score}/${c.max}`).join(' · ');
+  const scoreLabel = (score) => {
+    const waiting = score.waitingOn?.length
+      ? `Waiting on: ${score.waitingOn.map(c => `${c.label} +${c.gap}`).join(', ')}` : null;
+    return [score.tierHint, waiting].filter(Boolean).join(' — ') || score.readiness;
+  };
   const COMPONENT_TIPS = {
     Oversold: 'etfOversoldComp', Rotation: 'etfRotationComp', Turn: 'etfTurnComp', Drawdown: 'etfDrawdownComp',
     Overbought: 'etfOverboughtComp', Extension: 'etfExtensionComp', 'Rotation Loss': 'etfRotationLossComp', 'Climax Vol': 'etfClimaxVolComp',
@@ -216,7 +221,7 @@
       <div class="grid md:grid-cols-2 gap-4 mb-4 text-xs">
         <div>
           <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
-            use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: etf.sig.entry.readiness, color: entryColor(etf.sig.entry.score) } })}
+            use:tipAction={() => ({ ...TIPS.etfEntry, current: { value: etf.sig.entry.score.toFixed(1) + '/10', label: scoreLabel(etf.sig.entry), color: entryColor(etf.sig.entry.score) } })}
           >Entry {etf.sig.entry.score.toFixed(1)}/10 · {etf.sig.entry.readiness}</div>
           {#each etf.sig.entry.components as c}
             <div class="flex justify-between py-0.5 cursor-default"
@@ -229,7 +234,7 @@
         </div>
         <div>
           <div class="text-text-muted uppercase tracking-wider mb-1.5 cursor-default"
-            use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: etf.sig.exit.readiness, color: exitColor(etf.sig.exit.score) } })}
+            use:tipAction={() => ({ ...TIPS.etfExit, current: { value: etf.sig.exit.score.toFixed(1) + '/10', label: scoreLabel(etf.sig.exit), color: exitColor(etf.sig.exit.score) } })}
           >Exit {etf.sig.exit.score.toFixed(1)}/10 · {etf.sig.exit.readiness}</div>
           {#each etf.sig.exit.components as c}
             <div class="flex justify-between py-0.5 cursor-default"
@@ -331,10 +336,10 @@
               use:tipAction={() => ({ ...TIPS.relativeStrength, current: { value: fmtRs(etf.sig?.rs?.rs3m), label: '3M vs SPY', color: rsColor(etf.sig?.rs?.rs3m ?? 0) } })}
             >{fmtRs(etf.sig?.rs?.rs3m)}</td>
             <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{entryColor(etf.sig?.entry?.score ?? null)}"
-              use:tipAction={etf.sig ? () => ({ ...TIPS.etfEntry, current: { value: String(etf.sig.entry.score), label: etf.sig.entry.readiness, color: entryColor(etf.sig.entry.score) }, description: compSummary(etf.sig.entry) }) : undefined}
+              use:tipAction={etf.sig ? () => ({ ...TIPS.etfEntry, current: { value: String(etf.sig.entry.score), label: scoreLabel(etf.sig.entry), color: entryColor(etf.sig.entry.score) }, description: compSummary(etf.sig.entry) }) : undefined}
             >{etf.sig ? etf.sig.entry.score.toFixed(1) : '—'}</td>
             <td class="px-1.5 sm:px-2 py-2 text-right font-mono cursor-default" style="color:{exitColor(etf.sig?.exit?.score ?? null)}"
-              use:tipAction={etf.sig ? () => ({ ...TIPS.etfExit, current: { value: String(etf.sig.exit.score), label: etf.sig.exit.readiness, color: exitColor(etf.sig.exit.score) }, description: compSummary(etf.sig.exit) }) : undefined}
+              use:tipAction={etf.sig ? () => ({ ...TIPS.etfExit, current: { value: String(etf.sig.exit.score), label: scoreLabel(etf.sig.exit), color: exitColor(etf.sig.exit.score) }, description: compSummary(etf.sig.exit) }) : undefined}
             >{etf.sig ? etf.sig.exit.score.toFixed(1) : '—'}</td>
             <td class="px-1.5 sm:px-2 py-2 text-center whitespace-nowrap cursor-default"
               use:tipAction={etf.sig ? () => { const isBuy = etf.sig.entry.score >= etf.sig.exit.score; const sig = isBuy ? etf.sig.entry : etf.sig.exit; return { ...TIPS.etfSignal, current: { value: `${isBuy ? 'BUY' : 'SELL'} ${sig.readiness}`, label: '', color: signalColor(sig.readiness, isBuy) } }; } : undefined}

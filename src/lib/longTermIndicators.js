@@ -10,6 +10,7 @@
 // (tests/longTermIndicators.test.js asserts both sets still sum to 100).
 import { TIMING_MAX } from './timingScore.js';
 import { toneColor, toneStyle } from './tone.js';
+import { rankGaps } from './readiness.js';
 
 const TIMING = [
   ['drawdown', 'Drawdown', TIMING_MAX.drawdown],
@@ -102,13 +103,5 @@ export const qualityTone = (total) => total == null ? 'none' : total >= 65 ? 'go
 // The components with the most points still on the table — i.e. what has to
 // improve before the entry gets better. Pure ranking of existing sub-scores:
 // a null component is skipped (nothing is known about it, so it isn't a wait).
-function gaps(defs, components, limit) {
-  return chips(defs, components)
-    .filter(c => c.score != null && c.score < c.max)
-    .map(c => ({ ...c, gap: c.max - c.score }))
-    .sort((a, b) => b.gap - a.gap || a.label.localeCompare(b.label))
-    .slice(0, limit);
-}
-
-export const waitingOn = (components, limit = 3) => gaps(TIMING, components, limit);
-export const qualityWaitingOn = (components, limit = 3) => gaps(QUALITY, components, limit);
+export const waitingOn = (components, limit = 3) => rankGaps(chips(TIMING, components), limit);
+export const qualityWaitingOn = (components, limit = 3) => rankGaps(chips(QUALITY, components), limit);

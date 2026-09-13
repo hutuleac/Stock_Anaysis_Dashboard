@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readinessTone, readinessColor, readinessStyle, signalTone, signalColor, scoreTone, scoreColor } from '../src/lib/readiness.js';
+import { readinessTone, readinessColor, readinessStyle, signalTone, signalColor, scoreTone, scoreColor, scoreTierHint, rankGaps } from '../src/lib/readiness.js';
 import { TONE, toneColor, toneStyle } from '../src/lib/tone.js';
 
 describe('readiness tones', () => {
@@ -55,6 +55,59 @@ describe('scoreTone', () => {
     expect(scoreTone(undefined)).toBe('none');
     expect(scoreTone(NaN)).toBe('none');
     expect(scoreTone(0)).toBe('waiting');
+  });
+});
+
+describe('scoreTierHint', () => {
+  it('reports the distance to the next tier', () => {
+    expect(scoreTierHint(6.2)).toBe('+0.8 to ACT');
+    expect(scoreTierHint(4.3)).toBe('+0.7 to SOON');
+    expect(scoreTierHint(1)).toBe('+2 to WATCH');
+  });
+
+  it('is null at the top tier with no blocked reason', () => {
+    expect(scoreTierHint(7)).toBeNull();
+    expect(scoreTierHint(9)).toBeNull();
+  });
+
+  it('surfaces a blocked reason instead of "already there" at the top tier', () => {
+    expect(scoreTierHint(7.5, { blocked: 'needs market fear' })).toBe('needs market fear');
+    expect(scoreTierHint(7.5, { blocked: null })).toBeNull();
+  });
+
+  it('ignores a blocked reason below the top tier — the gap is the real answer', () => {
+    expect(scoreTierHint(6, { blocked: 'needs market fear' })).toBe('+1 to ACT');
+  });
+
+  it('treats a missing score as no hint', () => {
+    expect(scoreTierHint(null)).toBeNull();
+    expect(scoreTierHint(NaN)).toBeNull();
+  });
+});
+
+describe('rankGaps', () => {
+  const components = [
+    { label: 'A', score: 2, max: 3 },
+    { label: 'B', score: 0, max: 2 },
+    { label: 'C', score: 1, max: 1 },
+    { label: 'D', score: null, max: 1 },
+  ];
+
+  it('ranks by points left on the table, largest gap first', () => {
+    expect(rankGaps(components).map(c => `${c.label} +${c.gap}`))
+      .toEqual(['B +2', 'A +1']);
+  });
+
+  it('skips a completed or unknown component', () => {
+    const labels = rankGaps(components, 10).map(c => c.label);
+    expect(labels).not.toContain('C'); // maxed out
+    expect(labels).not.toContain('D'); // null = unknown, not a gap
+  });
+
+  it('respects the limit and handles an empty/missing list', () => {
+    expect(rankGaps(components, 1)).toHaveLength(1);
+    expect(rankGaps([])).toEqual([]);
+    expect(rankGaps(undefined)).toEqual([]);
   });
 });
 

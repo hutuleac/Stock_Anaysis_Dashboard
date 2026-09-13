@@ -219,6 +219,35 @@ describe('dip score components', () => {
     expect(hits[0].risk.strongDowntrend).toBe(false);
   });
 
+  it('tierHint explains a downtrend cap over a fear gap, since it wins the readiness gate outright', () => {
+    const strongDowntrend = makeTicker({
+      indicators: { rsi: 28, rsiZScore: -1.8, roc20: -7, roc60: -18, oversoldConfluence: true,
+        macdCrossover: 'bullish_cross', obv: { obv: 500000, trend: 'rising' }, adx: 40 },
+    });
+    const hits = computeDipRadar([strongDowntrend], GREED);
+    expect(hits[0].tierHint).toBe('capped by downtrend');
+  });
+
+  it('tierHint names the fear gate when a 7+ score stays off ACT in a greedy market', () => {
+    const hits = computeDipRadar([makeTicker()], GREED);
+    expect(hits[0].score).toBeGreaterThanOrEqual(7);
+    expect(hits[0].readiness).not.toBe('ACT');
+    expect(hits[0].tierHint).toBe('needs market fear');
+  });
+
+  it('tierHint is null once fear + score clear the ACT gate', () => {
+    const hits = computeDipRadar([makeTicker()], FEAR);
+    expect(hits[0].readiness).toBe('ACT');
+    expect(hits[0].tierHint).toBeNull();
+  });
+
+  it('waitingOn ranks the components with the most points left, skipping maxed ones', () => {
+    const hits = computeDipRadar([makeTicker()], GREED); // Market Fear scores 0 in a greedy market
+    const labels = hits[0].waitingOn.map(c => c.label);
+    expect(labels).toContain('Market Fear');
+    expect(labels).not.toContain('Turn'); // already maxed on this fixture
+  });
+
   it('flags when price has broken the most recent swing-low support', () => {
     const t = makeTicker({ quote: { data: { c: 60 } } }); // below any swing low
     t.data.indicators.swingLows = [{ price: 65, barsAgo: 10 }, { price: 50, barsAgo: 40 }];

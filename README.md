@@ -9,8 +9,8 @@ Bloomberg-grade data workflow in the browser — no backend, your keys and data 
 &nbsp;
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.24-blue)
-![Tests](https://img.shields.io/badge/tests-499_passing-brightgreen?logo=vitest&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.25-blue)
+![Tests](https://img.shields.io/badge/tests-514_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
@@ -214,6 +214,11 @@ npm run test:watch  # watch mode (dev)
 ---
 
 ## Changelog
+
+### v0.25 (2026-09-13) — distance-to-next-tier and "waiting on" for Dip Hunter, Setup Radar, ETF
+- **"+X to next tier"** on Dip Hunter and ETF entry/exit scores — a `6.2 SOON` now shows `+0.8 to ACT`, the same fix the Long-Term Setup card got in v0.24. Dip Hunter's hidden ACT gates are named explicitly: a score ≥7 that's still SOON reads `needs market fear` or `capped by downtrend` instead of leaving the rule buried in the source. (Setup Radar's readiness runs on an urgency-adjusted rank, not the displayed score, so it keeps its own `~Xw to full setup` hint rather than borrowing this one — see CLAUDE.md.)
+- **"Waiting on"** — the component with the most points left on the table, e.g. `Waiting on: Turn +1.0, Smart Money +0.6`, now shows on Dip Hunter (9 components), Setup Radar (4 per setup) and both ETF entry/exit scores (4 each). The ranking helper (`waitingOn`/`qualityWaitingOn` in `longTermIndicators.js`) is unchanged for callers; its ranking logic moved into the shared `readiness.js` layer (`rankGaps`) so every panel's own `components[]` can reuse it.
+- Display-only, zero new API calls, zero new math — pure formatting of scores already computed.
 
 ### v0.24 (2026-09-12) — two-view playbooks + dashboard-wide colour ramp
 - **Demo mode shows the whole dashboard** — without API keys, Setup Radar, Dip Hunter, Long-Term Setup and the ETF table were all empty, because they need price history rather than summary fields. Demo mode now generates deterministic synthetic candle series per ticker and ETF proxy and runs them through the real engines, so every panel shows a plausible reading and both Setup Radar buckets, the dip scan and the ETF entry/exit table populate.
