@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, isRefreshing, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { detectMarketRegime } from './lib/macro.js';
@@ -45,6 +45,14 @@
   let macroCtx = null; // FRED macro context — feeds setMarketContext, not the template
   let marketBarCollapsed = $state(false);
   let marketStatus = $state(getMarketStatus());
+  // One refresh at a time: covers the whole run (quotes + minutes of rate-limited
+  // enrichment), not just refreshAll — `r`, the button, auto-refresh and the
+  // API-key effect would otherwise start a second parallel run.
+  let inFlight = $state(false);
+  let enrichProgress = $state(null); // { current, total } during the indicators phase
+  const refreshStep = $derived(enrichProgress
+    ? { label: 'Indicators', ...enrichProgress }
+    : { label: 'Quotes', ...getRefreshProgress() });
 
   // When a user enters API keys in Settings, exit demo mode and load real data
   $effect(() => {
@@ -133,12 +141,13 @@
   }
 
   async function handleRefresh() {
-    if (!getApiKey() || isRefreshing()) return;
+    if (!getApiKey() || inFlight) return;
     refreshError = '';
 
     const symbols = getSymbols();
     if (symbols.length === 0) return;
 
+    inFlight = true;
     try {
       // FRED macro context (CPI, Fed funds, unemployment, yield curve) —
       // 24h localStorage cache, so this is usually a no-op. Non-blocking.
@@ -157,6 +166,7 @@
           macro:          macroCtx?.regime ?? null,
         });
       } catch { /* non-blocking — market context is informational */ }
+      persistSupplement(symbols, {});
 
       const results = await refreshAll(symbols);
 
@@ -203,7 +213,8 @@
         });
       }
 
-      for (const ticker of tickers) {
+      for (const [idx, ticker] of tickers.entries()) {
+        enrichProgress = { current: idx + 1, total: tickers.length };
         const data = results[ticker.symbol];
         if (!data) continue;
 
@@ -328,6 +339,8 @@
         // rate-limited TD queue (8 req/min) a full watchlist can take
         // minutes to drain; don't make the UI wait for the last ticker.
         setMarketData({ [ticker.symbol]: results[ticker.symbol] });
+        // …and persist it, so closing the tab mid-run keeps what already landed.
+        persistSupplement(symbols, results);
       }
 
       // ETF proxies — daily candles per unique proxy → weekly resample → etf store.
@@ -387,7 +400,7 @@
         const breadthEntries = tickers.map(t => {
           const d = results[t.symbol];
           return {
-            price:  d?.quote?.data?.c ?? null,
+            price:  d?.quote?.data?.c || null, // 0 = no quote → excluded
             ema50:  d?.indicators?.ema50 ?? null,
             ema200: d?.indicators?.ema200 ?? null,
           };
@@ -398,48 +411,43 @@
       lastRefreshed = new Date();
       try { localStorage.setItem('lastRefreshed', String(lastRefreshed.getTime())); } catch { /* noop */ }
 
-      // Persist all UI-critical fields to supplement (~100 KB).
-      // Excludes only news (large, non-critical for scores/indicators).
       // First remove the old large snapshot key to free quota space.
       try { localStorage.removeItem('dashboard_snapshot'); } catch { /* noop */ }
-      try {
-        // Read previous supplement so candle-derived fields (indicators, weekly,
-        // setups, rs) survive a refresh where candle fetches fail or are rate-limited.
-        let prevSupp = null;
-        try {
-          const ps = localStorage.getItem('dashboard_supplement');
-          if (ps) prevSupp = JSON.parse(ps)?.tickers ?? null;
-        } catch { /* noop */ }
-
-        const supplement = {};
-        for (const [sym, d] of Object.entries(results)) {
-          const p = prevSupp?.[sym];
-          supplement[sym] = {
-            quote:       d.quote       ?? null,
-            earnings:    d.earnings    ?? null,
-            metrics:     d.metrics     ?? null,
-            indicators:  d.indicators  ?? p?.indicators  ?? null,
-            tdQuote:     d.tdQuote     ?? p?.tdQuote     ?? null,
-            weekly:      d.weekly      ?? p?.weekly      ?? null,
-            setups:      d.setups      ?? p?.setups      ?? null,
-            profile:     d.profile     ?? p?.profile     ?? null,
-            rs:          d.rs          ?? p?.rs          ?? null,
-            smartMoney:  d.smartMoney  ?? p?.smartMoney  ?? null,
-            sectorMomentum: d.sectorMomentum ?? null,
-            timingScore:  d.timingScore  ?? p?.timingScore  ?? null,
-            qualityScore: d.qualityScore ?? p?.qualityScore ?? null,
-            revenueHistory: d.revenueHistory ?? p?.revenueHistory ?? null,
-          };
-        }
-        localStorage.setItem('dashboard_supplement', JSON.stringify({
-          tickers: supplement,
-          marketContextData: marketContextData ?? null,
-          ts: lastRefreshed.getTime(),
-        }));
-      } catch { /* quota exceeded — non-fatal */ }
+      persistSupplement(symbols, results);
     } catch (err) {
       refreshError = err.message;
+    } finally {
+      inFlight = false;
+      enrichProgress = null;
     }
+  }
+
+  // Persist all UI-critical fields to the supplement (~100 KB). Called after
+  // market context lands, after each ticker commits, and at the end — a refresh
+  // cut short keeps everything fetched so far. Fields this run hasn't produced
+  // (yet, or because a candle fetch failed) fall back to the previous snapshot.
+  function persistSupplement(symbols, results) {
+    try {
+      let prevSupp = null;
+      try {
+        const ps = localStorage.getItem('dashboard_supplement');
+        if (ps) prevSupp = JSON.parse(ps)?.tickers ?? null;
+      } catch { /* noop */ }
+
+      const FIELDS = ['quote', 'earnings', 'metrics', 'indicators', 'tdQuote', 'weekly', 'setups', 'profile',
+        'rs', 'smartMoney', 'sectorMomentum', 'timingScore', 'qualityScore', 'revenueHistory'];
+      const supplement = {};
+      for (const sym of symbols) {
+        const d = results[sym], p = prevSupp?.[sym];
+        if (!d && !p) continue;
+        supplement[sym] = Object.fromEntries(FIELDS.map(f => [f, d?.[f] ?? p?.[f] ?? null]));
+      }
+      localStorage.setItem('dashboard_supplement', JSON.stringify({
+        tickers: supplement,
+        marketContextData: marketContextData ?? null,
+        ts: lastRefreshed?.getTime() ?? null,
+      }));
+    } catch { /* quota exceeded — non-fatal */ }
   }
 
   function formatTime(date) {
@@ -711,11 +719,11 @@
         </div>
 
         <!-- Refresh button + progress -->
-        {#if isRefreshing()}
+        {#if inFlight}
           <div class="flex items-center gap-2 text-sm text-text-secondary">
             <div class="w-3.5 h-3.5 border-2 border-bull-strong border-t-transparent rounded-full animate-spin"></div>
             <span class="font-mono text-xs">
-              {getRefreshProgress().current}/{getRefreshProgress().total}
+              {refreshStep.label} {refreshStep.current}/{refreshStep.total}
             </span>
           </div>
         {:else}
@@ -746,11 +754,11 @@
     </div>
 
     <!-- Progress bar -->
-    {#if isRefreshing()}
+    {#if inFlight}
       <div class="h-0.5 bg-surface-700">
         <div
           class="h-full bg-bull-strong transition-all duration-300"
-          style="width: {(getRefreshProgress().current / Math.max(getRefreshProgress().total, 1)) * 100}%"
+          style="width: {(refreshStep.current / Math.max(refreshStep.total, 1)) * 100}%"
         ></div>
       </div>
     {/if}

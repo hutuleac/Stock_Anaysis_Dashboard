@@ -45,8 +45,10 @@ export function scoreNewsHeadlines(newsData) {
 // Defaults to module-level _marketContext (set via setMarketContext on each refresh).
 
 export function computeScore(tickerData, marketContext = _marketContext) {
-  if (!tickerData?.quote?.data) {
-    return { score: null, badge: 'NEUTRAL', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null, conviction: null, convictionLabel: null, regimeNote: null, spyPenaltyApplied: false, macroRegime: null, rsiZScore: null, scoreZScore: null };
+  // No price (unknown/delisted symbol, Finnhub returns c: 0) → no score at all,
+  // not a fake NEUTRAL 50 built from zero inputs.
+  if (!tickerData?.quote?.data?.c) {
+    return { score: null, badge: 'NO_DATA', factors: 0, total: 10, technical: null, fundamental: null, sentiment: null, conviction: null, convictionLabel: null, regimeNote: null, spyPenaltyApplied: false, macroRegime: null, rsiZScore: null, scoreZScore: null };
   }
 
   const quote   = tickerData.quote.data;
@@ -553,6 +555,7 @@ export function getBadgeStyle(badge) {
     case 'LEAN_SHORT':   return { bg: 'bg-transparent border border-bear-weak', text: 'text-bear-weak', label: 'LEAN SHORT' };
     case 'STRONG_SHORT': return { bg: 'bg-bear-strong', text: 'text-surface-900', label: 'STRONG SHORT' };
     case 'BLOCKED':      return { bg: 'bg-danger', text: 'text-white', label: 'BLOCKED' };
+    case 'NO_DATA':      return { bg: 'bg-transparent border border-border', text: 'text-text-muted', label: 'NO DATA' };
     default:             return { bg: 'bg-surface-600', text: 'text-neutral', label: '—' };
   }
 }

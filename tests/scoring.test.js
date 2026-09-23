@@ -148,7 +148,16 @@ describe('computeScore', () => {
   it('returns null score with no quote data', () => {
     const result = computeScore({});
     expect(result.score).toBeNull();
-    expect(result.badge).toBe('NEUTRAL');
+    expect(result.badge).toBe('NO_DATA');
+  });
+
+  it('a zero/missing price is no data, not a NEUTRAL 50', () => {
+    for (const c of [0, null, undefined]) {
+      const result = computeScore({ quote: { data: { c, dp: 0 } } });
+      expect(result.score).toBeNull();
+      expect(result.badge).toBe('NO_DATA');
+    }
+    expect(getBadgeStyle('NO_DATA').label).toBe('NO DATA');
   });
 
   it('score is always in [0, 100]', () => {

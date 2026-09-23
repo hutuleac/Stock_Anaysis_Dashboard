@@ -1,4 +1,5 @@
 <script>
+  import { hasTDApiKey } from '../api/twelvedata.svelte.js';
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
   import { timingChips, chipStyle, statusStyle, timingTone, qualityTone, timingHint } from '../longTermIndicators.js';
@@ -15,7 +16,7 @@
     return getTickers()
       .map(t => {
         const data = getTickerData(t.symbol);
-        if (!data?.timingScore) return null; // no candle data yet — nothing to show
+        if (!data?.timingScore || !data.quote?.data?.c) return null; // no candle/price data — nothing to show
         const setup = buildLongTermSetup(data.timingScore, data.qualityScore ?? null, { fearGreed, creditStress });
         return { symbol: t.symbol, setup };
       })
@@ -50,7 +51,9 @@
 
     {#if !collapsed}
       <div class="px-4 pb-3 border-t border-border/40 pt-3">
-        {#if !rows.length}
+        {#if !rows.length && !hasTDApiKey()}
+          <p class="text-xs text-text-muted italic">Add a free TwelveData key in Settings to unlock — Finnhub's free tier has no candle data.</p>
+        {:else if !rows.length}
           <p class="text-xs text-text-muted">No timing data yet — refresh your watchlist.</p>
         {:else}
           <div class="space-y-1.5">

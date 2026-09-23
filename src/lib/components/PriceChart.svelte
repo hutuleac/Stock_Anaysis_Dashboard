@@ -475,7 +475,7 @@
       } else {
         const result = await fetchCandles(symbol, tf.resolution, fromTs, toTs);
         const raw    = result.data;
-        if (!raw || raw.s === 'no_data' || !raw.t?.length) { error = 'No chart data available'; loading = false; return; }
+        if (!raw || raw.s === 'no_data' || !raw.t?.length) { error = 'Add a free TwelveData key in Settings to unlock charts'; loading = false; return; }
         candles = raw.t.map((ts, i) => ({
           time:   ts,
           open:   raw.o[i],
@@ -519,7 +519,7 @@
       restoreDrawings();
 
     } catch (err) {
-      error = 'Failed to load chart data';
+      error = hasTDApiKey() ? 'Failed to load chart data' : 'Add a free TwelveData key in Settings to unlock charts';
       console.error('[Chart] loadCandles error:', err);
     }
     loading = false;

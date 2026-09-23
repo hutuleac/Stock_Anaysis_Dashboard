@@ -1,4 +1,5 @@
 <script>
+  import { hasTDApiKey } from '../api/twelvedata.svelte.js';
   import { readinessColor, readinessStyle } from '../readiness.js';
   import { toneColor } from '../tone.js';
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
@@ -170,6 +171,8 @@
               </button>
             {/each}
           </div>
+        {:else if !hasTDApiKey()}
+          <p class="text-xs text-text-muted italic">Add a free TwelveData key in Settings to unlock — Finnhub's free tier has no candle data.</p>
         {:else}
           <p class="text-xs text-text-muted italic">No quality dips right now — patience is a position.</p>
         {/if}

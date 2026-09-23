@@ -7,6 +7,7 @@
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
   import PriceChart from './PriceChart.svelte';
+  import { hasTDApiKey } from '../api/twelvedata.svelte.js';
 
   // Gates mobile card vs desktop table so the expanded row's PriceChart only mounts once.
   let isMobile = $state(false);
@@ -125,6 +126,10 @@
         onclick={() => showAdd = !showAdd}>+ Add</button>
     </div>
   </div>
+
+  {#if !hasTDApiKey() && !rows.some(r => r.sig)}
+    <p class="px-4 py-2 text-xs text-text-muted italic border-b border-border/40">Add a free TwelveData key in Settings to unlock ETF signals — Finnhub's free tier has no candle data.</p>
+  {/if}
 
   {#if showAdd}
     <div class="px-4 py-2.5 border-b border-border/40">

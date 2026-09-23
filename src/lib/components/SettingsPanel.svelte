@@ -159,11 +159,11 @@
       <div class="space-y-2">
         <label class="block">
           <span class="text-sm font-medium text-text-secondary">TwelveData API Key</span>
-          <span class="ml-2 text-xs text-uncertain bg-uncertain/10 px-1.5 py-0.5 rounded">optional</span>
+          <span class="ml-2 text-xs text-warning bg-warning/10 px-1.5 py-0.5 rounded">required for charts</span>
           <div class="flex gap-2 mt-1">
             <input
               type="password"
-              placeholder="Enables RSI, MACD, Bollinger Bands"
+              placeholder="Unlocks charts, setups, dips, ETFs"
               class="flex-1 bg-surface-700 border border-border rounded px-3 py-2 text-text-primary font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50"
               bind:value={tdApiKeyInput}
             />
@@ -174,7 +174,7 @@
           </div>
         </label>
         <p class="text-xs text-text-muted">
-          Adds RSI(14) + MACD to the scoring engine and shows indicators in the detail panel.
+          Required for charts, setups, dips, ETFs and every indicator — Finnhub's free tier blocks candle data.
           Free key from <a href="https://twelvedata.com/register" target="_blank" rel="noopener" class="text-uncertain hover:underline">twelvedata.com/register</a>
         </p>
       </div>

@@ -239,7 +239,7 @@
   }
 
   function formatPrice(val) {
-    if (val == null) return '—';
+    if (!val) return '—'; // 0 = no quote for this symbol
     return '$' + val.toFixed(2);
   }
 

@@ -31,6 +31,10 @@ function ticker(symbol, o = {}) {
 }
 
 describe('computeRadar', () => {
+  it('skips a ticker with no price (c: 0)', () => {
+    expect(computeRadar([ticker('AOI', { price: 0 })])).toHaveLength(0);
+  });
+
   it('includes a name passing both gates', () => {
     const out = computeRadar([ticker('AAA')]);
     expect(out).toHaveLength(1);

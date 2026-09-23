@@ -70,7 +70,7 @@ export function computeRadar(list) {
   const hits = [];
   for (const item of list) {
     const data = item?.data;
-    if (!data) continue;
+    if (!data?.quote?.data?.c) continue; // no price = no data, not a setup
 
     const setup = activeSetup(data.setups);
     if (!setup) continue;

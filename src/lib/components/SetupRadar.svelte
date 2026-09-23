@@ -3,6 +3,7 @@
   import { toneColor } from '../tone.js';
   import { getTickers, getTickerData, selectTicker } from '../stores/watchlist.svelte.js';
   import { computeRadar } from '../radar.js';
+  import { hasTDApiKey } from '../api/twelvedata.svelte.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
 
@@ -180,6 +181,8 @@
             <div class="text-[12px] font-semibold text-text-muted uppercase tracking-wider mb-1.5 {accumulation.length ? 'mt-3' : ''}">Breakout Confirmation · leaders only</div>
             <div class="space-y-1.5">{#each breakout as h}{@render row(h)}{/each}</div>
           {/if}
+        {:else if !hasTDApiKey()}
+          <p class="text-xs text-text-muted italic">Add a free TwelveData key in Settings to unlock — Finnhub's free tier has no candle data.</p>
         {:else}
           <p class="text-xs text-text-muted italic">No entries today — the gate is intentionally strict.</p>
         {/if}
