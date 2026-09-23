@@ -20,6 +20,7 @@
   import SetupRadar from './lib/components/SetupRadar.svelte';
   import DipRadar from './lib/components/DipRadar.svelte';
   import LongTermScanPanel from './lib/components/LongTermScanPanel.svelte';
+  import ScanSummary from './lib/components/ScanSummary.svelte';
   import EtfDashboard from './lib/components/EtfDashboard.svelte';
   import { getUniqueProxies, setEtfProxyData, setEtfSpyCloses, requestEtfExpand } from './lib/stores/etflist.svelte.js';
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
@@ -32,7 +33,7 @@
 
   function handleHighlightNav(item) {
     activeView = item.view;
-    if (item.view === 'stocks') selectTicker(item.symbol);
+    if (item.view === 'stocks') { closeScan(); selectTicker(item.symbol); } // a filter could hide the target row
     else requestEtfExpand(item.symbol);
   }
 
@@ -44,7 +45,18 @@
   let refreshError = $state('');
   let marketContextData = $state(null);
   let macroCtx = null; // FRED macro context — feeds setMarketContext, not the template
-  let marketBarCollapsed = $state(false);
+  // Phones start collapsed so the watchlist is reachable on the first screen.
+  let marketBarCollapsed = $state(typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches);
+  // Scan panels are closed by default behind one summary line; opening one also
+  // filters the watchlist to its tickers. Clicking the open item again closes both.
+  let openScan = $state(null);   // 'setups' | 'dips' | 'longterm' | null
+  let tableFilter = $state(null); // symbol[] | null
+  function selectScan(key, symbols) {
+    if (openScan === key) { closeScan(); return; }
+    openScan = key;
+    tableFilter = symbols.length ? symbols : null;
+  }
+  function closeScan() { openScan = null; tableFilter = null; }
   let marketStatus = $state(getMarketStatus());
   let now = $state(Date.now()); // ticks with marketStatus, for the quote-age label
   // One refresh at a time: covers the whole run (quotes + minutes of rate-limited
@@ -829,10 +841,11 @@
     <HighlightsStrip marketData={marketContextData} onNavigate={handleHighlightNav} />
 
     {#if activeView === 'stocks'}
-      <SetupRadar />
-      <DipRadar marketData={marketContextData} />
-      <LongTermScanPanel marketContextData={marketContextData} />
-      <WatchlistTable onTickerAdded={handleRefresh} onTickerExpand={loadQualityScoreForTicker} />
+      <ScanSummary marketData={marketContextData} active={openScan} onSelect={selectScan} />
+      {#if openScan === 'setups'}<SetupRadar bind:collapsed={() => false, (v) => v && closeScan()} />{/if}
+      {#if openScan === 'dips'}<DipRadar marketData={marketContextData} bind:collapsed={() => false, (v) => v && closeScan()} />{/if}
+      {#if openScan === 'longterm'}<LongTermScanPanel marketContextData={marketContextData} bind:collapsed={() => false, (v) => v && closeScan()} />{/if}
+      <WatchlistTable onTickerAdded={handleRefresh} onTickerExpand={loadQualityScoreForTicker} filterSymbols={tableFilter} onClearFilter={closeScan} />
     {:else}
       <EtfDashboard />
     {/if}

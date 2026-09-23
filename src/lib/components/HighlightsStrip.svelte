@@ -5,6 +5,7 @@
   import { computeDipRadar } from '../dip.js';
   import { computeEtfSignals } from '../etf.js';
   import { computeHighlights, computeNotifications } from '../highlights.js';
+  import { signalStyle } from '../readiness.js';
 
   let { marketData = null, onNavigate } = $props();
 
@@ -46,19 +47,16 @@
     try { localStorage.setItem('notifySeen', JSON.stringify([...keys, ...carried])); } catch { /* noop */ }
   });
 
-  function chipClass(it) {
-    if (it.kind === 'etf-exit') return 'border-bear-strong/40 bg-bear-strong/10 text-bear-strong hover:bg-bear-strong/20';
-    if (it.readiness === 'ACT') return 'border-bull-strong/40 bg-bull-strong/10 text-bull-strong hover:bg-bull-strong/20';
-    return 'border-uncertain/40 bg-uncertain/10 text-uncertain hover:bg-uncertain/20';
-  }
 </script>
 
 {#if items.length}
-  <div class="mb-4 flex flex-wrap items-center gap-1.5">
-    <span class="text-[12px] uppercase tracking-wider text-text-muted mr-1">Today</span>
+  <!-- One scrollable line on phones (the watchlist must stay above the fold); wraps on desktop. -->
+  <div class="mb-4 flex flex-nowrap sm:flex-wrap items-center gap-1.5 overflow-x-auto sm:overflow-visible whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <span class="text-[12px] uppercase tracking-wider text-text-muted mr-1 shrink-0">Today</span>
     {#each items as it (it.kind + ':' + it.symbol)}
       <button
-        class="text-[13px] px-2 py-1 rounded-md border transition-colors {chipClass(it)}"
+        class="text-[13px] px-2 py-1 rounded-md shrink-0 transition-[filter] hover:brightness-125"
+        style={signalStyle(it.readiness, it.kind !== 'etf-exit')}
         onclick={() => onNavigate?.(it)}
       >{it.label} · {it.readiness}</button>
     {/each}

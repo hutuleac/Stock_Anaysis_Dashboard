@@ -5,8 +5,7 @@
   import { timingChips, chipStyle, statusStyle, timingTone, qualityTone, timingHint } from '../longTermIndicators.js';
   import { toneColor } from '../tone.js';
 
-  let { marketContextData = null } = $props();
-  let collapsed = $state(false);
+  let { marketContextData = null, collapsed = $bindable(false) } = $props();
 
   const STATUS_ORDER = ['ACCUMULATE', 'OVERSOLD_BUT_CAUTION', 'WATCHLIST', 'NEUTRAL', 'WAIT', 'INSUFFICIENT_DATA'];
 
@@ -57,7 +56,10 @@
           <p class="text-xs text-text-muted">No timing data yet — refresh your watchlist.</p>
         {:else}
           <div class="space-y-1.5">
-            {#each (showAll ? rows : primaryRows.length ? primaryRows : rows.slice(0, 3)) as row (row.symbol)}
+            {#if !showAll && !primaryRows.length}
+              <p class="text-xs text-text-muted">None ready — {rows.length} ticker{rows.length === 1 ? '' : 's'} waiting on timing or quality.</p>
+            {/if}
+            {#each (showAll ? rows : primaryRows) as row (row.symbol)}
               <button
                 class="w-full flex flex-col gap-1.5 px-3 py-2.5 rounded bg-surface-700/50 hover:bg-surface-700 transition-colors text-left"
                 onclick={() => selectTicker(row.symbol)}
@@ -100,7 +102,7 @@
               </button>
             {/each}
           </div>
-          {#if !showAll && rows.length > (primaryRows.length || 3)}
+          {#if !showAll && rows.length > primaryRows.length}
             <button class="text-[12px] text-text-muted hover:text-text-secondary mt-2" onclick={() => showAll = true}>
               Show all {rows.length} tickers ▾
             </button>

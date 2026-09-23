@@ -7,7 +7,7 @@
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
 
-  let collapsed = $state(false);
+  let { collapsed = $bindable(false) } = $props();
 
   const hits = $derived.by(() => {
     const list = getTickers().map(t => ({ symbol: t.symbol, data: getTickerData(t.symbol) }));

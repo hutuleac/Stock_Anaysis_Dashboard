@@ -4,7 +4,7 @@
   import { searchTicker } from '../api/finnhub.svelte.js';
   import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory, getMarketContext, BADGE_BANDS } from '../scoring.js';
   import { tickerSetups } from '../radar.js';
-  import { reconcileVerdict, readinessStyle } from '../readiness.js';
+  import { reconcileVerdict, readinessStyle, signalChips } from '../readiness.js';
   import { proximityTo52wHigh } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
@@ -18,7 +18,19 @@
   import PriceChart from './PriceChart.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
 
-  let { onTickerAdded = () => {}, onTickerExpand = () => {} } = $props();
+  // filterSymbols: set by the scan summary (App) — show only these tickers.
+  let { onTickerAdded = () => {}, onTickerExpand = () => {}, filterSymbols = null, onClearFilter = () => {} } = $props();
+
+  // Shared by the Signals column and the expanded row, so both read the same engines.
+  const dipCtx = () => {
+    const mc = getMarketContext();
+    return { fearGreedValue: mc?.fearGreedValue ?? null, spyBelowEma50: mc?.spyDowntrend ?? null };
+  };
+  const ltSetupFor = (data) => (data?.timingScore || data?.qualityScore)
+    ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null })
+    : null;
+  const rowSignals = (symbol, data) => signalChips(tickerSetups(symbol, data, dipCtx()), ltSetupFor(data));
+  const LT_CHIP = { ACCUMULATE: 'ACCUM', OVERSOLD_BUT_CAUTION: 'CHECK Q', WATCHLIST: 'WATCH' };
 
   // Open a ticker and, on phones, scroll its header just under the sticky top
   // bar so every stock opens the same way and reads top-to-bottom. Tapping the
@@ -211,7 +223,7 @@
   }
 
   function getSortedTickers() {
-    const list = [...getTickers()];
+    const list = filterSymbols ? getTickers().filter(t => filterSymbols.includes(t.symbol)) : [...getTickers()];
     list.sort((a, b) => {
       let aVal, bVal;
       const aData = getTickerData(a.symbol);
@@ -458,14 +470,7 @@
        setup chip hidden below md, other chips hidden below lg — matches pre-dedup gates). -->
   {#snippet tickerChips(data, size)}
     {@const px = size === 'sm' ? 'text-[13px]' : 'text-[12px]'}
-    {@const setupVis = size === 'sm' ? 'inline-block' : 'hidden md:inline-block'}
     {@const chipVis = size === 'sm' ? 'inline-block' : 'hidden lg:inline-block'}
-    {#if topSetup(data?.setups)}
-      {@const su = topSetup(data?.setups)}
-      <span class="{setupVis} px-1.5 py-0.5 rounded {px} font-semibold" style={readinessStyle(su.readiness)} title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
-        {su.kind} {su.readiness}{size === 'sm' && su.etaWeeks ? ` ~${su.etaWeeks}w` : ''}
-      </span>
-    {/if}
     {#if rsChip(data?.rs)}
       {@const chip = rsChip(data?.rs)}
       <span class="{chipVis} px-1.5 py-0.5 rounded {px} font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
@@ -478,6 +483,13 @@
       {@const chip = high52wChip(data)}
       <span class="{chipVis} px-1.5 py-0.5 rounded {px} font-semibold {chip.cls}" title={chip.title}>{chip.label}</span>
     {/if}
+  {/snippet}
+
+  <!-- Readiness chips: the ticker's one home for what the scan panels say. -->
+  {#snippet signalChipList(chips)}
+    {#each chips as c}
+      <span class="px-1.5 py-0.5 rounded text-[12px] font-semibold whitespace-nowrap" style={c.status ? ltStatusStyle(c.status) : readinessStyle(c.readiness)}>{c.label} {c.status ? LT_CHIP[c.status] : c.readiness}</span>
+    {/each}
   {/snippet}
 
   {#snippet sectionHeader(key, label)}
@@ -698,10 +710,9 @@
   {/snippet}
 
   {#snippet expandedPanel(ticker, data, score, variant)}
-    {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null }) : null}
+    {@const setup = ltSetupFor(data)}
     {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
-    {@const mc = getMarketContext()}
-    {@const rows = tickerSetups(ticker.symbol, data, { fearGreedValue: mc?.fearGreedValue ?? null, spyBelowEma50: mc?.spyDowntrend ?? null })}
+    {@const rows = tickerSetups(ticker.symbol, data, dipCtx())}
     {@const verdict = reconcileVerdict(score.badge, { ...rows, longTerm: setup })}
     {@const su = topSetup(data?.setups)}
     {@const playbook = su?.kind === 'BREAKOUT' ? 'trend' : su ? 'pullback' : 'all'}
@@ -805,11 +816,19 @@
     {/if}
   {/snippet}
 
+  {#if filterSymbols}
+    <div class="flex items-center gap-2 mb-2 text-xs text-text-muted">
+      <span>Showing {getSortedTickers().length} of {getTickers().length}</span>
+      <button class="px-2 py-0.5 rounded bg-surface-700 text-text-secondary hover:text-text-primary" onclick={onClearFilter}>clear filter ✕</button>
+    </div>
+  {/if}
+
   <!-- ── Mobile card layout (< sm) ─────────────────────────────────────────── -->
   {#if isMobile && getTickers().length > 0}
     <div class="space-y-2 mb-4">
       {#each getSortedTickers() as ticker}
         {@const data = getTickerData(ticker.symbol)}
+        {@const chips = rowSignals(ticker.symbol, data)}
         {@const score = computeScore(data)}
         {@const badge = getBadgeStyle(score.badge)}
         {@const quote = data?.quote?.data}
@@ -838,9 +857,10 @@
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold shrink-0 {badge.bg} {badge.text}">{badge.label}</span>
           </div>
 
-          <!-- Row 1.5: scrollable chip rail -->
-          {#if topSetup(data?.setups) || rsChip(data?.rs) || emaStackChip(data?.indicators) || high52wChip(data)}
-            <div class="flex gap-1.5 overflow-x-auto whitespace-nowrap -mx-1 px-1 pb-0.5 mt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <!-- Row 1.5: signal chips first, then context chips — wrap under the ticker -->
+          {#if chips.length || rsChip(data?.rs) || emaStackChip(data?.indicators) || high52wChip(data)}
+            <div class="flex flex-wrap gap-1.5 mt-1">
+              {@render signalChipList(chips)}
               {@render tickerChips(data, 'sm')}
             </div>
           {/if}
@@ -914,6 +934,7 @@
               Score {sortBy === 'score' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
             <th class="px-3 py-3 text-center hidden sm:table-cell cursor-default" use:tipAction={TIPS.setupBadge}>Setup</th>
+            <th class="px-3 py-3 text-left hidden md:table-cell">Signals</th>
             <th class="px-3 py-3 text-center hidden md:table-cell cursor-pointer hover:text-text-secondary" onclick={() => handleSort('earnings')}>
               Earnings {sortBy === 'earnings' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </th>
@@ -931,6 +952,7 @@
             {@const velocity = getScoreVelocity(ticker.symbol)}
             {@const scoreHistory = getScoreHistory(ticker.symbol)}
             {@const scoreZ = computeScoreZScore(ticker.symbol)}
+            {@const chips = rowSignals(ticker.symbol, data)}
 
             <tr
               class="border-b border-border/50 cursor-pointer transition-colors {isSelected ? 'bg-surface-700' : 'hover:bg-surface-800'}"
@@ -1009,6 +1031,9 @@
                   {badge.label}
                 </span>
               </td>
+              <td class="px-3 py-3 hidden md:table-cell">
+                <div class="flex flex-wrap gap-1">{#if chips.length}{@render signalChipList(chips)}{:else}<span class="text-text-muted text-xs">—</span>{/if}</div>
+              </td>
               <td class="px-3 py-3 text-center hidden md:table-cell">
                 {#if daysToEarnings !== null}
                   <span class="text-xs font-mono {daysToEarnings < 7 ? 'text-danger font-bold' : daysToEarnings < 14 ? 'text-warning' : 'text-text-secondary'}">
@@ -1030,7 +1055,7 @@
             <!-- Inline expansion: Checklist + Entry Panel -->
             {#if isSelected}
               <tr>
-                <td colspan="8" class="p-0">
+                <td colspan="9" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
                     {@render expandedPanel(ticker, data, score, 'desktop')}
                   </div>

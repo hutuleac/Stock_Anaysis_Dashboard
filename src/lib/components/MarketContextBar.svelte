@@ -180,7 +180,7 @@
         <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
           use:tipAction={() => ({ ...TIPS.spyTrend, levels: internals.length ? internals : TIPS.spyTrend.levels, current: spyInfo.sub ? { value: spyInfo.value, label: spyInfo.label, color: spyInfo.hex } : undefined })}>
           {@render tileHeader(spyInfo, 'SPY Trend')}
-          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{spyInfo.sub}{#if internals.length}<span class="font-sans"> · hover: {internals.map(i => i.range.toLowerCase()).join(', ')}</span>{/if}</span>{/if}
+          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{spyInfo.sub}{#if internals.length}<span class="font-sans"> · + {internals.map(i => i.range.toLowerCase()).join(', ')}</span>{/if}</span>{/if}
         </div>
 
         <!-- Fear & Greed -->

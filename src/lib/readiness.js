@@ -98,3 +98,19 @@ export function reconcileVerdict(badge, rows) {
   }
   return null;
 }
+
+// ─── Signal chips ───────────────────────────────────────────────────────────
+// One chip per live signal for a watchlist row — the ticker's "one home" for
+// what the scan panels say about it. Same rules as the panels: a setup counts
+// only if the radar surfaces it; WAIT and quiet long-term statuses are omitted.
+const LT_SIGNAL = new Set(['ACCUMULATE', 'OVERSOLD_BUT_CAUTION', 'WATCHLIST']);
+
+export function signalChips(rows, ltSetup) {
+  const out = [];
+  const add = (label, readiness) => { if (readiness && readiness !== 'WAIT') out.push({ label, readiness }); };
+  add('PULLBACK', rows?.pullback?.inRadar ? rows.pullback.readiness : null);
+  add('BREAKOUT', rows?.momentum?.inRadar ? rows.momentum.readiness : null);
+  add('DIP', rows?.dip?.readiness);
+  if (LT_SIGNAL.has(ltSetup?.status)) out.push({ label: 'LT', status: ltSetup.status });
+  return out;
+}

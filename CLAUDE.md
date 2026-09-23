@@ -134,6 +134,7 @@ src/lib/
     LongTermScanPanel.svelte — Long-Term Setup watchlist scan (longTermSetup.js)
     EtfDashboard.svelte     — UCITS ETF table (Stocks|ETFs header toggle) + catalog search add bar
     HighlightsStrip.svelte  — cross-view "Today" ACT/SOON digest + in-browser notifications
+    ScanSummary.svelte      — one-line "Scans" summary; opens one scan panel + filters the watchlist to its tickers
     SettingsPanel.svelte    — API keys, AI prompts, notification toggle
     TooltipOverlay.svelte / OnboardingModal.svelte
   stores/
@@ -142,7 +143,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 23 files, 514 tests (~1s). One test file per lib module, same basename.
+tests/                — 24 files, 530 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -283,6 +284,8 @@ The expanded row is the primary surface. Desktop order: **verdict header → cha
 - **Colour only verdicts**: neutral facts (Mkt Cap, Div Yield, EMA values, un-thresholded metrics) are `text-secondary`; ADX is green only on the Trend tab; below-EMA is neutral on the Pullback tab; lagging RS in an ACCUMULATION radar row is `waiting`, not red.
 - Stale quotes are flagged once in the header (`⚠ Quotes 12 min old`), not per row.
 
+**Table-first (v0.26):** Setup Radar / Dip Hunter / Long-Term panels are closed behind `ScanSummary` (`Setups 1 SOON · Dips 0 · Long-term 0 ready of 13`). Clicking an item opens that panel (App `openScan`, bound via function bindings to each panel's `collapsed`) and filters the watchlist (`tableFilter` → `WatchlistTable filterSymbols`); clicking again, the panel header, or "clear filter" closes both. The table's **Signals** column (and the mobile card's chip row) is `signalChips(rows, ltSetup)` from readiness.js — only radar-surfaced setups, no WAIT chips. On phones Market Context starts collapsed and the Today strip is one scrollable line: acceptance is the first watchlist card above the fold at 402×874 and 1440×900.
+
 ## Two-view playbooks (FundamentalsBar.svelte)
 
 The expanded row's indicator bar carries ~29 cards. An `All | Trend Setup | Pullback Setup` toggle filters the **technical** cards down to the playbook being considered — display-only, zero new math, zero new API calls.
@@ -342,7 +345,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 514 unit tests, ~1s
+npm test          # 530 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 
