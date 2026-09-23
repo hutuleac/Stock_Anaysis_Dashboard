@@ -344,9 +344,10 @@ export function computeSetupSignals(weeklyRaw) {
     : { state: 'NEUTRAL', slopePct: 0, percentile: 50 };
   const structure = detectStructure(highs, lows);
 
-  // Range position over available weekly history (self-contained — no Finnhub 52w)
-  const lo = Math.min(...lows);
-  const hi = Math.max(...highs);
+  // Range position over the last 52 weeks (self-contained — no Finnhub 52w).
+  // Windowed: the daily fetch now spans ~19 months for monthly RSI.
+  const lo = Math.min(...lows.slice(-52));
+  const hi = Math.max(...highs.slice(-52));
   const price = closes[closes.length - 1];
   const rangePos = hi > lo ? (price - lo) / (hi - lo) : null;
 

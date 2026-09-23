@@ -109,6 +109,14 @@ describe('computeChartAnchors', () => {
     expect(computeChartAnchors({ s: 'no_data', c: [] })).toBeNull();
   });
 
+  it('looks back ~1 year only — an older, higher swing high is not the target', () => {
+    // 400 bars: a spike to ~200 early on, then a year oscillating around 100.
+    const raw = mkRaw(400);
+    for (let i = 20; i < 25; i++) { raw.c[i] = 200; raw.h[i] = 201; raw.l[i] = 199; }
+    const a = computeChartAnchors(raw);
+    expect(a.fib.swingHigh).toBeLessThan(110);
+  });
+
   it('computes at the 30-bar floor (aligned with the indicator minimum)', () => {
     expect(computeChartAnchors(mkRaw(30))).not.toBeNull();
   });

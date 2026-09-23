@@ -325,6 +325,14 @@ describe('computeSetupSignals', () => {
     expect(r.pullback.score).toBeLessThanOrEqual(10);
   });
 
+  it('range position looks back 52 weeks, not the whole fetched history', () => {
+    // 80 weeks: an old spike to 300, then a steady climb 100 → 169 over the last 70.
+    const closes = [...Array(10).fill(300), ...Array.from({ length: 70 }, (_, i) => 100 + i)];
+    const r = computeSetupSignals(weekly(closes));
+    const range = r.pullback.components.find(c => /range/i.test(c.label));
+    expect(parseInt(range.detail, 10)).toBeGreaterThanOrEqual(95);
+  });
+
   it('handles missing volume array gracefully', () => {
     const closes = Array.from({ length: 40 }, (_, i) => 100 + i);
     const raw = weekly(closes);

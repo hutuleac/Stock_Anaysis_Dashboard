@@ -125,12 +125,17 @@ export function detectFVG(highs, lows, closes) {
 }
 
 // Orchestrator — consumes the Finnhub-style daily raw object { s, c, h, l, v }.
+// ~1 trading year. The daily fetch is longer (TD_DAILY_BARS, for monthly RSI);
+// swing high/low, AVWAP anchor and POC range are meant over the last year.
+const ANCHOR_BARS = 252;
+
 export function computeChartAnchors(raw) {
   if (!raw || raw.s !== 'ok' || !Array.isArray(raw.c) || raw.c.length < MIN_BARS) return null;
-  const closes = raw.c;
-  const highs = raw.h ?? closes;
-  const lows = raw.l ?? closes;
-  const volumes = raw.v ?? [];
+  const win = (a) => a?.slice(-ANCHOR_BARS);
+  const closes = win(raw.c);
+  const highs = win(raw.h) ?? closes;
+  const lows = win(raw.l) ?? closes;
+  const volumes = win(raw.v) ?? [];
   return {
     avwap: computeAVWAP(highs, lows, closes, volumes),
     poc: computePOC(highs, lows, closes, volumes),
