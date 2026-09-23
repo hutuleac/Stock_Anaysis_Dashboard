@@ -37,3 +37,19 @@ describe('tdValuesToCandles', () => {
     expect(tdValuesToCandles(null)).toBeNull();
   });
 });
+
+describe('TD_DAILY_BARS', () => {
+  it('fetches enough weekday bars for monthly RSI(14) (needs 15 monthly closes)', async () => {
+    const { TD_DAILY_BARS } = await import('../src/lib/candles.js');
+    const { resampleMonthly, computeRSI } = await import('../src/lib/indicators.js');
+    const vals = [];
+    for (let d = new Date('2024-01-02T00:00:00Z'); vals.length < TD_DAILY_BARS; d.setUTCDate(d.getUTCDate() + 1)) {
+      if (d.getUTCDay() === 0 || d.getUTCDay() === 6) continue;
+      const px = String(100 + Math.sin(vals.length / 9) * 10);
+      vals.push({ datetime: d.toISOString().slice(0, 10), open: px, high: px, low: px, close: px, volume: '1000' });
+    }
+    const monthly = resampleMonthly(tdValuesToCandles(vals));
+    expect(monthly.c.length).toBeGreaterThanOrEqual(15);
+    expect(computeRSI(monthly.c)).not.toBeNull();
+  });
+});

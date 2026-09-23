@@ -5,6 +5,7 @@
   import { hasTDApiKey, fetchTimeSeries } from '../api/twelvedata.svelte.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';
   import { computeMACDSeries, computeRSISeries, computeBBSeries } from '../indicators.js';
+  import { TD_DAILY_BARS } from '../candles.js';
 
   let { symbol } = $props();
 
@@ -62,10 +63,10 @@
   const TIMEFRAMES = {
     '1D': { days: 1,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 200 },
     '5D': { days: 5,   resolution: '60', intraday: true,  tdInterval: '1h',   tdOutput: 200 },
-    '1M': { days: 30,  resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
-    '3M': { days: 90,  resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
-    '6M': { days: 180, resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
-    '1Y': { days: 365, resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: 365 },
+    '1M': { days: 30,  resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: TD_DAILY_BARS },
+    '3M': { days: 90,  resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: TD_DAILY_BARS },
+    '6M': { days: 180, resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: TD_DAILY_BARS },
+    '1Y': { days: 365, resolution: 'D',  intraday: false, tdInterval: '1day', tdOutput: TD_DAILY_BARS },
   };
 
   const isIntraday = $derived(TIMEFRAMES[timeframe]?.intraday ?? false);

@@ -10,6 +10,14 @@ import { computeTimingScore } from '../src/lib/timingScore.js';
 const SYMBOLS = DEMO_TICKERS.map(t => t.symbol);
 
 describe('demo candle series', () => {
+  it('is long enough for monthly RSI on every demo ticker', () => {
+    for (const sym of SYMBOLS) {
+      const daily = DEMO_CANDLES[sym];
+      const t = computeTimingScore({ dailyCandles: daily, weeklyCandles: resampleWeekly(daily), marketContext: {} });
+      expect(t.signals.join(' '), sym).not.toContain('Monthly RSI n/a');
+    }
+  });
+
   it('generates a usable series for every ticker and ETF proxy', () => {
     for (const [sym, c] of Object.entries(DEMO_CANDLES)) {
       expect(c.s, sym).toBe('ok');

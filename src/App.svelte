@@ -8,7 +8,7 @@
   import { computeTimingScore } from './lib/timingScore.js';
   import { parseFinancials, parseRevenueHistory, computeQualityScore } from './lib/qualityScore.js';
   import { computeChartAnchors } from './lib/chartAnchors.js';
-  import { tdValuesToCandles } from './lib/candles.js';
+  import { tdValuesToCandles, TD_DAILY_BARS } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT, DEMO_CANDLES, DEMO_QUALITY, DEMO_REVENUE_HISTORY } from './lib/demoData.js';
   import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext, getMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
@@ -179,7 +179,7 @@
       let spyCloses = null;
       try {
         if (hasTDApiKey()) {
-          const r = await fetchTimeSeries('SPY', '1day', 250);
+          const r = await fetchTimeSeries('SPY', '1day', TD_DAILY_BARS);
           if (r?.data?.length) spyCloses = r.data.map(v => parseFloat(v.close));
         } else {
           const r = await fetchCandles('SPY', 'D', fromTs, toTs);
@@ -259,7 +259,7 @@
         try {
           if (hasTDApiKey()) {
             // TwelveData — Finnhub free tier blocks /candle
-            const candleRes = await fetchTimeSeries(ticker.symbol, '1day', 250);
+            const candleRes = await fetchTimeSeries(ticker.symbol, '1day', TD_DAILY_BARS);
             if (candleRes?.data?.length) {
               // Convert to Finnhub-style raw object for computeIndicatorsFromCandles
               const vals = candleRes.data;
@@ -349,7 +349,7 @@
         try {
           let synthetic = null;
           if (hasTDApiKey()) {
-            const r = await fetchTimeSeries(proxy, '1day', 250);
+            const r = await fetchTimeSeries(proxy, '1day', TD_DAILY_BARS);
             if (r?.data?.length) {
               const vals = r.data;
               synthetic = tdValuesToCandles(vals);
@@ -627,7 +627,7 @@
       // load fully without needing a fresh API refresh.
       if (!data.indicators) {
         try {
-          const tdRaw = localStorage.getItem(`td_ts_1day_${ticker.symbol}_1day_250`);
+          const tdRaw = localStorage.getItem(`td_ts_1day_${ticker.symbol}_1day_${TD_DAILY_BARS}`);
           if (tdRaw) {
             const td = JSON.parse(tdRaw);
             if (td?.data?.length >= 30) {
@@ -662,7 +662,7 @@
     // ETF proxy candles from the TwelveData localStorage cache
     for (const proxy of getUniqueProxies()) {
       try {
-        const tdRaw = localStorage.getItem(`td_ts_1day_${proxy}_1day_250`);
+        const tdRaw = localStorage.getItem(`td_ts_1day_${proxy}_1day_${TD_DAILY_BARS}`);
         if (!tdRaw) continue;
         const vals = JSON.parse(tdRaw)?.data;
         if (!vals?.length) continue;

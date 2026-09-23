@@ -161,7 +161,7 @@ const TAILS = {
 // Daily OHLCV in the Finnhub candle shape, oldest→newest, ending today.
 // `end` rescales the finished series so its last close lands exactly on the price
 // in DEMO_MARKET_DATA — otherwise the chart would disagree with the quote above it.
-function demoCandles(symbol, { bars = 260, start, vol = 0.014, shape = 'range', end = null, noTail = false }) {
+function demoCandles(symbol, { bars = 480, start, vol = 0.014, shape = 'range', end = null, noTail = false }) {
   const rand = prng([...symbol].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7) >>> 0);
   const drift = SHAPES[shape] ?? SHAPES.range;
   const out = { s: 'ok', t: [], o: [], h: [], l: [], c: [], v: [] };
