@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readinessTone, readinessColor, readinessStyle, signalTone, signalColor, scoreTone, scoreColor, scoreTierHint, rankGaps, reconcileVerdict } from '../src/lib/readiness.js';
+import { readinessTone, readinessColor, readinessStyle, signalTone, signalColor, scoreTone, scoreColor, scoreTierHint, rankGaps, reconcileVerdict, signalChips } from '../src/lib/readiness.js';
 import { TONE, toneColor, toneStyle } from '../src/lib/tone.js';
 
 describe('readiness tones', () => {
@@ -157,5 +157,29 @@ describe('reconcileVerdict', () => {
   it('otherwise null (header shows the badge alone)', () => {
     expect(reconcileVerdict('NEUTRAL', rows())).toBeNull();
     expect(reconcileVerdict('NO_DATA', null)).toBeNull();
+  });
+});
+
+describe('signalChips', () => {
+  const rows = {
+    pullback: { readiness: 'SOON', inRadar: true },
+    momentum: { readiness: 'WATCH', inRadar: false },
+    dip: { readiness: 'WATCH' },
+  };
+
+  it('one chip per live signal, only radar-surfaced setups', () => {
+    expect(signalChips(rows, { status: 'WATCHLIST' })).toEqual([
+      { label: 'PULLBACK', readiness: 'SOON' },
+      { label: 'DIP', readiness: 'WATCH' },
+      { label: 'LT', status: 'WATCHLIST' },
+    ]);
+  });
+
+  it('WAIT and quiet long-term statuses produce no chip', () => {
+    const quiet = { pullback: { readiness: 'WAIT', inRadar: false }, momentum: { readiness: 'WAIT', inRadar: false }, dip: null };
+    for (const status of ['WAIT', 'NEUTRAL', 'INSUFFICIENT_DATA']) {
+      expect(signalChips(quiet, { status })).toEqual([]);
+    }
+    expect(signalChips(null, null)).toEqual([]);
   });
 });
