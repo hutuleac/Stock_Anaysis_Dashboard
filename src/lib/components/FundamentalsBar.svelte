@@ -130,7 +130,8 @@
       })(),
       noteColor: (() => {
         const v = m['50DayMovingAverage'] ?? data?.indicators?.ema50;
-        return (v && price) ? (price > v ? 'text-bull-strong' : 'text-bear-strong') : '';
+        // Below the EMA is the premise of a pullback entry, not a warning.
+        return (v && price) ? (price > v ? 'text-bull-strong' : view === 'pullback' ? 'text-text-secondary' : 'text-bear-strong') : '';
       })(),
     },
     {
@@ -142,7 +143,8 @@
       })(),
       noteColor: (() => {
         const v = m['200DayMovingAverage'] ?? data?.indicators?.ema200;
-        return (v && price) ? (price > v ? 'text-bull-strong' : 'text-bear-strong') : '';
+        // Below the EMA is the premise of a pullback entry, not a warning.
+        return (v && price) ? (price > v ? 'text-bull-strong' : view === 'pullback' ? 'text-text-secondary' : 'text-bear-strong') : '';
       })(),
     },
   ]);
@@ -164,7 +166,7 @@
       <div class="flex flex-col sm:min-w-[80px] cursor-default" use:tipAction={metricTip ?? undefined}>
         <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">{metric.label}</span>
         <div class="flex items-baseline gap-1.5 mt-0.5">
-          <span class="text-[13px] sm:text-sm font-mono font-semibold {metric.color ?? 'text-text-primary'}">{metric.value}</span>
+          <span class="text-[13px] sm:text-sm font-mono font-semibold {metric.color || 'text-text-secondary'}">{metric.value}</span>
           {#if metric.note}
             <span class="text-[13px] {metric.noteColor ?? 'text-text-muted'}">{metric.note}</span>
           {/if}
@@ -241,8 +243,10 @@
       {#if data?.indicators?.adx != null}
         {@const adx = data.indicators.adx}
         {@const adxLabel = adx > 40 ? 'Strong' : adx > 25 ? 'Trending' : adx > 20 ? 'Emerging' : 'Ranging'}
-        {@const adxColor = adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-warning' : 'text-text-muted'}
-        {@const adxCssColor = adx > 25 ? '#22c55e' : adx > 20 ? '#f59e0b' : '#6b7280'}
+        <!-- Trend strength is only "good" for the trend playbook — a strong downtrend
+             also reads ADX 40. Elsewhere it's a neutral fact. -->
+        {@const adxColor = view !== 'trend' ? 'text-text-secondary' : adx > 25 ? 'text-bull-strong' : adx > 20 ? 'text-warning' : 'text-text-muted'}
+        {@const adxCssColor = view !== 'trend' ? '#cbd5e1' : adx > 25 ? '#22c55e' : adx > 20 ? '#f59e0b' : '#6b7280'}
         <div class="flex flex-col sm:min-w-[70px] cursor-default" use:tipAction={() => ({ ...TIPS.adx, current: { value: adx.toFixed(1), label: adxLabel, color: adxCssColor } })}>
           <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">ADX 14</span>
           <div class="flex items-baseline gap-1 mt-0.5">

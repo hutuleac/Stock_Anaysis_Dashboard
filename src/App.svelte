@@ -25,6 +25,7 @@
   import TooltipOverlay from './lib/components/TooltipOverlay.svelte';
   import HighlightsStrip from './lib/components/HighlightsStrip.svelte';
   import { version as pkgVersion } from '../package.json';
+  import { tooltip as tipAction } from './lib/actions/tooltip.js';
 
   // Badge shows the feature-round (major.minor); in-round patch bumps don't change it.
   const appVersion = `v${pkgVersion.split('.').slice(0, 2).join('.')}`;
@@ -45,6 +46,7 @@
   let macroCtx = null; // FRED macro context — feeds setMarketContext, not the template
   let marketBarCollapsed = $state(false);
   let marketStatus = $state(getMarketStatus());
+  let now = $state(Date.now()); // ticks with marketStatus, for the quote-age label
   // One refresh at a time: covers the whole run (quotes + minutes of rate-limited
   // enrichment), not just refreshAll — `r`, the button, auto-refresh and the
   // API-key effect would otherwise start a second parallel run.
@@ -95,7 +97,7 @@
 
   // Refresh market status every minute + auto-refresh if configured
   if (typeof window !== 'undefined') {
-    setInterval(() => { marketStatus = getMarketStatus(); }, 60000);
+    setInterval(() => { marketStatus = getMarketStatus(); now = Date.now(); }, 60000);
 
     setInterval(() => {
       const mins = parseInt(localStorage.getItem('autoRefreshInterval') || '0');
@@ -450,6 +452,14 @@
     } catch { /* quota exceeded — non-fatal */ }
   }
 
+  // Cached quotes are flagged once in the header, not with a ⚠ on every row.
+  const staleCount = $derived(isDemoMode ? 0 : getTickers().filter(t => getTickerData(t.symbol)?.quote?.stale).length);
+  function formatAge(date) {
+    if (!date) return 'unknown';
+    const m = Math.max(0, Math.round((now - date.getTime()) / 60000));
+    return m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+  }
+
   function formatTime(date) {
     if (!date) return 'Never';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -738,9 +748,16 @@
         {/if}
 
         <!-- Last refreshed -->
-        <span class="text-xs text-text-muted hidden sm:inline">
-          {lastRefreshed ? formatTime(lastRefreshed) : ''}
-        </span>
+        {#if staleCount && !inFlight}
+          <span class="text-xs text-warning cursor-default" use:tipAction={() => ({
+            title: 'Cached quotes',
+            description: `${staleCount} of ${getTickers().length} tickers show quotes cached at the last refresh (${lastRefreshed ? formatTime(lastRefreshed) : 'unknown'}). Press R or Refresh for live prices.`,
+          })}>⚠<span class="hidden sm:inline"> Quotes {formatAge(lastRefreshed)} old</span></span>
+        {:else}
+          <span class="text-xs text-text-muted hidden sm:inline">
+            {lastRefreshed ? formatTime(lastRefreshed) : ''}
+          </span>
+        {/if}
 
         <!-- Settings gear -->
         <button

@@ -100,7 +100,7 @@ src/lib/
   entryPlan.js        — pure stop/target/R:R + price-ladder geometry for EntryPanel
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
-  radar.js            — Setup Radar: gates setups on fundamentals, splits into ACCUMULATION/BREAKOUT buckets, ranks survivors
+  radar.js            — Setup Radar: gates setups on fundamentals, splits into ACCUMULATION/BREAKOUT buckets, ranks survivors; tickerSetups (per-ticker rows for the expanded row)
   etf.js              — ETF section: entry/exit scores on US proxies of UCITS ETFs + generateEtfThesis + buildEtfBriefing
   etfCatalog.js       — curated ~55-fund UCITS catalog + client-side search
   export.js           — AI export: buildStockSnapshot() + buildPrompt() + DEFAULT_TEMPLATES presets
@@ -115,7 +115,7 @@ src/lib/
   demoData.js         — no-API-key demo fixtures: seeded synthetic OHLCV per ticker + ETF proxy, run through the real engines
   longTermIndicators.js — timing/quality chips, band hints, waiting-on ranking (pure formatting)
   tone.js             — the one colour palette (good/partial/caution/danger/waiting/none)
-  readiness.js        — ACT/SOON/WATCH/WAIT + direction-aware BUY/SELL tones on top of tone.js
+  readiness.js        — ACT/SOON/WATCH/WAIT + direction-aware BUY/SELL tones on top of tone.js; reconcileVerdict (expanded-row verdict sentence)
   tooltipDefs.js      — TIPS.* rich tooltip definitions
   actions/tooltip.js  — Svelte action: desktop hover + mobile tap-to-open (touchend on iOS)
   api/
@@ -128,7 +128,7 @@ src/lib/
     PriceChart.svelte       — candlestick + MACD/RSI/BB sub-panes
     FundamentalsBar.svelte  — all indicators displayed inline
     ThesisSummary.svelte    — plain-English score explanation
-    MarketContextBar.svelte — VIX proxy / SPY / F&G / breadth / macro tiles
+    MarketContextBar.svelte — 4 tiles: Volatility / SPY / F&G / Macro; rotation, breadth, BTC in the SPY tile's hover card
     DipRadar.svelte         — Dip Hunter collapsible watchlist-scan panel
     SetupRadar.svelte       — Setup Radar panel (radar.js)
     LongTermScanPanel.svelte — Long-Term Setup watchlist scan (longTermSetup.js)
@@ -271,6 +271,17 @@ One colour ramp across the whole card so a colour means the same thing on every 
 - **`timingHint` / `qualityHint`** render "8 pts to watchlist timing (50+)" next to a total, so a bare 42 reads as a distance to the next band. Null at the top band.
 - **`waitingOn` / `qualityWaitingOn`** rank the components with the most points still on the table and are shown as `Label +gap`. The card picks which set to show: **when the quality total is under the ≥60 gate, the timing gaps aren't the answer** — it names the quality components instead ("Waiting on quality: Profit +26 …"). Null components are skipped (nothing is known, so nothing is being waited on). Hidden entirely on ACCUMULATE.
 - A five-dot legend closes the card so the ramp is self-explanatory.
+
+## Deep-dive expanded row (WatchlistTable.svelte, v0.26)
+
+The expanded row is the primary surface. Desktop order: **verdict header → chart → Entry & Risk | Setups (side by side) → indicators → Long-Term & thesis card (`ltCard` snippet) → AI export**. Mobile: verdict sentence + setup rows, then collapsible Chart / Entry & Risk (open) and Indicators / Long-term & thesis (closed).
+
+- **Verdict header**: badge + score + banded 0–100 bar (`scoreBar` snippet) + `reconcileVerdict(badge, rows)` sentence when the short-term score and a setup disagree. Only setups the radar surfaces (`inRadar`) count, so the sentence never cites a setup the panel hides.
+- **Setup rows** come from `tickerSetups(symbol, data, dipCtx)` (radar.js): same AVWAP/POC nudge and gates as `computeRadar`, dip row straight from `computeDipRadar`. **Never derive a row's readiness from `data.setups` directly** — that is how the row and the radar contradicted each other.
+- **`BADGE_BANDS`** (scoring.js) is the one source for badge, row score colour, the bar's band tints and `TIPS.score` ranges. The row colour used 70/30 while the badge used 72/28 before.
+- FundamentalsBar takes `defaultView` — the active setup's playbook (`trend` for a breakout, `pullback` otherwise, `all` when none).
+- **Colour only verdicts**: neutral facts (Mkt Cap, Div Yield, EMA values, un-thresholded metrics) are `text-secondary`; ADX is green only on the Trend tab; below-EMA is neutral on the Pullback tab; lagging RS in an ACCUMULATION radar row is `waiting`, not red.
+- Stale quotes are flagged once in the header (`⚠ Quotes 12 min old`), not per row.
 
 ## Two-view playbooks (FundamentalsBar.svelte)
 

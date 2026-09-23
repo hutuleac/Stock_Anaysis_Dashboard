@@ -254,11 +254,6 @@
     return best;
   }
 
-  function setupBadgeClass(readiness) {
-    return readiness === 'ACT'  ? 'bg-bull-strong/20 text-bull-strong'
-         : readiness === 'SOON' ? 'bg-uncertain/20 text-uncertain'
-         :                        'bg-surface-600 text-text-secondary';
-  }
 
   // RS-vs-SPY chip — only when 1M outperformance is meaningful (|RS| >= 3%).
   function rsChip(rs) {
@@ -467,7 +462,7 @@
     {@const chipVis = size === 'sm' ? 'inline-block' : 'hidden lg:inline-block'}
     {#if topSetup(data?.setups)}
       {@const su = topSetup(data?.setups)}
-      <span class="{setupVis} px-1.5 py-0.5 rounded {px} font-semibold {setupBadgeClass(su.readiness)}" title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
+      <span class="{setupVis} px-1.5 py-0.5 rounded {px} font-semibold" style={readinessStyle(su.readiness)} title="{su.kind} setup · {su.label} · {su.readiness}{su.etaWeeks ? ` · ~${su.etaWeeks}w` : ''}">
         {su.kind} {su.readiness}{size === 'sm' && su.etaWeeks ? ` ~${su.etaWeeks}w` : ''}
       </span>
     {/if}
@@ -673,30 +668,30 @@
     <div class="space-y-1">
       <div class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Setups</div>
       {#each [['Pullback', rows.pullback], ['Breakout', rows.momentum]] as [label, r]}
-        <div class="flex items-baseline gap-x-2 text-[13px]">
+        <div class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-2 text-[13px]">
           <span class="w-20 shrink-0 text-text-secondary">{label}</span>
-          <span class="px-1.5 rounded text-[12px] font-semibold shrink-0" style={readinessStyle(r.readiness)}>{r.readiness}</span>
+          <span class="w-14 text-center rounded text-[12px] font-semibold shrink-0" style={readinessStyle(r.readiness)}>{r.readiness}</span>
           <span class="font-mono text-text-muted w-12 shrink-0">{r.score != null ? `${r.score}/10` : '—'}</span>
           {#if r.readiness !== 'WAIT' && !r.inRadar}
-            <span class="text-text-muted flex-1 min-w-0">filtered out by the {label === 'Breakout' ? 'leaders / quality' : 'quality'} gate</span>
+            <span class="text-text-muted basis-full sm:basis-auto sm:flex-1 min-w-0 pl-[5.5rem] sm:pl-0">filtered out by the {label === 'Breakout' ? 'leaders / quality' : 'quality'} gate</span>
           {:else if r.waitingOn.length}
-            <span class="text-text-muted flex-1 min-w-0">waiting on {gapText(r.waitingOn)}</span>
+            <span class="text-text-muted basis-full sm:basis-auto sm:flex-1 min-w-0 pl-[5.5rem] sm:pl-0">waiting on {gapText(r.waitingOn)}</span>
           {/if}
         </div>
       {/each}
-      <div class="flex items-baseline gap-x-2 text-[13px]">
+      <div class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-2 text-[13px]">
         <span class="w-20 shrink-0 text-text-secondary">Dip</span>
-        <span class="px-1.5 rounded text-[12px] font-semibold shrink-0" style={readinessStyle(rows.dip?.readiness ?? 'WAIT')}>{rows.dip?.readiness ?? 'WAIT'}</span>
+        <span class="w-14 text-center rounded text-[12px] font-semibold shrink-0" style={readinessStyle(rows.dip?.readiness ?? 'WAIT')}>{rows.dip?.readiness ?? 'WAIT'}</span>
         <span class="font-mono text-text-muted w-12 shrink-0">{rows.dip ? `${rows.dip.score}/10` : '—'}</span>
-        <span class="text-text-muted flex-1 min-w-0">{rows.dip ? [rows.dip.tierHint, gapText(rows.dip.waitingOn) && `waiting on ${gapText(rows.dip.waitingOn)}`].filter(Boolean).join(' · ') : 'not a quality dip right now'}</span>
+        <span class="text-text-muted basis-full sm:basis-auto sm:flex-1 min-w-0 pl-[5.5rem] sm:pl-0">{rows.dip ? [rows.dip.tierHint, gapText(rows.dip.waitingOn) && `waiting on ${gapText(rows.dip.waitingOn)}`].filter(Boolean).join(' · ') : 'not a quality dip right now'}</span>
       </div>
-      <div class="flex items-baseline gap-x-2 text-[13px]">
+      <div class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-2 text-[13px]">
         <span class="w-20 shrink-0 text-text-secondary">Long-term</span>
         {#if setup}
           <span class="px-1.5 rounded text-[12px] font-semibold shrink-0" style={ltStatusStyle(setup.status)}>{setup.status === 'OVERSOLD_BUT_CAUTION' ? 'CHECK QUALITY' : setup.status.replace(/_/g, ' ')}</span>
-          <span class="text-text-muted flex-1 min-w-0">{setup.reasons?.[0] ?? ''}</span>
+          <span class="text-text-muted basis-full sm:basis-auto sm:flex-1 min-w-0 pl-[5.5rem] sm:pl-0">{setup.reasons?.[0] ?? ''}</span>
         {:else}
-          <span class="text-text-muted flex-1 min-w-0">no timing data yet</span>
+          <span class="text-text-muted basis-full sm:basis-auto sm:flex-1 min-w-0 pl-[5.5rem] sm:pl-0">no timing data yet</span>
         {/if}
       </div>
     </div>
@@ -710,8 +705,8 @@
     {@const verdict = reconcileVerdict(score.badge, { ...rows, longTerm: setup })}
     {@const su = topSetup(data?.setups)}
     {@const playbook = su?.kind === 'BREAKOUT' ? 'trend' : su ? 'pullback' : 'all'}
-    {@render verdictHeader(score, verdict)}
     {#if variant === 'desktop'}
+      {@render verdictHeader(score, verdict)}
       <div class="mb-4">
         <PriceChart symbol={ticker.symbol} />
       </div>
@@ -758,6 +753,8 @@
         <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
       {/if}
     {:else}
+      <!-- The mobile card above already shows badge + score bar; only the sentence is new. -->
+      {#if verdict}<p class="text-sm font-medium mb-2" style="color:{toneColor(verdict.tone)}">{verdict.text}</p>{/if}
       <div class="mb-2">{@render setupRows(rows, setup)}</div>
 
       <!-- Mobile: collapsible sections -->
@@ -835,9 +832,6 @@
               <span class="font-mono font-bold text-text-primary">{ticker.symbol}</span>
               {#if daysToEarnings !== null && daysToEarnings <= 14}
                 <span class="text-[13px] font-semibold text-warning bg-warning/10 px-1 rounded">E {daysToEarnings}d</span>
-              {/if}
-              {#if data?.quote?.stale}
-                <span class="text-warning text-xs" title="Stale data">⚠</span>
               {/if}
               <span class="text-[13px] text-text-secondary truncate">{ticker.sector || '—'}</span>
             </div>
@@ -934,7 +928,6 @@
             {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
             {@const isSelected = getSelectedSymbol() === ticker.symbol}
             {@const quote = data?.quote?.data}
-            {@const isStale = data?.quote?.stale}
             {@const velocity = getScoreVelocity(ticker.symbol)}
             {@const scoreHistory = getScoreHistory(ticker.symbol)}
             {@const scoreZ = computeScoreZScore(ticker.symbol)}
@@ -951,9 +944,6 @@
               <td class="px-3 py-3">
                 <div class="flex items-center gap-2">
                   <span class="font-mono font-semibold text-text-primary">{ticker.symbol}</span>
-                  {#if isStale}
-                    <span class="text-warning text-xs" title="Stale data">⚠</span>
-                  {/if}
                   <span class="hidden md:inline-flex items-center gap-2">{@render tickerChips(data, 'xs')}</span>
                 </div>
                 <div class="text-xs text-text-secondary truncate max-w-[180px]">{ticker.sector || '—'}</div>

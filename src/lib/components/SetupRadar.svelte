@@ -18,7 +18,9 @@
 
   const fmtPct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
   const fmtRs = (v) => (v == null ? '—' : fmtPct(v)); // laggards in Accumulation may have null/negative RS
-  const rsCssColor = (v) => (v == null ? '#6b7280' : v > 5 ? '#22c55e' : v > 0 ? '#86efac' : '#ef4444');
+  // Lagging SPY is the premise of an Accumulation setup — slate (waiting), not red.
+  const rsCssColor = (v, category) => (v == null ? '#6b7280' : v > 5 ? '#22c55e' : v > 0 ? '#86efac'
+    : category === 'ACCUMULATION' ? toneColor('waiting') : '#ef4444');
   const fmtPeg = (v) => (v === null ? '—' : `${v.toFixed(2)}x`);
   const scoreColor = (s) => toneColor(s >= 7 ? 'good' : s >= 4.5 ? 'partial' : 'waiting');
   const waitingOnText = (h) => h.waitingOn?.length
@@ -110,13 +112,13 @@
                 <!-- 3M RS % -->
                 <span
                   class="font-mono text-xs sm:w-36 shrink-0 cursor-default"
-                  style="color:{rsCssColor(h.rs3m)}"
+                  style="color:{rsCssColor(h.rs3m, h.category)}"
                   use:tipAction={() => ({
                     ...TIPS.relativeStrength,
                     current: {
                       value: fmtRs(h.rs3m),
                       label: h.rs3m == null ? 'No RS data' : h.rs3m > 5 ? 'Strong leader' : h.rs3m > 0 ? 'Ahead of SPY' : 'Lagging SPY',
-                      color: rsCssColor(h.rs3m),
+                      color: rsCssColor(h.rs3m, h.category),
                     },
                   })}
                 >3M vs SPY {fmtRs(h.rs3m)}</span>

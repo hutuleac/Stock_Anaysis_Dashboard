@@ -107,7 +107,6 @@
     if (vixLevel === 'extreme') return { text: 'Extreme fear in the market — cash is a valid position today', type: 'danger' };
     if (fg?.score != null && fg.score <= 25) return { text: `Fear & Greed at ${fg.score} (Extreme Fear) — market in panic mode, tread carefully`, type: 'danger' };
     if (vixLevel === 'high') return { text: 'Market anxiety is high — consider reducing position sizes', type: 'warning' };
-    if (vixLevel === 'elevated' && spyLabel === 'BEARISH') return { text: 'Elevated VIX + bearish trend — not ideal for new longs', type: 'warning' };
     if (fg?.score != null && fg.score >= 80) return { text: `Fear & Greed at ${fg.score} (Extreme Greed) — market extended, contrarian caution`, type: 'warning' };
     return null;
   }
@@ -120,6 +119,20 @@
   let rotation = $derived(getRotation(marketData?.sectors));
   let breadthInfo = $derived(getBreadthInfo(marketData?.breadth ?? null));
   let nudge    = $derived(getNudge(vixInfo.level, spyInfo.label, fgInfo));
+
+  // Rotation / Breadth / BTC used to be three more tiles. They are context, not
+  // a read on today — they live in the SPY tile's hover card now.
+  const TONE_HEX = { 'text-bull-strong': '#22c55e', 'text-bear-strong': '#ef4444', 'text-warning': '#f59e0b', 'text-bear-weak': '#f97316' };
+  const hexOf = (info) => TONE_HEX[info.color] ?? '#9ca3af';
+  const sectorList = (list) => list.map(s => `${s.name} ${s.dp > 0 ? '+' : ''}${s.dp.toFixed(1)}%`).join(', ');
+  let internals = $derived([
+    rotation && { range: 'Rotation', label: `${rotation.label} ${rotation.value}`, color: hexOf(rotation),
+      desc: `Sectors up today. Leading: ${sectorList(rotation.leaders)}. Lagging: ${sectorList(rotation.laggards)}.` },
+    breadthInfo && { range: 'Breadth', label: `${breadthInfo.label} ${breadthInfo.value}`, color: hexOf(breadthInfo),
+      desc: `Your watchlist above EMA50: ${breadthInfo.ema50.above}/${breadthInfo.ema50.total} · above EMA200: ${breadthInfo.ema200.above}/${breadthInfo.ema200.total}.` },
+    btcInfo && { range: 'BTC', label: `${btcInfo.label} ${btcInfo.value}`, color: btcInfo.hex,
+      desc: `Crypto risk appetite (${btcInfo.sub}); moves ~3× SPY, so ±1.5% is the threshold.` },
+  ].filter(Boolean));
 </script>
 
 {#snippet tileHeader(info, name)}
@@ -130,20 +143,6 @@
   <div class="flex items-baseline gap-1.5 min-w-0">
     <span class="text-sm font-bold font-mono {info.color}">{info.value}</span>
     <span class="text-[12px] font-semibold {info.color} sm:truncate">{info.label}</span>
-  </div>
-{/snippet}
-
-<!-- Rotation leader/laggard row: arrow + sector name left, % pinned right.
-     Top mover always shows; the runner-up appears only where there's room (md+). -->
-{#snippet rotationRow(arrow, color, sectors)}
-  <div class="flex items-center gap-x-2 min-w-0">
-    {#each sectors as s, i}
-      <span class="flex items-center gap-1 min-w-0 {i > 0 ? 'hidden md:flex' : ''}">
-        <span class="{color} shrink-0">{arrow}</span>
-        <span class="text-text-secondary sm:truncate">{s.name}</span>
-        <span class="{color} shrink-0">{s.dp > 0 ? '+' : ''}{s.dp.toFixed(1)}</span>
-      </span>
-    {/each}
   </div>
 {/snippet}
 
@@ -179,28 +178,10 @@
 
         <!-- SPY Trend -->
         <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
-          use:tipAction={() => ({ ...TIPS.spyTrend, current: spyInfo.sub ? { value: spyInfo.value, label: spyInfo.label, color: spyInfo.hex } : undefined })}>
+          use:tipAction={() => ({ ...TIPS.spyTrend, levels: internals.length ? internals : TIPS.spyTrend.levels, current: spyInfo.sub ? { value: spyInfo.value, label: spyInfo.label, color: spyInfo.hex } : undefined })}>
           {@render tileHeader(spyInfo, 'SPY Trend')}
-          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{spyInfo.sub}</span>{/if}
+          {#if spyInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{spyInfo.sub}{#if internals.length}<span class="font-sans"> · hover: {internals.map(i => i.range.toLowerCase()).join(', ')}</span>{/if}</span>{/if}
         </div>
-
-        <!-- BTC Risk Appetite -->
-        {#if btcInfo}
-          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
-            use:tipAction={() => ({ ...TIPS.btcRisk, current: { value: btcInfo.value, label: btcInfo.label, color: btcInfo.hex } })}>
-            {@render tileHeader(btcInfo, 'BTC Risk')}
-            <span class="text-[12px] text-text-muted font-mono sm:truncate">{btcInfo.sub}</span>
-          </div>
-        {/if}
-
-        <!-- Macro Regime (FRED) -->
-        {#if macroInfo}
-          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
-            use:tipAction={() => ({ ...TIPS.macro, current: { value: macroInfo.value, label: macroInfo.label, color: macroInfo.hex } })}>
-            {@render tileHeader(macroInfo, 'Macro · 10Y–2Y')}
-            {#if macroInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{macroInfo.sub}</span>{/if}
-          </div>
-        {/if}
 
         <!-- Fear & Greed -->
         {#if fgInfo}
@@ -216,28 +197,15 @@
           </div>
         {/if}
 
-        <!-- Sector Rotation (breadth + leaders/laggards) -->
-        {#if rotation}
+        <!-- Macro Regime (FRED) -->
+        {#if macroInfo}
           <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
-            use:tipAction={TIPS.sectorLeaders}>
-            {@render tileHeader(rotation, 'Rotation')}
-            <div class="flex flex-col gap-0.5 text-[12px] font-mono min-w-0 leading-tight mt-0.5">
-              {@render rotationRow('▲', 'text-bull-strong', rotation.leaders)}
-              {@render rotationRow('▼', 'text-bear-weak', rotation.laggards)}
-            </div>
+            use:tipAction={() => ({ ...TIPS.macro, current: { value: macroInfo.value, label: macroInfo.label, color: macroInfo.hex } })}>
+            {@render tileHeader(macroInfo, 'Macro · 10Y–2Y')}
+            {#if macroInfo.sub}<span class="text-[12px] text-text-muted font-mono sm:truncate">{macroInfo.sub}</span>{/if}
           </div>
         {/if}
 
-        <!-- Watchlist Breadth (%>EMA50/EMA200) -->
-        {#if breadthInfo}
-          <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
-            use:tipAction={TIPS.breadth}>
-            {@render tileHeader(breadthInfo, 'Breadth')}
-            <span class="text-[12px] text-text-muted font-mono sm:truncate">
-              {breadthInfo.ema50.above}/{breadthInfo.ema50.total} &gt; EMA50 · {breadthInfo.ema200.above}/{breadthInfo.ema200.total} &gt; EMA200
-            </span>
-          </div>
-        {/if}
       </div>
     {/if}
   </div>
