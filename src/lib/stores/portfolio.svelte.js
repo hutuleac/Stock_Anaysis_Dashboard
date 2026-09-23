@@ -1,5 +1,4 @@
 let positions = $state([]);
-let portfolioValue = $state(0);
 let storageWarning = $state(false);
 function isPortfolioStorageFull() { return storageWarning; }
 function clearPortfolioStorageWarning() { storageWarning = false; }
@@ -10,27 +9,12 @@ try {
   if (saved) positions = JSON.parse(saved);
 } catch { /* noop */ }
 
-try {
-  const savedVal = localStorage.getItem('portfolioValue');
-  if (savedVal) portfolioValue = parseFloat(savedVal) || 0;
-} catch { /* noop */ }
-
 function persistPositions() {
   try {
     localStorage.setItem('portfolio', JSON.stringify(positions));
   } catch (e) {
     if (e.name === 'QuotaExceededError') storageWarning = true;
     else console.warn('localStorage write failed:', e);
-  }
-}
-
-export function getPortfolioValue() { return portfolioValue; }
-export function setPortfolioValue(val) {
-  portfolioValue = val;
-  try {
-    localStorage.setItem('portfolioValue', String(val));
-  } catch (e) {
-    if (e.name === 'QuotaExceededError') storageWarning = true;
   }
 }
 

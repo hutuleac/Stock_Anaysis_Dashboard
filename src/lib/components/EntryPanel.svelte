@@ -1,212 +1,87 @@
 <script>
   import { getTickerData } from '../stores/watchlist.svelte.js';
-  import { getPortfolioValue } from '../stores/portfolio.svelte.js';
-  import { betaAdjustedRiskPct } from '../scoring.js';
+  import { entryPlan } from '../entryPlan.js';
+  import { toneColor } from '../tone.js';
+  import { tooltip as tipAction } from '../actions/tooltip.js';
 
   let { symbol } = $props();
 
   const data = $derived(getTickerData(symbol));
-
-  const currentPrice = $derived(data?.quote?.data?.c ?? null);
+  const price = $derived(data?.quote?.data?.c ?? null);
   const dp = $derived(data?.quote?.data?.dp ?? null);
-
-  // Weekly ATR — horizon-appropriate for 2mo–1yr holds.
   const weeklyAtr = $derived(data?.weekly?.atr ?? null);
-  // Upside target = most significant swing high (chartAnchors, computed free).
-  const upsideTarget = $derived(data?.anchors?.fib?.swingHigh ?? null);
-  // Suggested stop: entry − 2× weekly ATR.
-  const suggestedStop = $derived(
-    currentPrice && weeklyAtr ? currentPrice - 2 * weeklyAtr : null
-  );
+  const dailyAtr = $derived(data?.indicators?.atr ?? null);
+  const plan = $derived(entryPlan({ price, weeklyAtr, target: data?.anchors?.fib?.swingHigh ?? null }));
 
-  // Risk based on suggested stop
-  const riskPerShare = $derived(
-    currentPrice && suggestedStop ? Math.abs(currentPrice - suggestedStop) : null
-  );
-  const riskPct = $derived(
-    currentPrice && riskPerShare ? ((riskPerShare / currentPrice) * 100) : null
-  );
+  const usd = (v) => '$' + v.toFixed(2);
+  const pct = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}%`;
+  const rrColor = (rr) => toneColor(rr >= 2 ? 'good' : rr >= 1 ? 'partial' : 'danger');
 
-  // R:R to swing-high target
-  const rrToTarget = $derived(
-    currentPrice && upsideTarget && suggestedStop &&
-    upsideTarget > currentPrice && suggestedStop < currentPrice
-      ? (upsideTarget - currentPrice) / (currentPrice - suggestedStop)
-      : null
-  );
-
-  // Position sizing: beta-adjusted risk % of portfolio per trade
-  const beta = $derived(data?.metrics?.data?.metric?.beta ?? null);
-  const betaAdj = $derived(betaAdjustedRiskPct(beta));
-  const portfolioVal = $derived(getPortfolioValue());
-  const maxRiskDollars = $derived(portfolioVal > 0 ? portfolioVal * (betaAdj.riskPct / 100) : null);
-  const recommendedShares = $derived(
-    maxRiskDollars && riskPerShare ? Math.floor(maxRiskDollars / riskPerShare) : null
-  );
-  const positionCost = $derived(
-    recommendedShares && currentPrice ? recommendedShares * currentPrice : null
-  );
-  const positionPct = $derived(
-    positionCost && portfolioVal ? (positionCost / portfolioVal) * 100 : null
-  );
-
-  function getScenarios() {
-    if (!currentPrice || !suggestedStop) return null;
-    const risk = Math.abs(currentPrice - suggestedStop);
-    const isLong = suggestedStop < currentPrice;
-
-    return {
-      base: {
-        label: 'Base case (1:2 R:R)',
-        price: isLong ? currentPrice + risk * 2 : currentPrice - risk * 2,
-        rr: '1:2',
-        probability: 'Medium',
-      },
-      extended: {
-        label: 'Extended (1:3 R:R)',
-        price: isLong ? currentPrice + risk * 3 : currentPrice - risk * 3,
-        rr: '1:3',
-        probability: 'Low',
-      },
-      stopOut: {
-        label: 'Stop-out',
-        price: suggestedStop,
-        rr: '1:1',
-        probability: 'Defined',
-      },
-    };
-  }
-
-  const scenarios = $derived(getScenarios());
-
-  function formatUSD(val) {
-    if (val == null) return '—';
-    return '$' + val.toFixed(2);
-  }
+  const LEVEL_TIPS = {
+    stop:   'Suggested stop — entry minus 2× weekly ATR. Far enough that normal weekly noise shouldn\'t take you out.',
+    entry:  'Current price — where you would enter today.',
+    '1R':   'One unit of risk above entry: the gain equals what the stop would cost.',
+    '2R':   'Two units of risk above entry — the usual minimum worth taking a swing for.',
+    '3R':   'Three units of risk above entry — an extended target.',
+    target: 'Most significant recent swing high — the first real overhead supply.',
+  };
+  const levelTip = (l) => ({
+    title: `${l.key === 'target' ? 'Target' : l.key === 'stop' ? 'Stop' : l.key === 'entry' ? 'Entry' : l.key} · ${usd(l.price)}`,
+    description: LEVEL_TIPS[l.key],
+  });
 </script>
 
-<div class="relative">
-    <div class="space-y-3">
-      <div class="flex items-center gap-2 mb-1">
-        <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Entry Panel</h3>
-      </div>
+<div class="space-y-2">
+  <div class="flex items-center justify-between gap-2">
+    <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Entry &amp; Risk</h3>
+    {#if plan?.rr != null}
+      <span class="font-mono text-sm font-semibold" style="color:{rrColor(plan.rr)}">R:R 1:{plan.rr.toFixed(1)}</span>
+    {/if}
+  </div>
 
-      <!-- High-volatility day warning -->
-      {#if dp !== null && Math.abs(dp) >= 5}
-        <div class="flex items-center gap-3 px-2.5 py-1.5 rounded-lg border {dp >= 5 ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}">
-          <span class="text-lg">🌊</span>
-          <div>
-            <p class="text-xs font-semibold {dp >= 5 ? 'text-warning' : 'text-danger'}">
-              High-volatility day ({dp > 0 ? '+' : ''}{dp.toFixed(1)}%)
-            </p>
-            <p class="text-[12px] text-text-muted">
-              {dp >= 5 ? 'Chasing a gap-up — consider waiting for the dust to settle.' : 'Entering into a sharp selloff — could bounce or accelerate lower.'}
-            </p>
-          </div>
-        </div>
+  {#if dp !== null && Math.abs(dp) >= 5}
+    <p class="text-xs {dp >= 5 ? 'text-warning' : 'text-danger'}">
+      🌊 High-volatility day ({pct(dp)}) — {dp >= 5 ? 'chasing a gap-up; consider letting it settle.' : 'entering a sharp selloff; could bounce or accelerate.'}
+    </p>
+  {/if}
+
+  {#if plan}
+    <p class="font-mono text-sm text-text-secondary leading-relaxed">
+      <span class="text-text-primary">{usd(price)}</span>
+      → stop <span class="text-danger">{usd(plan.stop)}</span> <span class="text-text-muted">({pct(plan.stopPct)})</span>
+      {#if plan.target}
+        → target <span class="text-bull-strong">{usd(plan.target)}</span> <span class="text-text-muted">swing high ({pct(plan.targetPct)})</span>
       {/if}
+    </p>
 
-      <div class="space-y-3">
-          <!-- Risk Snapshot -->
-          <div class="grid grid-cols-2 gap-2">
-            <div class="bg-surface-700 rounded-lg p-2.5">
-              <p class="text-xs text-text-muted mb-1">Current Price</p>
-              <p class="font-mono font-semibold text-text-primary">{formatUSD(currentPrice)}</p>
-            </div>
-            <div class="bg-surface-700 rounded-lg p-2.5">
-              <p class="text-xs text-text-muted mb-1">Suggested Stop (2× wk ATR)</p>
-              <p class="font-mono font-semibold text-danger">{formatUSD(suggestedStop)}</p>
-            </div>
-            <div class="bg-surface-700 rounded-lg p-2.5">
-              <p class="text-xs text-text-muted mb-1">Risk / Share</p>
-              <p class="font-mono font-semibold text-bear-weak">{formatUSD(riskPerShare)}</p>
-            </div>
-            <div class="bg-surface-700 rounded-lg p-2.5">
-              <p class="text-xs text-text-muted mb-1">Risk %</p>
-              <p class="font-mono font-semibold text-bear-weak">
-                {riskPct !== null ? riskPct.toFixed(1) + '%' : '—'}
-              </p>
-            </div>
-          </div>
-
-          <!-- Position size recommendation -->
-          <div class="bg-surface-700 rounded-lg p-2.5 border-l-2 border-uncertain">
-            <div class="flex items-center justify-between mb-1.5">
-              <p class="text-xs text-text-muted">Position Size ({betaAdj.riskPct}% risk rule)</p>
-              {#if beta !== null}
-                {@const betaColor = betaAdj.tier === 'high' ? 'text-danger' : betaAdj.tier === 'elevated' ? 'text-uncertain' : betaAdj.tier === 'low' ? 'text-bull-strong' : 'text-text-muted'}
-                <span class="text-[13px] font-mono {betaColor}" title="Beta {beta.toFixed(2)} → {betaAdj.riskPct}% risk allocation">β {beta.toFixed(2)}</span>
-              {/if}
-            </div>
-            {#if recommendedShares !== null}
-              <div class="flex items-baseline gap-3 flex-wrap">
-                <span class="font-mono font-semibold text-text-primary text-sm">{recommendedShares} shares</span>
-                <span class="text-xs text-text-muted">≈ ${positionCost?.toLocaleString('en-US', { maximumFractionDigits: 0 })} ({positionPct?.toFixed(1)}% of portfolio)</span>
-              </div>
-              <p class="text-xs text-text-muted mt-1">Max loss: ${maxRiskDollars?.toFixed(0)} ({betaAdj.riskPct}% of ${portfolioVal?.toLocaleString()})</p>
-            {:else}
-              <p class="text-xs text-text-secondary">
-                {#if !portfolioVal}Set portfolio value in Settings to see recommended shares.
-                {:else if !riskPerShare}Weekly ATR unavailable — load candle data to calculate position size.
-                {/if}
-              </p>
-            {/if}
-          </div>
-
-          <!-- Scenario Table -->
-          {#if scenarios}
-            <div class="bg-surface-700 rounded-lg overflow-hidden">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="text-xs text-text-muted border-b border-border/50">
-                    <th class="px-2.5 py-1.5 text-left">Scenario</th>
-                    <th class="px-2.5 py-1.5 text-right">Price</th>
-                    <th class="px-2.5 py-1.5 text-right">P&L %</th>
-                    <th class="px-2.5 py-1.5 text-center">R:R</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-b border-border/30">
-                    <td class="px-2.5 py-1.5 text-text-secondary">{scenarios.base.label}</td>
-                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">{formatUSD(scenarios.base.price)}</td>
-                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">
-                      +{((scenarios.base.price - currentPrice) / currentPrice * 100).toFixed(1)}%
-                    </td>
-                    <td class="px-2.5 py-1.5 text-center text-text-muted">{scenarios.base.rr}</td>
-                  </tr>
-                  <tr class="border-b border-border/30">
-                    <td class="px-2.5 py-1.5 text-text-secondary">{scenarios.extended.label}</td>
-                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">{formatUSD(scenarios.extended.price)}</td>
-                    <td class="px-2.5 py-1.5 text-right font-mono text-bull-strong">
-                      +{((scenarios.extended.price - currentPrice) / currentPrice * 100).toFixed(1)}%
-                    </td>
-                    <td class="px-2.5 py-1.5 text-center text-text-muted">{scenarios.extended.rr}</td>
-                  </tr>
-                  <tr>
-                    <td class="px-2.5 py-1.5 text-text-secondary">{scenarios.stopOut.label}</td>
-                    <td class="px-2.5 py-1.5 text-right font-mono text-danger">{formatUSD(scenarios.stopOut.price)}</td>
-                    <td class="px-2.5 py-1.5 text-right font-mono text-danger">
-                      -{riskPct?.toFixed(1)}%
-                    </td>
-                    <td class="px-2.5 py-1.5 text-center text-text-muted">{scenarios.stopOut.rr}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+    <!-- Price ladder: red = risk (stop → entry), green = upside (entry → 3R / target) -->
+    {@const entryPos = plan.levels[1].pos}
+    <div class="relative h-11 mt-1 mx-4">
+      <div class="absolute top-3 h-1.5 left-0 rounded-l bg-danger/60" style="width:{entryPos}%"></div>
+      <div class="absolute top-3 h-1.5 right-0 rounded-r bg-bull-strong/40" style="left:{entryPos}%"></div>
+      {#each plan.levels as l (l.key)}
+        <div class="absolute top-0 -translate-x-1/2 flex flex-col items-center cursor-default" style="left:{l.pos}%" use:tipAction={() => levelTip(l)}>
+          {#if l.key === 'entry'}
+            <span class="mt-2 w-3.5 h-3.5 rounded-full bg-text-primary border-2 border-surface-800"></span>
+          {:else if l.key === 'target'}
+            <span class="text-bull-strong text-xs leading-none mt-0.5">▲</span>
+            <span class="w-0.5 h-3 bg-bull-strong"></span>
+          {:else}
+            <span class="mt-2 w-0.5 h-3.5 {l.key === 'stop' ? 'bg-danger' : 'bg-text-muted'}"></span>
           {/if}
-
-          <!-- R:R to swing-high target -->
-          {#if rrToTarget !== null}
-            <div class="bg-surface-700 rounded-lg p-2.5">
-              <p class="text-xs text-text-muted mb-1">R:R to Target (swing high)</p>
-              <p class="font-mono font-semibold {rrToTarget >= 2 ? 'text-bull-strong' : rrToTarget >= 1 ? 'text-uncertain' : 'text-bear-weak'}">
-                1:{rrToTarget.toFixed(1)}
-              </p>
-              <p class="text-[12px] text-text-muted mt-0.5">target {formatUSD(upsideTarget)}</p>
-            </div>
+          {#if l.key !== 'target'}
+            <span class="text-[12px] font-mono whitespace-nowrap {l.key === 'stop' ? 'text-danger' : 'text-text-muted'}">{l.key === 'entry' ? '' : l.key}</span>
           {/if}
         </div>
-
+      {/each}
     </div>
-</div>
+  {:else}
+    <p class="text-xs text-text-muted">Weekly ATR unavailable — load candle data to see stop and targets.</p>
+  {/if}
 
+  {#if dailyAtr !== null && price}
+    <p class="text-xs text-text-muted">
+      Daily ATR <span class="font-mono text-text-secondary">{usd(dailyAtr)} ({(dailyAtr / price * 100).toFixed(1)}%)</span> — a normal day's move{#if weeklyAtr}; the stop sits 2× weekly ATR (<span class="font-mono">{usd(weeklyAtr)}</span>) away{/if}.
+    </p>
+  {/if}
+</div>

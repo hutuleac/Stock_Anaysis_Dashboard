@@ -2,7 +2,7 @@
   import { getApiKey, setApiKey, clearStorageFullFlag } from '../api/finnhub.svelte.js';
   import { getTDApiKey, setTDApiKey } from '../api/twelvedata.svelte.js';
   import { getFredApiKey, setFredApiKey } from '../api/fred.js';
-  import { getPositions, setPositions, getPortfolioValue, setPortfolioValue } from '../stores/portfolio.svelte.js';
+  import { getPositions, setPositions } from '../stores/portfolio.svelte.js';
   import { getDefaultTickers, addDefaultTicker, removeDefaultTicker, resetDefaultTickers, addTicker } from '../stores/watchlist.svelte.js';
   import { getTemplates, getDefaultId, setDefaultId, updateTemplate, resetTemplate } from '../stores/prompts.svelte.js';
 
@@ -37,7 +37,6 @@
   }
 
   let portfolioText = $state('');
-  let portfolioValueInput = $state(getPortfolioValue() > 0 ? String(getPortfolioValue()) : '');
   let saveMessage = $state('');
   let autoRefreshInterval = $state(parseInt(localStorage.getItem('autoRefreshInterval') || '0'));
   let notifyEnabled = $state(localStorage.getItem('notifyEnabled') === 'true');
@@ -83,17 +82,6 @@
     setFredApiKey(fredApiKeyInput.trim());
     saveMessage = 'FRED key saved — refresh to load macro context';
     setTimeout(() => saveMessage = '', 3000);
-  }
-
-  function savePortfolioValue() {
-    const val = parseFloat(portfolioValueInput.replace(/[,$]/g, ''));
-    if (!isNaN(val) && val > 0) {
-      setPortfolioValue(val);
-      saveMessage = `Portfolio value set to $${val.toLocaleString()}`;
-    } else {
-      saveMessage = 'Enter a valid dollar amount';
-    }
-    setTimeout(() => saveMessage = '', 2500);
   }
 
   function parsePortfolio() {
@@ -248,28 +236,6 @@
           >Load to Watchlist</button>
         </div>
         <p class="text-xs text-text-muted">These tickers are added automatically on first launch. "Load to Watchlist" adds any missing ones now.</p>
-      </div>
-
-      <!-- Portfolio Value (for position sizing) -->
-      <div class="space-y-2">
-        <label class="block">
-          <span class="text-sm font-medium text-text-secondary">Total Portfolio Value</span>
-          <div class="flex gap-2 mt-1">
-            <input
-              type="text"
-              placeholder="e.g. 50000"
-              class="flex-1 bg-surface-700 border border-border rounded px-3 py-2 text-text-primary font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50"
-              bind:value={portfolioValueInput}
-            />
-            <button
-              class="px-4 py-2 bg-bull-strong text-surface-900 font-semibold text-sm rounded hover:brightness-110 transition"
-              onclick={savePortfolioValue}
-            >
-              Set
-            </button>
-          </div>
-        </label>
-        <p class="text-xs text-text-muted">Used to calculate recommended position size (2% risk rule).</p>
       </div>
 
       <!-- Portfolio Snapshot -->

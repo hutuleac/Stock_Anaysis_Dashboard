@@ -10,7 +10,6 @@ import {
   storeScoreSnapshot,
   getScoreHistory,
   getScoreVelocity,
-  betaAdjustedRiskPct,
   storeSectorMomentumSnapshot,
   getSectorMomentumHistory,
   computeSectorMomentum,
@@ -504,34 +503,6 @@ describe('generateThesis — sector momentum bullets', () => {
     const thesis = generateThesis(ticker, computeScore(ticker));
     expect(thesis.bulls.some(b => b.includes('Sector momentum'))).toBe(false);
     expect(thesis.bears.some(b => b.includes('Sector momentum'))).toBe(false);
-  });
-});
-
-// ─── betaAdjustedRiskPct ─────────────────────────────────────────────────────
-describe('betaAdjustedRiskPct', () => {
-  it('returns 2% and normal tier when beta is null or zero', () => {
-    expect(betaAdjustedRiskPct(null)).toEqual({ riskPct: 2.0, tier: 'normal' });
-    expect(betaAdjustedRiskPct(0)).toEqual({ riskPct: 2.0, tier: 'normal' });
-  });
-
-  it('returns 2.5% for low-beta stocks (β ≤ 0.8)', () => {
-    expect(betaAdjustedRiskPct(0.5)).toEqual({ riskPct: 2.5, tier: 'low' });
-    expect(betaAdjustedRiskPct(0.8)).toEqual({ riskPct: 2.5, tier: 'low' });
-  });
-
-  it('returns 2% for normal-beta stocks (0.8 < β ≤ 1.2)', () => {
-    expect(betaAdjustedRiskPct(1.0)).toEqual({ riskPct: 2.0, tier: 'normal' });
-    expect(betaAdjustedRiskPct(1.2)).toEqual({ riskPct: 2.0, tier: 'normal' });
-  });
-
-  it('returns 1.5% for elevated-beta stocks (1.2 < β ≤ 1.8)', () => {
-    expect(betaAdjustedRiskPct(1.5)).toEqual({ riskPct: 1.5, tier: 'elevated' });
-    expect(betaAdjustedRiskPct(1.8)).toEqual({ riskPct: 1.5, tier: 'elevated' });
-  });
-
-  it('returns 1% for high-beta stocks (β > 1.8)', () => {
-    expect(betaAdjustedRiskPct(2.0)).toEqual({ riskPct: 1.0, tier: 'high' });
-    expect(betaAdjustedRiskPct(3.5)).toEqual({ riskPct: 1.0, tier: 'high' });
   });
 });
 

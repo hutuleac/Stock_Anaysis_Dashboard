@@ -97,6 +97,7 @@ src/lib/
   indicators.js       — all indicator math (RSI, MACD, EMA, ATR, BB, ADX, Stoch) + priceReturn/computeRelativeStrength (RS vs SPY)
   scoring.js          — 9-signal scoring engine, thesis generator, badge logic, market-context holder (set/getMarketContext)
   signals.js          — weekly leading-signal engine (divergence, squeeze, volume, structure → Pullback + Momentum setups)
+  entryPlan.js        — pure stop/target/R:R + price-ladder geometry for EntryPanel
   valuation.js        — PEG ratio (P/E ÷ growth) with null guards; display-only valuation math
   dip.js              — Dip Hunter: quality gate + 9-component 0–10 dip score
   radar.js            — Setup Radar: gates setups on fundamentals, splits into ACCUMULATION/BREAKOUT buckets, ranks survivors
@@ -123,7 +124,7 @@ src/lib/
     fred.js           — FRED macro series (dev: vite proxy /fred-api; prod: corsproxy.io — API key visible to that proxy)
   components/
     WatchlistTable.svelte   — main table + expanded row (incl. Long-Term Setup card, Copy for AI)
-    EntryPanel.svelte       — position sizing, stop-loss, scenario table
+    EntryPanel.svelte       — Entry & Risk: one-line entry→stop→target + R:R, price ladder (1R/2R/3R), daily ATR line
     PriceChart.svelte       — candlestick + MACD/RSI/BB sub-panes
     FundamentalsBar.svelte  — all indicators displayed inline
     ThesisSummary.svelte    — plain-English score explanation
@@ -162,7 +163,7 @@ tests/                — 23 files, 514 tests (~1s). One test file per lib modul
 - **Bollinger Bands(20,2):** Population std dev (÷period). Matches TradingView.
 - **ADX(14):** Full Wilder-smoothed +DM/−DM/TR pipeline. Final ADX is the Wilder RMA (average) of DX, bounded [0,100] — NOT the running sum (that bug inflated it ~period×; fixed v0.10).
 - **Stochastic(14,3,3):** Raw %K, 3-bar SMA for %D, crossover on sign change.
-- **Display-only signals (v0.12), all in `computeIndicatorsFromCandles` unless noted:** `computeEmaStack` (BULL STACK/BROKEN), `computeOversoldConfluence` (RSI<35 + price ≤ lower BB), `priceReturn`→`roc20`/`roc60`, daily `atr` (now exposed — EntryPanel reads `data.indicators.atr` for its stop-too-tight band). `proximityTo52wHigh` runs at display time off the Finnhub `52WeekHigh` metric. EntryPanel's suggested stop uses **weekly** ATR (`data.weekly.atr`), entry − 2×ATR; R:R = (target − entry)/(entry − stop).
+- **Display-only signals (v0.12), all in `computeIndicatorsFromCandles` unless noted:** `computeEmaStack` (BULL STACK/BROKEN), `computeOversoldConfluence` (RSI<35 + price ≤ lower BB), `priceReturn`→`roc20`/`roc60`, daily `atr` (EntryPanel shows it as one "a normal day's move" line). `proximityTo52wHigh` runs at display time off the Finnhub `52WeekHigh` metric. EntryPanel's suggested stop uses **weekly** ATR (`data.weekly.atr`), entry − 2×ATR; R:R = (target − entry)/(entry − stop), target = `anchors.fib.swingHigh` when above entry — all in `entryPlan.js`. Position Size (2% rule, beta-adjusted) and the portfolio-value setting were removed in v0.26 — don't reintroduce.
 
 ## Setup signals (signals.js)
 
@@ -239,7 +240,7 @@ Three-slice framework for long-horizon accumulation, all display-only:
 - **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed, creditStress })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
 - **Indicator breakdown:** `longTermIndicators.js` (`timingChips` / `qualityChips`) maps the component sub-scores into labelled chips — pure formatting, zero new compute; colours come from the shared ramp (see Colour system). The expanded card shows both chip rows plus the concrete timing `signals[]` and `warnings[]`; scan-panel rows show T/Q totals + timing chips (quality stays lazy). Timing chip maxes are imported from `TIMING_MAX`; the quality ones are mirrored literals — `tests/longTermIndicators.test.js` asserts both sets sum to 100.
 - **HY credit-stress gate (FRED `BAMLH0A0HYM2`):** `deriveMacroRegime` adds `creditStress` — STRESS when HY spread > 5% or Δ ≥ +0.5pp over ~20 sessions, ELEVATED 4–5%, CALM below. STRESS demotes ACCUMULATE → OVERSOLD_BUT_CAUTION and overrides the panic boost (systemic risk, not a dip); ELEVATED appends a staged-entries reason. This is the **only macro input that changes classification** — everything else in the Macro tile is context-only. Deliberately rejected as redundant/YAGNI (Jul 2026): T10Y3M, DFF, ICSA, Alpha Vantage fallback, CBOE vol indices, direct SEC EDGAR (Finnhub financials-reported *is* EDGAR data).
-- **Where it renders:** the Long-Term Setup card and the `ThesisSummary` / Trade-Window / ATR block are **one** card in `WatchlistTable.svelte`'s `expandedPanel` snippet. `ThesisSummary` is rendered only from there — `EntryPanel.svelte` does not import it. Every element in the card (status badge, both totals, all 11 chips) has a `TIPS.lt*` tooltip; the chip→tooltip mapping is `WatchlistTable.svelte`'s `LT_CHIP_TIPS` — keep it in sync with `longTermIndicators.js`'s component keys.
+- **Where it renders:** the Long-Term Setup card and the `ThesisSummary` / Trade-Window block are **one** card in `WatchlistTable.svelte`'s `expandedPanel` snippet. `ThesisSummary` is rendered only from there — `EntryPanel.svelte` does not import it. Every element in the card (status badge, both totals, all 11 chips) has a `TIPS.lt*` tooltip; the chip→tooltip mapping is `WatchlistTable.svelte`'s `LT_CHIP_TIPS` — keep it in sync with `longTermIndicators.js`'s component keys.
 
 ## UI conventions
 

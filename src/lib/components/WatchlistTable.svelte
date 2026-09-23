@@ -493,9 +493,6 @@
   {#snippet expandedPanel(ticker, data, score, variant)}
     {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null }) : null}
     {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
-    {@const atr = data?.indicators?.atr ?? null}
-    {@const currentPrice = data?.quote?.data?.c ?? null}
-    {@const atrPct = atr !== null && currentPrice ? (atr / currentPrice) * 100 : null}
     <div class="mb-3 px-3 py-3 rounded-lg bg-surface-800/60 border border-border/40 space-y-3">
       {#if setup}
         {@const tTotal = data.timingScore?.total ?? null}
@@ -625,17 +622,6 @@
           </div>
         {/if}
 
-        {#if atr !== null && currentPrice}
-          <div class="rounded-lg p-2.5 border bg-surface-700/50 border-border/40">
-            <div class="flex items-center justify-between mb-1">
-              <p class="text-sm font-semibold text-text-muted">📊 Intraday Volatility (ATR 14)</p>
-              <span class="font-mono text-sm text-text-secondary">${atr.toFixed(2)} / {atrPct.toFixed(1)}%</span>
-            </div>
-            <p class="text-sm text-text-muted">
-              On a normal day, {ticker.symbol} moves ≈ ${atr.toFixed(2)} ({atrPct.toFixed(1)}%).
-            </p>
-          </div>
-        {/if}
       </div>
     </div>
     {#if variant === 'desktop'}
