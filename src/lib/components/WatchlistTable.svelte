@@ -2,7 +2,9 @@
   import { tick, onMount } from 'svelte';
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory, getMarketContext } from '../scoring.js';
+  import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory, getMarketContext, BADGE_BANDS } from '../scoring.js';
+  import { tickerSetups } from '../radar.js';
+  import { reconcileVerdict, readinessStyle } from '../readiness.js';
   import { proximityTo52wHigh } from '../indicators.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
@@ -65,7 +67,7 @@
   const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   // Mobile expansion sections — per-session; state carries across ticker opens.
-  let openSections = $state({ chart: true, indicators: true, entry: false });
+  let openSections = $state({ chart: true, entry: true, indicators: false, longterm: false });
   function toggleSection(k) { openSections[k] = !openSections[k]; }
 
   function buildAiText(ticker, templateId) {
@@ -319,13 +321,14 @@
   }
 
   // One source for the score chip color/label (was duplicated per layout).
+  // Same bands as the badge (BADGE_BANDS) — number colour, bar and badge agree.
   function scoreStyle(s) {
-    return s >= 70 ? { color: '#22c55e', label: 'Bullish' }
-      : s >= 58 ? { color: '#f59e0b', label: 'Positive' }
-      : s <= 30 ? { color: '#ef4444', label: 'Bearish' }
-      : s <= 42 ? { color: '#f97316', label: 'Negative' }
-      : { color: '#9ca3af', label: 'Neutral' };
+    const b = BADGE_BANDS.find(b => s >= b.min);
+    return { color: b.tone === 'none' ? '#9ca3af' : toneColor(b.tone), label: b.label };
   }
+  // 0–100 bar segments, lowest band first: [0–28) [28–42) [42–58) [58–72) [72–100]
+  const BAND_SEGMENTS = [...BADGE_BANDS].reverse()
+    .map((b, i, arr) => ({ tone: b.tone, w: (arr[i + 1]?.min ?? 100) - b.min }));
 
   function fmtRevenue(val) {
     if (val == null) return '—';
@@ -490,9 +493,31 @@
   {/snippet}
 
 
-  {#snippet expandedPanel(ticker, data, score, variant)}
-    {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null }) : null}
-    {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
+  <!-- One 0–100 bar with the badge bands tinted and a marker at the score.
+       T/F/S pillar scores live in its tooltip instead of three tiny bars. -->
+  {#snippet scoreBar(score, cls)}
+    {@const ss = scoreStyle(score.score)}
+    <div class="relative h-1.5 shrink-0 cursor-default {cls}"
+      use:tipAction={() => ({ ...TIPS.score, current: { value: String(score.score), label: `${ss.label} · T ${score.technical ?? '–'} · F ${score.fundamental ?? '–'} · S ${score.sentiment ?? '–'}`, color: ss.color } })}>
+      <div class="absolute inset-0 flex rounded-full overflow-hidden">
+        {#each BAND_SEGMENTS as seg}<div style="width:{seg.w}%; background:{toneColor(seg.tone)}; opacity:.35"></div>{/each}
+      </div>
+      <div class="absolute -top-1 w-1 h-3.5 rounded-sm -translate-x-1/2" style="left:{score.score}%; background:{ss.color}"></div>
+    </div>
+  {/snippet}
+
+  <!-- `*` = the score was adjusted for the market regime; the tooltip says how. -->
+  {#snippet adjustedMark(score)}
+    {#if score.regimeNote || score.spyPenaltyApplied}
+      <span class="text-warning cursor-default" use:tipAction={() => ({
+        title: 'Score adjusted for market regime',
+        description: [score.regimeNote, score.spyPenaltyApplied ? 'SPY is below its EMA50, so long scores are pulled 20% toward 50' : null].filter(Boolean).join('. ') + '.',
+      })}>*</span>
+    {/if}
+  {/snippet}
+
+  <!-- Long-Term Setup + thesis + trade window — the "why" card. -->
+  {#snippet ltCard(ticker, data, setup, daysToEarnings)}
     <div class="mb-3 px-3 py-3 rounded-lg bg-surface-800/60 border border-border/40 space-y-3">
       {#if setup}
         {@const tTotal = data.timingScore?.total ?? null}
@@ -624,7 +649,80 @@
 
       </div>
     </div>
+  {/snippet}
+
+  <!-- Verdict: badge + banded score + one sentence reconciling the short-term
+       score with the forward-looking setups (readiness.js reconcileVerdict). -->
+  {#snippet verdictHeader(score, verdict)}
+    {@const badge = getBadgeStyle(score.badge)}
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-3">
+      <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold shrink-0 {badge.bg} {badge.text}">{badge.label}</span>
+      {#if score.score !== null}
+        <span class="font-mono font-semibold text-sm" style="color:{scoreStyle(score.score).color}">{score.score}{@render adjustedMark(score)}</span>
+        {@render scoreBar(score, 'w-28 sm:w-40')}
+      {/if}
+      {#if verdict}
+        <span class="text-sm font-medium" style="color:{toneColor(verdict.tone)}">{verdict.text}</span>
+      {/if}
+    </div>
+  {/snippet}
+
+  <!-- Four setup engines, one row each, with the readiness their panels show. -->
+  {#snippet setupRows(rows, setup)}
+    {@const gapText = (w) => w?.length ? w.map(g => `${g.label} +${g.gap}`).join(' · ') : ''}
+    <div class="space-y-1">
+      <div class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Setups</div>
+      {#each [['Pullback', rows.pullback], ['Breakout', rows.momentum]] as [label, r]}
+        <div class="flex items-baseline gap-x-2 text-[13px]">
+          <span class="w-20 shrink-0 text-text-secondary">{label}</span>
+          <span class="px-1.5 rounded text-[12px] font-semibold shrink-0" style={readinessStyle(r.readiness)}>{r.readiness}</span>
+          <span class="font-mono text-text-muted w-12 shrink-0">{r.score != null ? `${r.score}/10` : '—'}</span>
+          {#if r.readiness !== 'WAIT' && !r.inRadar}
+            <span class="text-text-muted flex-1 min-w-0">filtered out by the {label === 'Breakout' ? 'leaders / quality' : 'quality'} gate</span>
+          {:else if r.waitingOn.length}
+            <span class="text-text-muted flex-1 min-w-0">waiting on {gapText(r.waitingOn)}</span>
+          {/if}
+        </div>
+      {/each}
+      <div class="flex items-baseline gap-x-2 text-[13px]">
+        <span class="w-20 shrink-0 text-text-secondary">Dip</span>
+        <span class="px-1.5 rounded text-[12px] font-semibold shrink-0" style={readinessStyle(rows.dip?.readiness ?? 'WAIT')}>{rows.dip?.readiness ?? 'WAIT'}</span>
+        <span class="font-mono text-text-muted w-12 shrink-0">{rows.dip ? `${rows.dip.score}/10` : '—'}</span>
+        <span class="text-text-muted flex-1 min-w-0">{rows.dip ? [rows.dip.tierHint, gapText(rows.dip.waitingOn) && `waiting on ${gapText(rows.dip.waitingOn)}`].filter(Boolean).join(' · ') : 'not a quality dip right now'}</span>
+      </div>
+      <div class="flex items-baseline gap-x-2 text-[13px]">
+        <span class="w-20 shrink-0 text-text-secondary">Long-term</span>
+        {#if setup}
+          <span class="px-1.5 rounded text-[12px] font-semibold shrink-0" style={ltStatusStyle(setup.status)}>{setup.status === 'OVERSOLD_BUT_CAUTION' ? 'CHECK QUALITY' : setup.status.replace(/_/g, ' ')}</span>
+          <span class="text-text-muted flex-1 min-w-0">{setup.reasons?.[0] ?? ''}</span>
+        {:else}
+          <span class="text-text-muted flex-1 min-w-0">no timing data yet</span>
+        {/if}
+      </div>
+    </div>
+  {/snippet}
+
+  {#snippet expandedPanel(ticker, data, score, variant)}
+    {@const setup = (data.timingScore || data.qualityScore) ? buildLongTermSetup(data.timingScore ?? null, data.qualityScore ?? null, { fearGreed: getMarketContext()?.fearGreedValue ?? null, creditStress: getMarketContext()?.macro?.creditStress ?? null }) : null}
+    {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
+    {@const mc = getMarketContext()}
+    {@const rows = tickerSetups(ticker.symbol, data, { fearGreedValue: mc?.fearGreedValue ?? null, spyBelowEma50: mc?.spyDowntrend ?? null })}
+    {@const verdict = reconcileVerdict(score.badge, { ...rows, longTerm: setup })}
+    {@const su = topSetup(data?.setups)}
+    {@const playbook = su?.kind === 'BREAKOUT' ? 'trend' : su ? 'pullback' : 'all'}
+    {@render verdictHeader(score, verdict)}
     {#if variant === 'desktop'}
+      <div class="mb-4">
+        <PriceChart symbol={ticker.symbol} />
+      </div>
+      <div class="mb-4 grid lg:grid-cols-2 gap-x-6 gap-y-4">
+        <EntryPanel symbol={ticker.symbol} />
+        {@render setupRows(rows, setup)}
+      </div>
+      <div class="mb-4">
+        <FundamentalsBar symbol={ticker.symbol} defaultView={playbook} />
+      </div>
+      {@render ltCard(ticker, data, setup, daysToEarnings)}
       <!-- AI export toolbar -->
       <div class="flex items-center justify-end gap-1 mb-3 relative">
         <button
@@ -659,23 +757,10 @@
         <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
         <div class="fixed inset-0 z-20" onclick={() => { copyMenuSymbol = null; }}></div>
       {/if}
-      <div class="mb-4">
-        <FundamentalsBar symbol={ticker.symbol} />
-      </div>
-      <div class="mb-4">
-        <PriceChart symbol={ticker.symbol} />
-      </div>
-
-      <EntryPanel symbol={ticker.symbol} />
     {:else}
-      <!-- Mobile: collapsible sections -->
-      <div class="border-t border-border/30">
-        {@render sectionHeader('indicators', 'Indicators')}
-        {#if openSections.indicators}
-          <div class="pb-3"><FundamentalsBar symbol={ticker.symbol} /></div>
-        {/if}
-      </div>
+      <div class="mb-2">{@render setupRows(rows, setup)}</div>
 
+      <!-- Mobile: collapsible sections -->
       <div class="border-t border-border/30">
         {@render sectionHeader('chart', 'Chart')}
         {#if openSections.chart}
@@ -685,9 +770,23 @@
       </div>
 
       <div class="border-t border-border/30">
-        {@render sectionHeader('entry', 'Entry Plan')}
+        {@render sectionHeader('entry', 'Entry & Risk')}
         {#if openSections.entry}
           <div class="pb-3"><EntryPanel symbol={ticker.symbol} /></div>
+        {/if}
+      </div>
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('indicators', 'Indicators')}
+        {#if openSections.indicators}
+          <div class="pb-3"><FundamentalsBar symbol={ticker.symbol} defaultView={playbook} /></div>
+        {/if}
+      </div>
+
+      <div class="border-t border-border/30">
+        {@render sectionHeader('longterm', 'Long-term & thesis')}
+        {#if openSections.longterm}
+          <div class="pb-3">{@render ltCard(ticker, data, setup, daysToEarnings)}</div>
         {/if}
       </div>
 
@@ -779,24 +878,9 @@
             {/if}
           </div>
 
-          <!-- Row 3: T/F/S mini bars -->
+          <!-- Row 3: banded score bar (T/F/S in its tooltip) -->
           {#if score.score !== null}
-            <div class="flex items-center gap-2 mt-1.5">
-              {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
-                {#if val !== null}
-                  <div class="flex items-center gap-0.5">
-                    <span class="text-[12px] text-text-muted">{label}</span>
-                    <div class="w-10 h-1 bg-surface-600 rounded-full overflow-hidden">
-                      <div class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}" style="width:{val}%"></div>
-                    </div>
-                    <span class="text-[12px] font-mono text-text-muted">{val}</span>
-                  </div>
-                {/if}
-              {/each}
-              {#if score.regimeNote || score.spyPenaltyApplied}
-                <span class="text-[12px] text-warning ml-1">⚡</span>
-              {/if}
-            </div>
+            <div class="flex items-center gap-2 mt-2">{@render scoreBar(score, 'flex-1')}{@render adjustedMark(score)}</div>
           {/if}
         </div>
 
@@ -907,10 +991,7 @@
                     {/if}
                     <!-- Score number + arrow + label + fraction on the same baseline -->
                     <div class="flex items-baseline gap-1">
-                      <span
-                        class="font-mono font-semibold tabular-nums"
-                        title="{score.regimeNote ? score.regimeNote + '. ' : ''}{score.spyPenaltyApplied ? 'SPY downtrend penalty applied.' : ''}"
-                      >{score.score}{score.regimeNote || score.spyPenaltyApplied ? '*' : ''}</span>
+                      <span class="font-mono font-semibold tabular-nums">{score.score}</span>{@render adjustedMark(score)}
                       {#if velocity}
                         <span
                           class="text-xs font-mono {velocity.direction === 'up' ? 'text-bull-strong' : velocity.direction === 'down' ? 'text-bear-strong' : 'text-text-muted'}"
@@ -928,22 +1009,7 @@
                       <span class="text-xs text-text-muted hidden sm:inline">({score.factors}/{score.total})</span>
                     </div>
                   </div>
-                  <!-- T/F/S sub-score bars -->
-                  <div class="hidden sm:flex items-center gap-1.5 mt-1 justify-end">
-                    {#each [['T', score.technical], ['F', score.fundamental], ['S', score.sentiment]] as [label, val]}
-                      {#if val !== null}
-                        <div class="flex items-center gap-0.5" title="{label === 'T' ? `Technical (${Math.round((score.weights?.tech ?? 0.35)*100)}%)` : label === 'F' ? `Fundamental (${Math.round((score.weights?.fund ?? 0.45)*100)}%)` : `Sentiment (${Math.round((score.weights?.sent ?? 0.20)*100)}%)`}: {val}">
-                          <span class="text-[13px] text-text-muted font-mono">{label}</span>
-                          <div class="w-7 h-1 bg-surface-600 rounded-full overflow-hidden">
-                            <div
-                              class="h-full rounded-full {val >= 60 ? 'bg-bull-strong' : val >= 40 ? 'bg-neutral' : 'bg-bear-strong'}"
-                              style="width:{val}%"
-                            ></div>
-                          </div>
-                        </div>
-                      {/if}
-                    {/each}
-                  </div>
+                  <div class="hidden sm:flex justify-end mt-1.5">{@render scoreBar(score, 'w-24')}</div>
                 {:else}
                   <span class="text-text-muted">—</span>
                 {/if}

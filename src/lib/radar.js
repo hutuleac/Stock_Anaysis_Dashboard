@@ -6,6 +6,7 @@
 // on the ticker object — no API calls, no scoring changes.
 import { computePEG } from './valuation.js';
 import { rankGaps } from './readiness.js';
+import { computeDipRadar } from './dip.js';
 
 const READINESS_RANK = { ACT: 3, SOON: 2, WATCH: 1 };
 
@@ -120,4 +121,31 @@ export function computeRadar(list) {
     (rsOrNegInf(b.rs3m) - rsOrNegInf(a.rs3m))
   );
   return hits;
+}
+
+// Per-ticker view of the same engines for the expanded row: both weekly setups
+// with the readiness the radar would show (AVWAP/POC nudge included), whether the
+// radar surfaces it (quality / leaders gates), and the Dip Hunter hit. Reusing
+// the panel logic is the point — a second derivation is how the row and the
+// panels ended up contradicting each other.
+export function tickerSetups(symbol, data, dipCtx = {}) {
+  const item = { symbol, data };
+  const hit = computeRadar([item])[0] ?? null;
+  const row = (type, key) => {
+    const s = data?.setups?.[key];
+    if (!s) return { readiness: 'WAIT', score: null, waitingOn: [], inRadar: false, etaWeeks: null };
+    const readiness = READINESS_RANK[s.readiness] ? nudgeReadiness(s.readiness, data.anchors) : s.readiness;
+    return {
+      readiness,
+      score: isFiniteNum(s.score) ? s.score : null,
+      waitingOn: rankGaps(s.components),
+      inRadar: hit?.setupType === type,
+      etaWeeks: s.etaWeeks ?? null,
+    };
+  };
+  return {
+    pullback: row('PULLBACK', 'pullback'),
+    momentum: row('MOMENTUM', 'momentum'),
+    dip: computeDipRadar([item], dipCtx)[0] ?? null,
+  };
 }

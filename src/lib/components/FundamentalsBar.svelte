@@ -7,7 +7,7 @@
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
 
-  let { symbol } = $props();
+  let { symbol, defaultView = 'all' } = $props();
 
   const data = $derived(getTickerData(symbol));
   const m = $derived(data?.metrics?.data?.metric ?? {});
@@ -55,8 +55,10 @@
 
   // ─── Playbook views ─────────────────────────────────────────────────────────
   // Two-view architecture: the same cards, narrowed to the setup being considered.
-  // 'all' is the default — nothing is hidden until a playbook is picked.
-  let view = $state('all');
+  // Opens on the playbook of the ticker's active setup (WatchlistTable passes it);
+  // 'all' when there is none. The panel remounts per ticker, so the initial value is enough.
+  // svelte-ignore state_referenced_locally
+  let view = $state(defaultView);
 
   // Cards that are score/context, not setup-specific — always shown.
   const CORE = new Set(['tfs', 'conviction', 'scorez']);

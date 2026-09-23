@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readinessTone, readinessColor, readinessStyle, signalTone, signalColor, scoreTone, scoreColor, scoreTierHint, rankGaps } from '../src/lib/readiness.js';
+import { readinessTone, readinessColor, readinessStyle, signalTone, signalColor, scoreTone, scoreColor, scoreTierHint, rankGaps, reconcileVerdict } from '../src/lib/readiness.js';
 import { TONE, toneColor, toneStyle } from '../src/lib/tone.js';
 
 describe('readiness tones', () => {
@@ -121,5 +121,41 @@ describe('tone palette', () => {
 
   it('falls back to the no-data tone for an unknown name', () => {
     expect(toneColor('nope')).toBe(TONE.none.color);
+  });
+});
+
+describe('reconcileVerdict', () => {
+  const rows = (o = {}) => ({
+    pullback: { readiness: 'WAIT', inRadar: false, ...o.pullback },
+    momentum: { readiness: 'WAIT', inRadar: false, ...o.momentum },
+    longTerm: { status: 'WAIT', ...o.longTerm },
+  });
+
+  it('bearish score + pullback SOON/ACT in the radar → staged accumulation', () => {
+    for (const readiness of ['SOON', 'ACT']) {
+      const v = reconcileVerdict('LEAN_SHORT', rows({ pullback: { readiness, inRadar: true } }));
+      expect(v.text).toMatch(/Weak now, accumulation setup forming/);
+      expect(v.tone).toBe('partial');
+    }
+  });
+
+  it('a pullback the radar gated out does not count', () => {
+    expect(reconcileVerdict('LEAN_SHORT', rows({ pullback: { readiness: 'SOON', inRadar: false } }))).toBeNull();
+  });
+
+  it('bullish score + breakout ACT → trend confirmed', () => {
+    const v = reconcileVerdict('STRONG_LONG', rows({ momentum: { readiness: 'ACT', inRadar: true } }));
+    expect(v).toEqual({ tone: 'good', text: 'Trend confirmed — breakout entry' });
+    expect(reconcileVerdict('STRONG_LONG', rows({ momentum: { readiness: 'SOON', inRadar: true } }))).toBeNull();
+  });
+
+  it('long-term ACCUMULATE → quality on sale, regardless of badge', () => {
+    const v = reconcileVerdict('NEUTRAL', rows({ longTerm: { status: 'ACCUMULATE' } }));
+    expect(v).toEqual({ tone: 'good', text: 'Quality on sale — long-term entry window' });
+  });
+
+  it('otherwise null (header shows the badge alone)', () => {
+    expect(reconcileVerdict('NEUTRAL', rows())).toBeNull();
+    expect(reconcileVerdict('NO_DATA', null)).toBeNull();
   });
 });

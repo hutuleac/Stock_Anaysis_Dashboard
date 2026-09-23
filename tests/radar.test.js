@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRadar } from '../src/lib/radar.js';
+import { computeRadar, tickerSetups } from '../src/lib/radar.js';
 
 // Fixture builder. Defaults pass BOTH gates with a SOON pullback.
 function ticker(symbol, o = {}) {
@@ -208,5 +208,38 @@ describe('radar wRsi passthrough', () => {
       indicators: {},
     };
     expect(computeRadar([{ symbol: 'TEST', data }])[0].wRsi).toBeNull();
+  });
+});
+
+describe('tickerSetups', () => {
+  it('reports both setups with the same nudged readiness the radar shows', () => {
+    const { data } = ticker('AAA', {
+      readiness: 'WATCH', anchors: { avwap: { reclaimed: true }, poc: { position: 'inside' } },
+      components: [{ label: 'Divergence', score: 0.5, max: 3 }],
+    });
+    const s = tickerSetups('AAA', data);
+    expect(s.pullback.readiness).toBe('SOON'); // WATCH nudged, as in computeRadar
+    expect(s.pullback.inRadar).toBe(true);
+    expect(s.pullback.waitingOn[0]).toMatchObject({ label: 'Divergence', gap: 2.5 });
+    expect(s.momentum.readiness).toBe('WAIT');
+    expect(s.momentum.inRadar).toBe(false);
+  });
+
+  it('flags an active setup the radar filtered out (quality gate)', () => {
+    const { data } = ticker('BBB', { revGrowth: -5 });
+    const s = tickerSetups('BBB', data);
+    expect(s.pullback.readiness).toBe('SOON');
+    expect(s.pullback.inRadar).toBe(false);
+  });
+
+  it('dip row comes from computeDipRadar (null when not a quality dip)', () => {
+    const { data } = ticker('CCC');
+    expect(tickerSetups('CCC', data, {}).dip).toBeNull();
+  });
+
+  it('null setups → WAIT rows, never throws', () => {
+    const s = tickerSetups('DDD', { quote: { data: { c: 10 } } });
+    expect(s.pullback.readiness).toBe('WAIT');
+    expect(s.momentum.readiness).toBe('WAIT');
   });
 });

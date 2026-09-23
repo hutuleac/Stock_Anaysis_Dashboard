@@ -8,6 +8,16 @@
 
 let _marketContext = null;
 
+// Score → badge bands, highest first. The single source for the badge, the row's
+// score colour and the banded score bar — they drifted apart before (70/30 vs 72/28).
+export const BADGE_BANDS = [
+  { min: 72, badge: 'STRONG_LONG',  tone: 'good',    label: 'Bullish' },
+  { min: 58, badge: 'LEAN_LONG',    tone: 'partial', label: 'Positive' },
+  { min: 42, badge: 'NEUTRAL',      tone: 'none',    label: 'Neutral' },
+  { min: 28, badge: 'LEAN_SHORT',   tone: 'caution', label: 'Negative' },
+  { min: 0,  badge: 'STRONG_SHORT', tone: 'danger',  label: 'Bearish' },
+];
+
 export function setMarketContext(ctx) { _marketContext = ctx; }
 
 export function getMarketContext() { return _marketContext; }
@@ -276,12 +286,7 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   const factors = techFactors + fundFactors + sentFactors;
   const total   = techTotal + fundTotal + sentTotal;
 
-  let badge;
-  if (score >= 72)      badge = 'STRONG_LONG';
-  else if (score >= 58) badge = 'LEAN_LONG';
-  else if (score >= 42) badge = 'NEUTRAL';
-  else if (score >= 28) badge = 'LEAN_SHORT';
-  else                  badge = 'STRONG_SHORT';
+  const badge = BADGE_BANDS.find(b => score >= b.min).badge;
 
   return {
     score,

@@ -74,3 +74,27 @@ export function rankGaps(components, limit = 3) {
     .sort((a, b) => b.gap - a.gap || a.label.localeCompare(b.label))
     .slice(0, limit);
 }
+
+// ─── Verdict reconciler ─────────────────────────────────────────────────────
+// The row badge is a short-term score; the setups are forward-looking. They can
+// legitimately disagree (LEAN SHORT today, Pullback SOON in the radar) — this
+// names the disagreement in one sentence instead of leaving two contradicting
+// labels side by side. `rows` is radar.js's tickerSetups() + the long-term
+// status; only setups the radar actually surfaces (inRadar) count.
+const BEARISH = new Set(['LEAN_SHORT', 'STRONG_SHORT']);
+const BULLISH = new Set(['LEAN_LONG', 'STRONG_LONG']);
+
+export function reconcileVerdict(badge, rows) {
+  if (!rows) return null;
+  const { pullback, momentum, longTerm } = rows;
+  if (BEARISH.has(badge) && pullback?.inRadar && (pullback.readiness === 'SOON' || pullback.readiness === 'ACT')) {
+    return { tone: 'partial', text: 'Weak now, accumulation setup forming — small, staged size' };
+  }
+  if (BULLISH.has(badge) && momentum?.inRadar && momentum.readiness === 'ACT') {
+    return { tone: 'good', text: 'Trend confirmed — breakout entry' };
+  }
+  if (longTerm?.status === 'ACCUMULATE') {
+    return { tone: 'good', text: 'Quality on sale — long-term entry window' };
+  }
+  return null;
+}
