@@ -536,7 +536,7 @@
       </div>
       <div class="space-y-1">
         {#each rows as c}
-          <div class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-2 text-[13px] cursor-default"
+          <div class="flex flex-wrap items-baseline gap-x-2 text-[13px] cursor-default"
             use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}>
             <span class="w-[4.5rem] sm:w-20 shrink-0 text-text-secondary">{c.label}</span>
             <span class="w-10 sm:w-16 h-1.5 shrink-0 self-center rounded-full bg-surface-700 overflow-hidden">
@@ -544,7 +544,7 @@
             </span>
             <span class="w-12 shrink-0 font-mono text-text-muted">{c.score ?? '–'}/{c.max}</span>
             <span class="sm:w-16 shrink-0 font-mono text-[12px]" style="color:{c.gap ? toneColor('partial') : 'var(--color-text-muted)'}">{c.gap ? `+${c.gap} left` : c.gap === 0 ? 'maxed' : ''}</span>
-            <span class="flex-1 min-w-0 basis-full sm:basis-auto text-text-muted">
+            <span class="basis-full min-w-0 pl-[5rem] sm:pl-[5.5rem] text-[12px] text-text-muted">
               {#each c.notes as n, i}{i ? ' · ' : ''}<span class={n.warn ? 'text-bear-strong/80' : ''}>{n.warn ? '⚠ ' : ''}{n.text}</span>{/each}
               {#if c.score == null}no data{/if}
             </span>
@@ -572,33 +572,42 @@
           {/each}
         </div>
 
-        {@render ltSection('Timing', tTotal, toneColor(timingTone(tTotal)), timingHint(tTotal), TIPS.ltTiming, data.timingScore ? timingRows(data.timingScore) : [])}
+        <!-- Timing | Quality side by side; revenue sits under Quality (same fetch). -->
+        <div class="grid lg:grid-cols-2 gap-x-8 gap-y-3">
+          {@render ltSection('Timing', tTotal, toneColor(timingTone(tTotal)), timingHint(tTotal), TIPS.ltTiming, data.timingScore ? timingRows(data.timingScore) : [])}
 
-        {#if data.qualityScore}
-          {@render ltSection('Quality', qTotal, toneColor(qualityTone(qTotal)), qualityHint(qTotal), TIPS.ltQuality, qualityRows(data.qualityScore))}
-        {:else}
-          <p class="text-[13px] text-text-muted"><span class="uppercase tracking-wider">Quality</span> · not checked yet</p>
-        {/if}
+          <div class="space-y-3">
+            {#if data.qualityScore}
+              {@render ltSection('Quality', qTotal, toneColor(qualityTone(qTotal)), qualityHint(qTotal), TIPS.ltQuality, qualityRows(data.qualityScore))}
+            {:else}
+              <p class="text-[13px] text-text-muted"><span class="uppercase tracking-wider">Quality</span> · not checked yet</p>
+            {/if}
 
-        <!-- Revenue history (lazy — same financials-reported fetch as Quality Score) -->
-        {#if data.revenueHistory?.length}
-          {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
-          <div>
-            <div class="text-xs text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
-            <div class="flex items-end gap-1.5 h-10 max-w-xs">
-              {#each data.revenueHistory as r}
-                {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
-                {@const h = maxRev > 0 ? Math.max(12, Math.round((r.revenue / maxRev) * 100)) : 12}
-                <div class="flex-1 flex flex-col items-center justify-end gap-0.5 h-full cursor-default"
-                  use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}
-                >
-                  <div class="w-full rounded-t" style="height:{h}%; background:{barColor}"></div>
-                  <span class="text-[9px] text-text-muted">{String(r.year).slice(2)}</span>
+            <!-- Revenue history (lazy — same financials-reported fetch as Quality Score).
+                 Bars scale from zero in a fixed-height plot; labels sit outside it so
+                 the tallest bar is never squeezed to the same height as the next. -->
+            {#if data.revenueHistory?.length}
+              {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
+              <div>
+                <div class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
+                <div class="grid grid-cols-5 gap-2 max-w-sm text-center">
+                  {#each data.revenueHistory as r}
+                    {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
+                    <div class="cursor-default"
+                      use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}>
+                      <div class="h-20 flex flex-col justify-end">
+                        <div class="text-[12px] font-mono text-text-secondary">{fmtRevenue(r.revenue).replace('.0', '')}</div>
+                        <div class="w-full rounded-t shrink-0" style="height:{maxRev > 0 ? Math.max(0.15, (r.revenue / maxRev) * 3) : 0.1}rem; background:{barColor}; opacity:.8"></div>
+                      </div>
+                      <div class="text-[12px] font-mono pt-0.5" style="color:{barColor}">{r.growthPct == null ? '—' : `${r.growthPct > 0 ? '+' : ''}${Math.round(r.growthPct)}%`}</div>
+                      <div class="text-[12px] text-text-muted">FY{String(r.year).slice(2)}</div>
+                    </div>
+                  {/each}
                 </div>
-              {/each}
-            </div>
+              </div>
+            {/if}
           </div>
-        {/if}
+        </div>
       {/if}
 
       <!-- Why this score + trade window + ATR — consolidated with Long-Term Setup above -->
