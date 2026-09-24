@@ -1,4 +1,4 @@
-// TwelveData API — real-time quote + OHLCV candle series
+// TwelveData API — OHLCV candle series (quotes come from Finnhub)
 // Indicators are computed locally from candles (see indicators.js).
 // Free tier: 8 credits/min, 800/day.
 
@@ -7,7 +7,6 @@ import { evictStaleCache } from './finnhub.svelte.js';
 const BASE = 'https://api.twelvedata.com';
 
 const CACHE_TTL = {
-  tdquote: 60,     // 1-minute cache — prevents hammering on each refresh
   ts_1day: 86400,  // daily candles — 24h
   ts_1h:   900,    // intraday candles — 15 min
 };
@@ -94,7 +93,9 @@ async function fetchTD(path, { priority = false } = {}) {
   return enqueueRequest(async () => {
     const url = `${BASE}${path}&apikey=${tdApiKey}`;
     const res = await fetch(url);
-    if (res.status === 429) {
+    const json = res.ok ? await res.json() : null;
+    // TD can report the rate limit as HTTP 200 + { code: 429 } in the body
+    if (res.status === 429 || json?.code === 429) {
       // Server-side rate limit hit — wait a full window and retry once
       await new Promise(r => setTimeout(r, 61_000));
       const r2  = await fetch(url);
@@ -104,7 +105,6 @@ async function fetchTD(path, { priority = false } = {}) {
       return j2;
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
     if (json.status === 'error') throw new Error(json.message || 'TwelveData error');
     return json;
   }, priority);
@@ -127,28 +127,6 @@ async function fetchWithCache(type, symbol, fetcher) {
     } catch { /* noop */ }
     return { data: null, stale: true, error: err.message };
   }
-}
-
-// ── Real-time quote ───────────────────────────────────────────────────────────
-// TTL=60s — short cache prevents duplicate calls within a single refresh cycle.
-export async function fetchTDQuote(symbol) {
-  return fetchWithCache('tdquote', symbol, async () => {
-    const json = await fetchTD(`/quote?symbol=${encodeURIComponent(symbol)}`);
-    return {
-      price:        parseFloat(json.close),
-      change:       parseFloat(json.change),
-      changePct:    parseFloat(json.percent_change),
-      prevClose:    parseFloat(json.previous_close),
-      volume:       parseInt(json.volume, 10),
-      avgVolume:    parseInt(json.average_volume, 10),
-      volumeRatio:  json.average_volume > 0
-                      ? parseInt(json.volume, 10) / parseInt(json.average_volume, 10)
-                      : null,
-      isMarketOpen: json.is_market_open ?? null,
-      high52w:      parseFloat(json.fifty_two_week?.high),
-      low52w:       parseFloat(json.fifty_two_week?.low),
-    };
-  });
 }
 
 // ── OHLCV candle series ───────────────────────────────────────────────────────

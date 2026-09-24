@@ -541,6 +541,7 @@
 
   onMount(() => {
     setTimeout(() => {
+      if (!container) return; // destroyed before the deferred mount ran
       chart = createChart(container, {
         autoSize: true,
         layout: { background: { color: CHART_COLORS.background }, textColor: CHART_COLORS.text, fontFamily: 'ui-monospace, monospace', fontSize: 11 },

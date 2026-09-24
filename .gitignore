@@ -37,3 +37,4 @@ dist-ssr
 Thumbs.db
 .gstack/
 graphify-out/
+public/macro.json

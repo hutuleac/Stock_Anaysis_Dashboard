@@ -1,6 +1,6 @@
 <script>
   import { getApiKey, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
-  import { hasTDApiKey, fetchTDQuote, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
+  import { hasTDApiKey, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { detectMarketRegime } from './lib/macro.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
@@ -64,9 +64,18 @@
   // API-key effect would otherwise start a second parallel run.
   let inFlight = $state(false);
   let enrichProgress = $state(null); // { current, total } during the indicators phase
+  let enrichStart = 0;
   const refreshStep = $derived(enrichProgress
-    ? { label: 'Indicators', ...enrichProgress }
+    ? { label: 'Indicators', ...enrichProgress, eta: etaLabel(enrichProgress) }
     : { label: 'Quotes', ...getRefreshProgress() });
+
+  // Linear extrapolation from the tickers done so far — the cold path is paced
+  // by TwelveData's 8 calls/min, so "Indicators 3/13" alone looks hung.
+  function etaLabel({ current, total }) {
+    if (current < 2 || current >= total) return '';
+    const secs = (Date.now() - enrichStart) / (current - 1) * (total - current + 1) / 1000;
+    return secs < 60 ? '' : `~${Math.ceil(secs / 60)} min`;
+  }
 
   // When a user enters API keys in Settings, exit demo mode and load real data
   $effect(() => {
@@ -228,6 +237,7 @@
       }
 
       for (const [idx, ticker] of tickers.entries()) {
+        if (idx === 0) enrichStart = Date.now();
         enrichProgress = { current: idx + 1, total: tickers.length };
         const data = results[ticker.symbol];
         if (!data) continue;
@@ -236,7 +246,9 @@
         // ETF's daily % change, replacing the old single-day boolean.
         try {
           const etf = getSectorETF(ticker.sector);
-          const etfQuote = await fetchSectorETFQuote(ticker.sector);
+          // Market context already fetched every sector ETF (and SPY) this refresh
+          const etfQuote = (etf === 'SPY' ? marketContextData?.spy : marketContextData?.sectors?.[etf])
+            ?? await fetchSectorETFQuote(ticker.sector);
           if (etfQuote.data) {
             storeSectorMomentumSnapshot(etf, etfQuote.data.dp);
             results[ticker.symbol].sectorMomentum = computeSectorMomentum(getSectorMomentumHistory(etf), etfQuote.data.dp);
@@ -382,27 +394,6 @@
         await delay(100);
       }
 
-      // TwelveData — live quote enrichment only (indicators already computed locally from candles)
-      // This is 1 credit/ticker instead of 6; all RSI/MACD/BB/ADX/Stoch come from local computation above.
-      if (hasTDApiKey()) {
-        for (const ticker of tickers) {
-          try {
-            const qRes = await fetchTDQuote(ticker.symbol);
-            const q = qRes?.data;
-            if (q?.price && results[ticker.symbol]) {
-              if (results[ticker.symbol].quote?.data) {
-                results[ticker.symbol].quote.data.c  = q.price;
-                results[ticker.symbol].quote.data.d  = q.change;
-                results[ticker.symbol].quote.data.dp = q.changePct;
-                results[ticker.symbol].quote.data.pc = q.prevClose;
-              }
-              results[ticker.symbol].tdQuote = q;
-              setMarketData({ [ticker.symbol]: results[ticker.symbol] });
-            }
-          } catch { /* non-blocking */ }
-        }
-      }
-
       // Store score snapshots for velocity tracking
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -465,7 +456,7 @@
   }
 
   // Cached quotes are flagged once in the header, not with a ⚠ on every row.
-  const staleCount = $derived(isDemoMode ? 0 : getTickers().filter(t => getTickerData(t.symbol)?.quote?.stale).length);
+  const staleCount = $derived(isDemoMode ? 0 : getTickers().filter(t => { const q = getTickerData(t.symbol)?.quote; return q?.stale && q?.data; }).length);
   function formatAge(date) {
     if (!date) return 'unknown';
     const m = Math.max(0, Math.round((now - date.getTime()) / 60000));
@@ -699,6 +690,10 @@
 
   hydrateStartup();
 
+  // First run with keys set: nothing cached to show, so load instead of
+  // leaving a table of NO DATA until the user finds the Refresh button.
+  if (getApiKey() && !lastRefreshed) handleRefresh();
+
   // One-time-per-load cleanup: drop cached quotes/candles/fundamentals/news for
   // symbols no longer in the watchlist or ETF proxy list. Prevents the
   // "storage full" warning from creeping back as tickers are added/removed
@@ -745,7 +740,7 @@
           <div class="flex items-center gap-2 text-sm text-text-secondary">
             <div class="w-3.5 h-3.5 border-2 border-bull-strong border-t-transparent rounded-full animate-spin"></div>
             <span class="font-mono text-xs">
-              {refreshStep.label} {refreshStep.current}/{refreshStep.total}
+              {refreshStep.label} {refreshStep.current}/{refreshStep.total}{#if refreshStep.eta}<span class="text-text-muted" title={hasTDApiKey() ? 'TwelveData free tier: 8 calls/min' : ''}> · {refreshStep.eta}</span>{/if}
             </span>
           </div>
         {:else}
