@@ -572,7 +572,7 @@
           {/each}
         </div>
 
-        <!-- Timing | Quality side by side; revenue sits under Quality (same fetch). -->
+        <!-- Timing | Quality side by side. -->
         <div class="grid lg:grid-cols-2 gap-x-8 gap-y-3">
           {@render ltSection('Timing', tTotal, toneColor(timingTone(tTotal)), timingHint(tTotal), TIPS.ltTiming, data.timingScore ? timingRows(data.timingScore) : [])}
 
@@ -583,51 +583,53 @@
               <p class="text-[13px] text-text-muted"><span class="uppercase tracking-wider">Quality</span> · not checked yet</p>
             {/if}
 
-            <!-- Revenue history (lazy — same financials-reported fetch as Quality Score).
-                 Bars scale from zero in a fixed-height plot; labels sit outside it so
-                 the tallest bar is never squeezed to the same height as the next. -->
-            {#if data.revenueHistory?.length}
-              {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
-              <div>
-                <div class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
-                <div class="grid grid-cols-5 gap-2 max-w-sm text-center">
-                  {#each data.revenueHistory as r}
-                    {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
-                    <div class="cursor-default"
-                      use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}>
-                      <div class="h-20 flex flex-col justify-end">
-                        <div class="text-[12px] font-mono text-text-secondary">{fmtRevenue(r.revenue).replace('.0', '')}</div>
-                        <div class="w-full rounded-t shrink-0" style="height:{maxRev > 0 ? Math.max(0.15, (r.revenue / maxRev) * 3) : 0.1}rem; background:{barColor}; opacity:.8"></div>
-                      </div>
-                      <div class="text-[12px] font-mono pt-0.5" style="color:{barColor}">{r.growthPct == null ? '—' : `${r.growthPct > 0 ? '+' : ''}${Math.round(r.growthPct)}%`}</div>
-                      <div class="text-[12px] text-text-muted">FY{String(r.year).slice(2)}</div>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
           </div>
         </div>
       {/if}
 
-      <!-- Why this score + trade window + ATR — consolidated with Long-Term Setup above -->
-      <div class="space-y-2.5 {setup ? 'pt-2.5 border-t border-border/30' : ''}">
-        <ThesisSummary symbol={ticker.symbol} />
+      <!-- Why this score + trade window | Revenue (5y) on the right. -->
+      <div class="grid {data.revenueHistory?.length ? 'lg:grid-cols-2' : ''} gap-x-8 gap-y-3 {setup ? 'pt-2.5 border-t border-border/30' : ''}">
+        <div class="space-y-2.5">
+          <ThesisSummary symbol={ticker.symbol} />
 
-        {#if daysToEarnings !== null}
-          <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
-            <span class="text-lg shrink-0">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold leading-tight {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
-                Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day left' : `${daysToEarnings} days left`}
-              </p>
-              <p class="text-xs text-text-muted leading-snug">
-                {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into hold time and size.' : 'Earnings not imminent — window is open.'}
-              </p>
+          {#if daysToEarnings !== null}
+            <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
+              <span class="text-lg shrink-0">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold leading-tight {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
+                  Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day left' : `${daysToEarnings} days left`}
+                </p>
+                <p class="text-xs text-text-muted leading-snug">
+                  {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into hold time and size.' : 'Earnings not imminent — window is open.'}
+                </p>
+              </div>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Revenue history (lazy — same financials-reported fetch as Quality Score).
+             Bars scale from zero in a fixed-height plot; labels sit outside it so
+             the tallest bar is never squeezed to the same height as the next. -->
+        {#if data.revenueHistory?.length}
+          {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
+          <div>
+            <div class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
+            <div class="grid grid-cols-5 gap-2 max-w-sm text-center">
+              {#each data.revenueHistory as r}
+                {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
+                <div class="cursor-default"
+                  use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}>
+                  <div class="h-20 flex flex-col justify-end">
+                    <div class="text-[12px] font-mono text-text-secondary">{fmtRevenue(r.revenue).replace('.0', '')}</div>
+                    <div class="w-full rounded-t shrink-0" style="height:{maxRev > 0 ? Math.max(0.15, (r.revenue / maxRev) * 3) : 0.1}rem; background:{barColor}; opacity:.8"></div>
+                  </div>
+                  <div class="text-[12px] font-mono pt-0.5" style="color:{barColor}">{r.growthPct == null ? '—' : `${r.growthPct > 0 ? '+' : ''}${Math.round(r.growthPct)}%`}</div>
+                  <div class="text-[12px] text-text-muted">FY{String(r.year).slice(2)}</div>
+                </div>
+              {/each}
             </div>
           </div>
         {/if}
-
       </div>
     </div>
   {/snippet}
