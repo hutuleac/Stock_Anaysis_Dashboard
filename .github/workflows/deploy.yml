@@ -4,7 +4,13 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '30 11 * * *' # daily FRED refresh for macro.json (series update overnight ET)
+    # Snapshots at ~10:00 ET (open) and ~16:30 ET (close), weekdays. Cron is UTC
+    # and ignores daylight saving, so each slot has an EDT and an EST cron and
+    # the gate job keeps whichever lands in the New York window.
+    - cron: '0 14 * * 1-5'
+    - cron: '0 15 * * 1-5'
+    - cron: '30 20 * * 1-5'
+    - cron: '30 21 * * 1-5'
   workflow_dispatch:
 
 permissions:
@@ -12,13 +18,35 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  build-and-deploy:
+  gate:
     runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+    steps:
+      - id: mode
+        run: |
+          # push → republish the live snapshot; manual run → fresh close snapshot
+          if [ "${{ github.event_name }}" = push ]; then mode=reuse
+          elif [ "${{ github.event_name }}" != schedule ]; then mode=close
+          else
+            t=$((10#$(TZ=America/New_York date +%H%M)))
+            # windows absorb GitHub's cron start delays (often 5–20 min)
+            if   [ $t -ge 955 ]  && [ $t -le 1045 ]; then mode=open
+            elif [ $t -ge 1625 ] && [ $t -le 1720 ]; then mode=close
+            else mode=skip; fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "snapshot mode: $mode"
+
+  build-and-deploy:
+    needs: gate
+    if: needs.gate.outputs.mode != 'skip'
+    runs-on: ubuntu-latest
+    # queue rather than cancel, so a push never kills a snapshot run mid-fetch
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -34,6 +62,12 @@ jobs:
       - run: node scripts/fetch-macro.mjs
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      - run: node scripts/snapshot.mjs
+        env:
+          SNAPSHOT_MODE: ${{ needs.gate.outputs.mode }}
+          LIVE_URL: https://hutuleac.github.io/Stock_Anaysis_Dashboard/snapshot.json
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
       - run: npm run build
 
       - uses: actions/configure-pages@v4

@@ -2,7 +2,7 @@
 // Indicators are computed locally from candles (see indicators.js).
 // Free tier: 8 credits/min, 800/day.
 
-import { evictStaleCache } from './finnhub.svelte.js';
+import { evictStaleCache, isNetworkEnabled } from './finnhub.svelte.js';
 
 const BASE = 'https://api.twelvedata.com';
 
@@ -90,6 +90,7 @@ function enqueueRequest(fn, priority = false) {
 
 async function fetchTD(path, { priority = false } = {}) {
   if (!tdApiKey) throw new Error('No TwelveData API key');
+  if (!isNetworkEnabled()) throw new Error('Network disabled');
   return enqueueRequest(async () => {
     const url = `${BASE}${path}&apikey=${tdApiKey}`;
     const res = await fetch(url);
@@ -144,4 +145,3 @@ export async function fetchTimeSeries(symbol, interval, outputsize, { priority =
     return json.values;
   });
 }
-

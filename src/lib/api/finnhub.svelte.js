@@ -1,3 +1,5 @@
+import { trimFinancials } from '../qualityScore.js';
+
 const CACHE_TTL = {
   quote: 0,
   earnings: 86400,
@@ -153,12 +155,20 @@ export function pruneOrphanedCache(validSymbols) {
   return removed;
 }
 
+// Off while the app recomputes from a published snapshot: every fetcher then
+// resolves from cache (fresh, else stale) without spending a call.
+let networkEnabled = true;
+export function setNetworkEnabled(on) { networkEnabled = on; }
+export function isNetworkEnabled() { return networkEnabled; }
+
 export function delay(ms) {
+  if (!networkEnabled) return Promise.resolve(); // pacing only matters for real calls
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function fetchFinnhub(path) {
   if (!apiKey) throw new Error('No API key configured');
+  if (!networkEnabled) throw new Error('Network disabled');
   const wait = Math.max(0, FH_MIN_INTERVAL - (Date.now() - _fhLastCall));
   if (wait > 0) await new Promise(r => setTimeout(r, wait));
   _fhLastCall = Date.now();
@@ -396,11 +406,12 @@ export async function fetchHistoricalEarnings(symbol, limit = 8) {
 // Returns the raw financials-reported payload: { data: [{ year, quarter, form, report: { bs, cf, ic } }] }
 export async function fetchFinancialsReported(symbol) {
   // The raw payload is every filing since ~2009 (often MBs). parseRevenueHistory
-  // needs 6 annual reports, parseFinancials 2 — keep the 6 most recent.
+  // needs 6 annual reports, parseFinancials 2 — keep the 6 most recent, and only
+  // the concepts those two parsers read.
   return fetchWithCache('financials', symbol, async () => {
     const json = await fetchFinnhub(`/stock/financials-reported?symbol=${encodeURIComponent(symbol)}`);
     const data = Array.isArray(json?.data) ? json.data : [];
-    return { data: [...data].sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (a.quarter ?? 0) - (b.quarter ?? 0)).slice(0, 6) };
+    return trimFinancials({ data: [...data].sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (a.quarter ?? 0) - (b.quarter ?? 0)).slice(0, 6) });
   });
 }
 

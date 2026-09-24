@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFinancials, parseRevenueHistory, computeQualityScore } from '../src/lib/qualityScore.js';
+import { parseFinancials, parseRevenueHistory, computeQualityScore, trimFinancials } from '../src/lib/qualityScore.js';
 
 function reportEntry({ year, quarter = 0, cf = [], ic = [] }) {
   return { year, quarter, form: '10-K', report: { bs: [], cf, ic } };
@@ -376,5 +376,25 @@ describe('parseRevenueHistory', () => {
     expect(parseRevenueHistory({ data: [] })).toEqual([]);
     expect(parseRevenueHistory(null)).toEqual([]);
     expect(parseRevenueHistory({})).toEqual([]);
+  });
+});
+
+describe('trimFinancials', () => {
+  it('drops unread lines without changing what the parsers return', () => {
+    const line = (concept, value) => ({ concept, value, label: 'x', unit: 'usd' });
+    const filing = (year, rev) => ({ year, quarter: 0, form: '10-K', report: {
+      bs: [line('us-gaap_Assets', 1)],
+      ic: [line('us-gaap_CostOfRevenue', 5), line('us-gaap_Revenues', rev), line('us-gaap_SalesRevenueNet', rev * 2),
+           line('us-gaap_WeightedAverageNumberOfDilutedSharesOutstanding', 100)],
+      cf: [line('us-gaap_NetCashProvidedByUsedInOperatingActivities', 30), line('us-gaap_PaymentsToAcquirePropertyPlantAndEquipment', 10),
+           line('us-gaap_PaymentsForRepurchaseOfCommonStock', 4), line('us-gaap_DepreciationAndAmortization', 2)],
+    } });
+    const reported = { data: [filing(2025, 120), filing(2024, 100), filing(2023, 90)] };
+    const trimmed = trimFinancials(reported);
+
+    expect(parseFinancials(trimmed)).toEqual(parseFinancials(reported));
+    expect(parseRevenueHistory(trimmed)).toEqual(parseRevenueHistory(reported));
+    expect(trimmed.data[0].report.bs).toBeUndefined();
+    expect(trimmed.data[0].report.ic.map(l => l.concept)).not.toContain('us-gaap_CostOfRevenue');
   });
 });
