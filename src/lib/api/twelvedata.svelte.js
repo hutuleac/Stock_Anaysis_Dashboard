@@ -135,6 +135,7 @@ async function fetchWithCache(type, symbol, fetcher) {
 // Returns values array sorted ascending (oldest first), ready for lightweight-charts
 export async function fetchTimeSeries(symbol, interval, outputsize, { priority = false } = {}) {
   const cacheType = interval === '1h' ? 'ts_1h' : 'ts_1day';
+  if (interval === '1day') await seedFromSnapshot(tdCacheKey(cacheType, `${symbol}_${interval}_${outputsize}`), symbol, outputsize);
   return fetchWithCache(cacheType, `${symbol}_${interval}_${outputsize}`, async () => {
     const json = await fetchTD(
       `/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputsize}&order=ASC`,
@@ -145,3 +146,25 @@ export async function fetchTimeSeries(symbol, interval, outputsize, { priority =
   });
 }
 
+
+// ── Deploy-time snapshot (scripts/fetch-candles.mjs → candles.json) ──────────
+// Writes the snapshot into the cache stamped with its generation time, so the
+// normal 24h TTL decides freshness: a stale or missing snapshot just falls
+// through to the live fetch. Never overwrites a newer cache entry.
+let snapshot = null; // one candles.json request per page load
+async function seedFromSnapshot(key, symbol, outputsize) {
+  if (!import.meta.env.PROD) return;
+  snapshot ??= fetch(`${import.meta.env.BASE_URL}candles.json`, { cache: 'no-cache' })
+    .then(res => (res.ok ? res.json() : null))
+    .catch(() => null);
+  const snap = await snapshot;
+  const rows = snap?.bars?.[symbol];
+  if (!rows?.length) return;
+  try {
+    const cachedTs = JSON.parse(localStorage.getItem(key) ?? 'null')?.ts ?? 0;
+    if (cachedTs >= snap.generatedAt) return;
+    const data = rows.slice(-outputsize).map(([datetime, open, high, low, close, volume]) =>
+      ({ datetime, open, high, low, close, volume }));
+    localStorage.setItem(key, JSON.stringify({ data, ts: snap.generatedAt }));
+  } catch { /* quota — the live fetch path handles eviction */ }
+}

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '30 11 * * *' # daily FRED refresh for macro.json (series update overnight ET)
+    - cron: '15 22 * * *' # daily, after the US close: fresh candles.json + macro.json
   workflow_dispatch:
 
 permissions:
@@ -34,6 +34,11 @@ jobs:
       - run: node scripts/fetch-macro.mjs
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      - run: node scripts/fetch-candles.mjs
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          # push deploys reuse the live snapshot; the nightly run always refetches
+          REUSE_URL: ${{ github.event_name != 'schedule' && 'https://hutuleac.github.io/Stock_Anaysis_Dashboard/candles.json' || '' }}
       - run: npm run build
 
       - uses: actions/configure-pages@v4

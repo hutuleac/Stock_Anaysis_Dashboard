@@ -38,3 +38,4 @@ Thumbs.db
 .gstack/
 graphify-out/
 public/macro.json
+public/candles.json

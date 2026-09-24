@@ -1,26 +1,10 @@
 import { fetchProfile, getSectorETF } from '../api/finnhub.svelte.js';
+import { HARDCODED_DEFAULTS } from '../defaultLists.js';
 
 let tickers = $state([]);
 let selectedSymbol = $state(null);
 let marketData = $state({});
 
-// Built-in fallback defaults — used only when no user-configured defaults exist
-const HARDCODED_DEFAULTS = [
-  { symbol: 'AAPL',  name: 'Apple Inc',             sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'AVGO',  name: 'Broadcom Inc',           sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'CRDO',  name: 'Credo Technology Group', sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'NET',   name: 'Cloudflare Inc',         sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'RKLB',  name: 'Rocket Lab USA',         sector: 'Industrials',            sectorETF: 'XLI' },
-  { symbol: 'LLY',   name: 'Eli Lilly and Company',  sector: 'Healthcare',             sectorETF: 'XLV' },
-  { symbol: 'MRVL',  name: 'Marvell Technology',     sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'AMZN',  name: 'Amazon.com Inc',         sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
-  { symbol: 'GOOGL', name: 'Alphabet Inc',            sector: 'Communication Services', sectorETF: 'XLC' },
-  { symbol: 'TSLA',  name: 'Tesla Inc',               sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
-  { symbol: 'HOOD',  name: 'Robinhood Markets',       sector: 'Financial Services',     sectorETF: 'XLF' },
-  { symbol: 'NVDA',  name: 'NVIDIA Corporation',      sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'SOFI',  name: 'SoFi Technologies',       sector: 'Financial Services',     sectorETF: 'XLF' },
-  { symbol: 'AOI',   name: 'Applied Optoelectronics',  sector: 'Technology',             sectorETF: 'XLK' },
-];
 
 // User-configurable defaults — persisted separately from active watchlist
 let defaultTickers = $state([]);
