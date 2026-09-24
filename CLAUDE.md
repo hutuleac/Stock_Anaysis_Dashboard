@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.25
+# Project State — Stock Analysis Dashboard v0.27
 
 ## What this is
 
@@ -231,7 +231,7 @@ Each proxy also carries display-only `indicators { trendState, wRsi, rangePos52w
 
 **Published snapshots (deploy.yml + scripts/snapshot.mjs):** weekday runs at ~10:00 ET (`open`) and ~16:30 ET (`close`). There are two UTC crons per slot because cron ignores daylight saving; the `gate` job keeps the one whose New York time is inside the window (09:55–10:45 / 16:25–17:20) and skips the other. `snapshot.mjs` loads the **real** `finnhub.svelte.js` / `twelvedata.svelte.js` through Vite `ssrLoadModule` against an in-memory localStorage, runs the same fetches the app does for `watchlist.json` + ETF proxies + SPY, and publishes the resulting `fh_*` / `td_*` cache entries as `snapshot.json` (it aborts if a key string would leak). `close` = a fresh run; `open` = start from the live snapshot so only expired entries refetch (quotes, F&G, BTC); push deploys `reuse` the live file and make zero calls. `scripts/fetch-macro.mjs` → `macro.json` runs on every deploy. Secrets: `FINNHUB_API_KEY`, `TWELVEDATA_API_KEY`, `FRED_API_KEY`. Deploys queue (`cancel-in-progress: false`) so a push never kills a snapshot run.
 
-In the browser (prod only), `seedSnapshot` writes the entries that are newer than this browser's own. Then `handleRefresh({ offline: true })` recomputes every panel with `setNetworkEnabled(false)`: fetchers resolve from cache, quotes come back `stale` from the snapshot, and nothing is spent. That works **with no API keys**: it replaces demo mode whenever a snapshot exists. The header shows "Open/Close snapshot · <time>"; Refresh (keys required) is the live path and clears the label. Offline runs skip `storeScoreSnapshot` (reloads would stack duplicates). The snapshot is skipped if this browser refreshed live after it was generated. Tickers not in `watchlist.json` need browser keys. Intraday chart timeframes (1h) are not in the snapshot.
+In the browser (prod only), `seedSnapshot` writes the entries that are newer than this browser's own. Then `handleRefresh({ offline: true })` recomputes every panel with `setNetworkEnabled(false)`: fetchers resolve from cache, quotes come back `stale` from the snapshot, and nothing is spent. That works **with no API keys**: it replaces demo mode whenever a snapshot exists. The header shows "Open/Close snapshot · <time>"; Refresh (keys required) is the live path and clears the label. Offline runs skip `storeScoreSnapshot` (reloads would stack duplicates). The snapshot is skipped if this browser refreshed live after it was generated. Tickers not in `watchlist.json` need browser keys. `PriceChart` routes daily timeframes through `fetchTimeSeries` even without a TD key (the seeded cache has them); only intraday (1h) needs a live TD key.
 
 **`HARDCODED_ETFS` additions are not migrated into existing installs** — `localStorage['etfList']` is written once and never reconciled, so a user from before the change (e.g. `XDEW`, added Aug 2026) has to re-add the fund via catalog search. Keep that in mind before assuming a catalog entry is visible to everyone.
 
