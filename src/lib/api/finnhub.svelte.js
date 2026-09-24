@@ -124,7 +124,8 @@ export function evictStaleCache() {
 // self-trim only runs on write, which stops the moment a ticker is removed —
 // leaving the entry to linger forever otherwise.
 const PRUNE_PREFIXES = [
-  'fh_quote_', 'fh_earnings_', 'fh_fundamentals_', 'fh_news_', 'fh_smart_money_', 'fh_candles_',
+  'fh_quote_', 'fh_earnings_hist_', 'fh_earnings_', 'fh_fundamentals_', 'fh_news_', 'fh_smart_money_', 'fh_candles_',
+  'fh_profile_', 'fh_financials_',
   'td_tdquote_', 'td_ts_1day_', 'td_ts_1h_', 'sv_',
 ];
 
@@ -216,9 +217,11 @@ export async function fetchProfile(symbol) {
 }
 
 async function fetchMetrics(symbol) {
-  return fetchWithCache('fundamentals', symbol, () =>
-    fetchFinnhub(`/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`)
-  );
+  // Only `metric` is read; `series` (years of per-metric history) is most of the payload.
+  return fetchWithCache('fundamentals', symbol, async () => {
+    const json = await fetchFinnhub(`/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`);
+    return { metric: json?.metric ?? {} };
+  });
 }
 
 async function fetchEarnings(symbol) {
@@ -235,9 +238,11 @@ async function fetchNews(symbol) {
   const now = new Date();
   const to = now.toISOString().split('T')[0];
   const from = new Date(now - 7 * 86400000).toISOString().split('T')[0];
-  return fetchWithCache('news', symbol, () =>
-    fetchFinnhub(`/company-news?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`)
-  );
+  // scoreNewsHeadlines reads the top 5 headline + summary only — cache just that.
+  return fetchWithCache('news', symbol, async () => {
+    const json = await fetchFinnhub(`/company-news?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}`);
+    return (Array.isArray(json) ? json : []).slice(0, 5).map(({ headline, summary }) => ({ headline, summary }));
+  });
 }
 
 export async function fetchCandles(symbol, resolution = 'D', fromTs, toTs) {
@@ -390,9 +395,13 @@ export async function fetchHistoricalEarnings(symbol, limit = 8) {
 // ── Financials Reported (cash flow + share-count concepts for Quality Score) ─
 // Returns the raw financials-reported payload: { data: [{ year, quarter, form, report: { bs, cf, ic } }] }
 export async function fetchFinancialsReported(symbol) {
-  return fetchWithCache('financials', symbol, () =>
-    fetchFinnhub(`/stock/financials-reported?symbol=${encodeURIComponent(symbol)}`)
-  );
+  // The raw payload is every filing since ~2009 (often MBs). parseRevenueHistory
+  // needs 6 annual reports, parseFinancials 2 — keep the 6 most recent.
+  return fetchWithCache('financials', symbol, async () => {
+    const json = await fetchFinnhub(`/stock/financials-reported?symbol=${encodeURIComponent(symbol)}`);
+    const data = Array.isArray(json?.data) ? json.data : [];
+    return { data: [...data].sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (a.quarter ?? 0) - (b.quarter ?? 0)).slice(0, 6) };
+  });
 }
 
 // ── CNN Fear & Greed Index ────────────────────────────────────────────────────

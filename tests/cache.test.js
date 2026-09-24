@@ -46,6 +46,16 @@ describe('pruneOrphanedCache', () => {
     expect(removed).toBe(2);
   });
 
+  it('prunes the lazy expand-row caches (financials, earnings history, profile) too', () => {
+    localStorage.setItem('fh_financials_TSLA', entry({ data: [] }));
+    localStorage.setItem('fh_earnings_hist_TSLA', entry([]));
+    localStorage.setItem('fh_profile_TSLA', entry({}));
+    localStorage.setItem('fh_financials_AAPL', entry({ data: [] }));
+
+    expect(pruneOrphanedCache(['AAPL'])).toBe(3);
+    expect(localStorage.getItem('fh_financials_AAPL')).not.toBeNull();
+  });
+
   it('prunes frozen sv_ score history for removed symbols but keeps tracked ones', () => {
     localStorage.setItem('sv_AAPL', entry([{ score: 60, ts: NOW }]));
     localStorage.setItem('sv_TSLA', entry([{ score: 40, ts: NOW }]));
