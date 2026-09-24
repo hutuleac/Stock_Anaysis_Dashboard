@@ -658,22 +658,6 @@
     </div>
   {/snippet}
 
-  <!-- Verdict: badge + banded score + one sentence reconciling the short-term
-       score with the forward-looking setups (readiness.js reconcileVerdict). -->
-  {#snippet verdictHeader(score, verdict)}
-    {@const badge = getBadgeStyle(score.badge)}
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-3">
-      <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold shrink-0 {badge.bg} {badge.text}">{badge.label}</span>
-      {#if score.score !== null}
-        <span class="font-mono font-semibold text-sm" style="color:{scoreStyle(score.score).color}">{score.score}{@render adjustedMark(score)}</span>
-        {@render scoreBar(score, 'w-28 sm:w-40')}
-      {/if}
-      {#if verdict}
-        <span class="text-sm font-medium" style="color:{toneColor(verdict.tone)}">{verdict.text}</span>
-      {/if}
-    </div>
-  {/snippet}
-
   <!-- Four setup engines, one row each, with the readiness their panels show. -->
   {#snippet setupRows(rows, setup)}
     {@const gapText = (w) => w?.length ? w.map(g => `${g.label} +${g.gap}`).join(' · ') : ''}
@@ -717,7 +701,7 @@
     {@const su = topSetup(data?.setups)}
     {@const playbook = su?.kind === 'BREAKOUT' ? 'trend' : su ? 'pullback' : 'all'}
     {#if variant === 'desktop'}
-      {@render verdictHeader(score, verdict)}
+      {#if verdict}<p class="text-sm font-medium mb-3" style="color:{toneColor(verdict.tone)}">{verdict.text}</p>{/if}
       <div class="mb-4">
         <PriceChart symbol={ticker.symbol} />
       </div>

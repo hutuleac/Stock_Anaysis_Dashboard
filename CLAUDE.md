@@ -275,9 +275,9 @@ One colour ramp across the whole card so a colour means the same thing on every 
 
 ## Deep-dive expanded row (WatchlistTable.svelte, v0.26)
 
-The expanded row is the primary surface. Desktop order: **verdict header → chart → Entry & Risk | Setups (side by side) → indicators → Long-Term & thesis card (`ltCard` snippet) → AI export**. Mobile: verdict sentence + setup rows, then collapsible Chart / Entry & Risk (open) and Indicators / Long-term & thesis (closed).
+The expanded row is the primary surface. Desktop order: **verdict sentence → chart → Entry & Risk | Setups (side by side) → indicators → Long-Term & thesis card (`ltCard` snippet) → AI export**. Mobile: verdict sentence + setup rows, then collapsible Chart / Entry & Risk (open) and Indicators / Long-term & thesis (closed).
 
-- **Verdict header**: badge + score + banded 0–100 bar (`scoreBar` snippet) + `reconcileVerdict(badge, rows)` sentence when the short-term score and a setup disagree. Only setups the radar surfaces (`inRadar`) count, so the sentence never cites a setup the panel hides.
+- **Verdict sentence**: only the `reconcileVerdict(badge, rows)` sentence, shown when the short-term score and a setup disagree. Only setups the radar surfaces (`inRadar`) count, so the sentence never cites a setup the panel hides. Badge + score + bar live once, in the row above — don't repeat them in the expanded panel.
 - **Setup rows** come from `tickerSetups(symbol, data, dipCtx)` (radar.js): same AVWAP/POC nudge and gates as `computeRadar`, dip row straight from `computeDipRadar`. **Never derive a row's readiness from `data.setups` directly** — that is how the row and the radar contradicted each other.
 - **`BADGE_BANDS`** (scoring.js) is the one source for badge, row score colour, the bar's band tints and `TIPS.score` ranges. The row colour used 70/30 while the badge used 72/28 before.
 - FundamentalsBar takes `defaultView` — the active setup's playbook (`trend` for a breakout, `pullback` otherwise, `all` when none).
