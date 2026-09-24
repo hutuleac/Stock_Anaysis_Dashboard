@@ -459,12 +459,14 @@
     try {
       let candles;
 
-      if (hasTDApiKey()) {
+      // Daily bars go through the TwelveData cache even without a key: the
+      // published snapshot seeds it. Only intraday needs a live TD key.
+      if (hasTDApiKey() || !tf.intraday) {
         // priority: true — this is a user click, shouldn't queue behind a
         // background bulk-refresh backlog of 20+ calls.
         const result = await fetchTimeSeries(symbol, tf.tdInterval, tf.tdOutput, { priority: true });
         const values = result.data;
-        if (!values?.length) { error = 'No chart data available'; loading = false; return; }
+        if (!values?.length) { error = hasTDApiKey() ? 'No chart data available' : 'Add a free TwelveData key in Settings to unlock charts'; loading = false; return; }
         candles = values.map(v => ({
           time:   tf.intraday ? Math.floor(new Date(v.datetime.replace(' ', 'T') + 'Z').getTime() / 1000) : v.datetime,
           open:   parseFloat(v.open),

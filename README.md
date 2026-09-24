@@ -2,396 +2,205 @@
 
 # 📈 Stock Analysis Dashboard
 
-**A fast, offline-first stock analysis dashboard for retail swing traders.**
-Bloomberg-grade data workflow in the browser — no backend, your keys and data never leave your machine.
+### Your pre-market analyst, in a browser tab.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-2ea043?style=for-the-badge&logo=githubpages&logoColor=white)](https://hutuleac.github.io/Stock_Anaysis_Dashboard/)
+Scores every stock on your watchlist, spots entries before they happen,<br/>
+and explains every call in plain English. Free, private, no backend.
+
+[![Open the dashboard](https://img.shields.io/badge/Open_the_dashboard-no_signup-2ea043?style=for-the-badge&logo=githubpages&logoColor=white)](https://hutuleac.github.io/Stock_Anaysis_Dashboard/)
 &nbsp;
-[![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=deploy&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
+[![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=snapshot&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
-![Version](https://img.shields.io/badge/version-0.25-blue)
-![Tests](https://img.shields.io/badge/tests-530_passing-brightgreen?logo=vitest&logoColor=white)
-![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-FF3E00?logo=svelte&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
-![Data](https://img.shields.io/badge/data-Finnhub_free_tier-1E64FF)
-![Storage](https://img.shields.io/badge/storage-localStorage_only-555)
+![Version](https://img.shields.io/badge/version-0.27-blue)
+![Tests](https://img.shields.io/badge/tests-534_passing-brightgreen?logo=vitest&logoColor=white)
+![Svelte 5](https://img.shields.io/badge/Svelte_5-FF3E00?logo=svelte&logoColor=white)
+![Cost](https://img.shields.io/badge/cost-%240_·_free_API_tiers-555)
+
+<img src="docs/screenshots/01-overview.png" alt="Dashboard overview: market context, today's signals, scans and the scored watchlist" width="100%"/>
 
 </div>
 
 ---
 
-## Screenshots
+## ✨ Open it. That's it.
 
-> Scan the whole watchlist in the morning, then drill into one name for the full thesis.
+**[→ hutuleac.github.io/Stock_Anaysis_Dashboard](https://hutuleac.github.io/Stock_Anaysis_Dashboard/)**
 
-**Market context + Morning Brief** — VIX, SPY trend, Fear & Greed, sector leaders/laggards, and the day's top setups / earnings / movers above the fold.
-![Market context and morning brief](docs/screenshots/01-market-context-morning-brief.png)
+No account, no API key, no install. A scheduled job refreshes the data **twice every trading day**, around the US open and after the close, so the page opens instantly with real numbers.
 
-**Watchlist** — every ticker scored 0–100 with a directional badge, T/F/S sub-score bars, conviction %, RS-vs-SPY chip, score sparkline + velocity arrow, and the weekly setup at a glance.
-![Watchlist table](docs/screenshots/02-watchlist.png)
-
-**Fundamentals bar + score history** — valuation (P/E, EPS & rev growth, P/S, PEG), the full indicator suite (RSI, MACD, ADX, Stochastic, BB, EMAs), RS, momentum, weekly trend, conviction, and a 90-day score-history sparkline — each with a plain-English "so what" tooltip.
-![Fundamentals bar](docs/screenshots/03-fundamentals-bar.png)
-
-**Price chart** — TradingView candlesticks with EMA50/200, Bollinger Bands, RSI/Volume/MACD sub-panes, and drawing tools. Scroll-zoom activates on click, so the wheel scrolls the page until you ask the chart for it.
-![Price chart and news](docs/screenshots/04-chart-news.png)
+Want live prices mid-session? Add your own free API keys in ⚙ Settings and press **Refresh**.
 
 ---
 
-## Why it exists
+## 🎯 What it answers
 
-Most retail tools either drown you in raw numbers or hide the math behind a black-box "buy/sell" call. This dashboard does the opposite: it computes the indicators **locally from candle data**, scores each name across a dozen signals, and then **explains every score in plain English** — so you learn the *why*, not just the *what*. It runs entirely client-side on a free Finnhub key and deploys as a static site, so there's no server, no subscription, and nothing of yours sent anywhere.
+### "What deserves my attention today?"
 
-- 🧮 **Transparent scoring** — Technical / Fundamental / Sentiment, regime-aware weights, conviction %, and a thesis you can read.
-- ⚡ **Zero-cost data** — built around the Finnhub free tier; indicators computed from candles, not paid endpoints.
-- 🔒 **Offline-first & private** — localStorage only; opens instantly from cache, refreshes on demand.
-- 🧪 **Tested math** — 280 unit tests over the indicator, scoring, signal, valuation, dip, ETF, and chart-anchor engines.
+The **Today** strip lists every setup that is ready (`ACT`) or close (`SOON`), across stocks and ETFs. The **Scans** line summarises three watchlist-wide radars. Click one to open it, and the table filters to just those tickers.
 
----
+<img src="docs/screenshots/03-scans.png" alt="Setup Radar open, watchlist filtered to its tickers" width="100%"/>
 
-## Features
+| Radar | Looks for |
+|---|---|
+| **Setup Radar** | Weekly **Pullback** (buy weakness before the turn) and **Breakout** (buy strength as a trend starts) setups, each gated on growth and valuation |
+| **Dip Hunter** | Quality companies on sale: a strict quality gate first, then a 0–10 dip score (oversold, drawdown, fear, turn, insider buying…) |
+| **Long-term** | Accumulation zones where **timing** and **quality** line up at the same time |
 
-### Watchlist
-- Search and add tickers via Finnhub search API
-- Bulk import — paste comma/newline-separated list
-- Drag-and-drop reorder
-- Sort by: score · price · change · earnings · symbol
-- Score sparkline — tiny SVG trend line of last 7 score snapshots per ticker
-- Score velocity arrow (↑↓→) — 3-day delta
-- CSV export — all tickers with score, sub-scores, price, sector, earnings countdown
+### "Is this a good entry, right now?"
 
-### Scoring Engine (up to 12 signals)
+Click any row for the deep dive: one verdict sentence, the chart, where your stop and target sit, and which setups are live. Every setup shows what it's still **waiting on**, e.g. `waiting on Structure Breakout +3`.
 
-| Category | Signals |
-|----------|---------|
-| **Technical 35%** | EMA50 position, MA200 regime, 52-week range, daily momentum, RSI(14), MACD crossover, ADX trend strength, Stochastic %K momentum |
-| **Fundamental 45%** | P/E ratio, EPS growth YoY |
-| **Sentiment 20%** | News headline keywords (last 5), sector ETF trend |
+<img src="docs/screenshots/02-deep-dive.png" alt="Expanded row: chart with EMAs and Bollinger Bands, Entry and Risk, setup readiness" width="100%"/>
 
-- T5 RSI(14) + T6 MACD computed locally from candle data — no extra API key needed
-- T7 ADX(14): trend quality signal — strong trending + MACD direction = high conviction
-- T8 Stochastic(14,3,3): oversold/overbought zones + %K/%D crossover detection
-- EMA50 + MA200 fall back to locally-computed values when Finnhub metrics unavailable
-- Optional TwelveData key adds BBands, ADX, Stochastic, and higher-precision indicator values
-- Score badges: `STRONG` · `LEAN LONG` · `NEUTRAL` · `LEAN SHORT` · `STRONG SHORT`
-- Confidence band: `(factors/total)` shows how many signals had live data
-- T/F/S sub-score mini bars inline per row
-- **Conviction %** — signal agreement score separate from directional strength ("how bullish" vs "how many signals agree") — HIGH / MODERATE / LOW / MIXED label
-- **Regime-aware weights** — VIX > 25: fundamentals 55%, VIX > 35: fundamentals 60%; technicals weighted down in volatile regimes
-- **SPY downtrend penalty** — when SPY is in downtrend, all LONG scores pulled 20% toward neutral
-- **Fear & Greed modifier** — CNN F&G index adjusts scores at extremes (extreme fear: −3, extreme greed: −2)
-- **RSI z-score** — how many std-devs current RSI sits above/below its 90-day mean (shown inline in Fundamentals Bar)
-- **Score z-score** — same concept for the composite score itself; shown in table and Fundamentals Bar once ≥5 snapshots exist
-- **Weekly Setup Signals (leading)** — two separately-scored entry timers built on weekly candles: **Pullback/Accumulation** (bullish RSI divergence + downtrend exhaustion + volume dry-up) and **Momentum/Breakout** (BB squeeze resolving + structure breakout + volume expansion). Each shows a 0–10 score, readiness (WATCH/SOON/ACT), and an ETA in weeks. Surfaced as a table badge + Fundamentals Bar cells with tooltips. Zero extra API calls.
-- **Relative Strength vs SPY (1M/3M)** — stock return minus the index return; outperform/underperform chip on rows + Fundamentals Bar. Leaders keep leading — a core trend-following filter.
-- **Growth valuation — Revenue growth · P/S · PEG** — for growth names and ADRs where P/E is negative or misleading. PEG normalizes valuation against growth; P/S works when there are no earnings. Display-only, with plain-English tooltips.
-- **EMA Stack** — `BULL STACK` / `BROKEN` chip when price > EMA20 > EMA50 > EMA200 (full bull alignment). The single fastest trend-quality read on a row.
-- **Oversold Confluence** — `OVERSOLD` badge when RSI < 35 *and* price sits at/below the lower Bollinger band — a higher-conviction mean-reversion entry than either signal alone.
-- **ROC 20d / 60d** — rate-of-change momentum cell; 20d rising while 60d is flat = early trend emergence.
-- **52-week-high proximity** — `AT HIGH` / `x% ↓ 52wH` chip flagging breakout-watch candidates near their highs.
+### "Is it a company worth holding?"
 
-### Expanded Row (per ticker, click to open)
+The **Long-Term** card splits the decision into two scores that never blend: **Timing** (is it cheap *now*?) and **Quality** (cash, balance sheet, profit, earnings). Every row shows how many points are left, so a 29 reads as "21 points from the watchlist band" rather than an abstract number. It also shows five years of revenue and a plain-English "why this score".
 
-**Charts**
-- Candlestick chart — 1D / 5D / 1M / 3M / 6M / 1Y (TradingView lightweight-charts)
-- MA50 (amber) + MA200 (blue) overlays with toggle button
-- **Volume bars** sub-pane (default on) — green/red colored, toggleable
-- **MACD** sub-pane (12,26,9) — histogram + line + signal with crossover coloring; exclusive with volume
-- **RSI(14)** overlaid on volume/MACD pane — 70/30 reference lines, toggleable
-- **Bollinger Bands(20,2)** overlay on main pane — default on, toggleable
-- Dynamic chart height adjusts to active sub-panes
+<img src="docs/screenshots/04-long-term.png" alt="Long-Term Setup card: timing and quality breakdown, why this score, revenue 5y" width="100%"/>
 
-**Data panels**
-- Fundamentals bar — Mkt Cap · P/E · PEG · EPS & Revenue growth · P/S · Div yield · EMA50/200, then the technical cards: RSI(14) · MACD · ADX(14) · Stoch %K/%D · BB position · 52w range · Score Z · Weekly trend · Volume ratio · Conviction % · RS vs SPY · AVWAP · POC · ROC · OBV · swing-low support · the two weekly setups
-- **Trend Setup / Pullback Setup tabs** — narrow those technical cards to the playbook you're considering; `All` is the default, fundamentals and the score-context cards stay visible in every tab
-- **Long-Term Setup card** — Timing and Quality totals with the distance to the next band, colour-coded component chips, a "waiting on" line naming what still has to improve, the plain-English verdict, and a 5-year revenue mini chart
-- **"So what" tooltips** — hover any indicator for plain-English interpretation (e.g. RSI 38 → "approaching oversold; potential base forming")
-- **🤖 Copy for AI** — the full reading as a plain-text prompt, merged into an editable template, with a share-sheet button on mobile
+### "Which ETF do I add, and which do I trim?"
 
-**Entry Panel** (always visible)
-- Thesis Summary — 2–4 plain-English bullets explaining exactly why the score is what it is (positives ▲, negatives ▼, warnings ⚠)
-- Trade Window — explicit countdown to earnings with risk colour coding
-- High-volatility day warning — fires when |dp| ≥ 5% with contextual copy
-- Risk Snapshot — current price, suggested stop (2× weekly ATR), risk/share, risk %
-- ATR(14) intraday volatility card — daily noise range reference
-- R:R to swing-high target (chartAnchors AVWAP swing high)
-- Position sizing — 2% rule: recommended shares, cost, % of portfolio, max loss
-- Scenario table — Base (1:2 R:R), Extended (1:3), Stop-out
+A dedicated view for **Ireland-domiciled UCITS ETFs**, the kind European investors can actually buy. Signals run on the matching US fund (CSPX → SPY, CNDX → QQQ…), and every fund gets an **Entry** and an **Exit** score.
 
-### Market Context Bar
-- VIX with plain-English interpretation (CALM → EXTREME)
-- SPY trend + 11 sector ETF performance
-- **CNN Fear & Greed index** — gauge bar (0–100) with Extreme Fear / Greed labels + nudge integration
-- Soft nudge banner for elevated risk conditions
-- Collapsible
+<img src="docs/screenshots/05-etfs.png" alt="UCITS ETF table with entry and exit scores" width="100%"/>
 
-### App-level
-- **Default watchlist** — opens pre-loaded with AMZN · GOOGL · SKM · TSLA · HOOD · NVDA · SOFI; fully editable in Settings (add/remove/reset, persisted separately from active watchlist)
-- **Startup hydration** — last fetched data is shown immediately on load from cache; no auto-fetch on open
-- Market hours indicator — OPEN/CLOSED + countdown (ET), updates every minute
-- Auto-refresh — Off / 5 / 15 / 30 min, only fires when market is open
-- Keyboard shortcuts: `R` refresh · `Esc` close · `/` search · `J`/`K` navigate tickers
-- Offline banner, storage quota protection, cache-clear in Settings
-- GitHub Actions deploy to GitHub Pages on push to `main`
+<details>
+<summary><b>📱 Works on your phone too</b></summary>
+<br/>
+<div align="center"><img src="docs/screenshots/06-mobile.png" alt="Mobile view" width="320"/></div>
+</details>
 
 ---
 
-## Testing
+## ⚙️ How it works
 
-```bash
-npm test          # single run (CI)
-npm run test:watch  # watch mode (dev)
+```mermaid
+flowchart LR
+    FH[("Finnhub<br/>prices · fundamentals<br/>news")]
+    TD[("TwelveData<br/>price history")]
+    FR[("FRED<br/>macro")]
+    JOB["⏰ GitHub Actions<br/>~10:00 open · ~16:30 close<br/>New York time, weekdays"]
+    SNAP["📦 snapshot.json<br/>on GitHub Pages"]
+    YOU["💻 Your browser<br/>computes every score"]
+    REF["🔄 Refresh (optional)<br/>live prices with<br/>your own keys"]
+
+    FH --> JOB
+    TD --> JOB
+    FR --> JOB
+    JOB --> SNAP --> YOU
+    YOU -.- REF
 ```
 
-499 unit tests covering `src/lib/indicators.js`, `src/lib/scoring.js`, `src/lib/signals.js`, `src/lib/valuation.js`, `src/lib/radar.js`, `src/lib/dip.js`, `src/lib/etf.js`, `src/lib/etfCatalog.js`, `src/lib/highlights.js`, `src/lib/chartAnchors.js`, `src/lib/candles.js`, `src/lib/export.js`, `src/lib/macro.js`, `src/lib/timingScore.js`, `src/lib/technicalPatterns.js`, `src/lib/qualityScore.js`, `src/lib/longTermSetup.js`, `src/lib/longTermIndicators.js`, `src/lib/readiness.js`, `src/lib/demoData.js`, the tooltip action, and the FundamentalsBar playbook-view keys:
+The job runs the dashboard's **own** fetch code, so the snapshot holds exactly what your browser would have cached. Your browser loads it, fills in anything newer it already has, and does all the maths itself: indicators, scores, setups. There is no server.
 
-| Suite | What's tested |
-|-------|---------------|
-| `emaArray` | Seed value, multiplier math, length |
-| `computeRSI` | Wilder smoothing, all-gains (100), all-losses (0), edge/null cases |
-| `computeMACD` | Structure, histogram = MACD − signal, flat series, crossover detection |
-| `computeATR` | Uniform TR, spike isolation, gap-based true range |
-| `computeRSIZScore` | Null guard, zero-variance series |
-| `computeIndicatorsFromCandles` | All fields returned, BB ordering, missing OHLC graceful null |
-| `computeWeeklyTrend` | Up/down trend detection, structure |
-| `scoreNewsHeadlines` | Bullish/bearish/neutral words, first-5 limit, clamping |
-| `computeScore` | All 8 technical signals, 3 fundamental, regime weights, SPY penalty, F&G modifier, conviction label, badge thresholds |
-| `getDaysToEarnings` | Future/past/today date handling |
-| `score history` | localStorage store/retrieve, dedup, velocity, z-score |
-| `generateThesis` | Structure, EMA50 bull/bear copy, earnings warning |
-| `signals.js` | Swing pivots, RSI divergence, BB squeeze, volume profile, structure, both setup aggregators, orchestrator null guards |
-| `indicators.js` (RS) | `priceReturn` window math, `computeRelativeStrength` vs SPY (1M/3M), ADX [0,100] bounds |
-| `valuation.js` | `computePEG` — ratio math + null guards for zero/negative growth and non-positive P/E |
+**From raw data to one verdict:**
 
-### Math implementation notes
+```mermaid
+flowchart LR
+    RAW["Price history<br/>Fundamentals<br/>News · market mood"] --> IND["Indicators<br/>RSI · MACD · ADX · EMAs<br/>Bollinger · ATR · OBV"]
+    IND --> SC["Score 0–100<br/>technical · fundamental · sentiment"]
+    IND --> SU["Weekly setups<br/>Pullback · Breakout"]
+    IND --> DIP["Dip Hunter"]
+    IND --> TI["Timing score"]
+    RAW --> QU["Quality score"]
+    TI --> LT["Long-term verdict"]
+    QU --> LT
+    SC --> V["✅ One plain-English verdict<br/>per ticker"]
+    SU --> V
+    DIP --> V
+    LT --> V
+```
 
-- **RSI(14)** — Wilder's smoothing (RMA): `avgGain = (prev * 13 + gain) / 14` per bar, consistent with TradingView.
-- **EMA** — seeded with SMA of the first `period` values, then standard EMA multiplier `k = 2/(n+1)`.
-- **MACD(12,26,9)** — EMA crossover on the MACD histogram (histogram flips sign = crossover event).
-- **ATR(14)** — simple average of the last 14 true ranges (not Wilder's RMA). Expect small divergence vs TradingView's ATR(14) which uses Wilder smoothing; values are directionally consistent and suitable for stop-loss guidance.
-- **Bollinger Bands(20,2)** — population std dev (divides by `period`, not `period−1`), matching TradingView default.
-- **ADX(14)** — Wilder-smoothed +DM/−DM/TR, matching standard ADX definition.
-- **Stochastic(14,3,3)** — raw %K smoothed to D by 3-bar SMA; crossover fires on %K/%D sign change.
+The score adapts to the market: in high volatility it leans on fundamentals, a falling S&P 500 pulls bullish scores toward neutral, and extreme fear or greed nudges them. A **conviction** figure shows how many signals agree, which is separate from how bullish the score is.
 
 ---
 
-## Setup
+## 💸 Runs entirely on free tiers
 
-1. Get a free API key from [finnhub.io/register](https://finnhub.io/register)
-2. *(Optional)* Get a free TwelveData key from [twelvedata.com/register](https://twelvedata.com/register) — unlocks price charts (1D/5D/1M–1Y), RSI/MACD/BBands/ADX/Stochastic precision indicators (8 credits/min, 800/day free tier)
-3. Clone and install:
-   ```bash
-   git clone https://github.com/hutuleac/Stock_Anaysis_Dashboard
-   cd Stock_Anaysis_Dashboard
-   npm install
-   npm run dev
-   ```
-4. Open `http://localhost:5173` — enter your API key when prompted, then hit Refresh
+| Provider | Free limit | The scheduled job uses | Your Refresh uses |
+|---|---|---|---|
+| [Finnhub](https://finnhub.io/register) | 60 calls/min | ~140 at close, ~26 at open | ~26 price calls (~34 s) |
+| [TwelveData](https://twelvedata.com/register) | 800/day · 8/min | ~26 at close | 0 (price history comes from the snapshot) |
+| [FRED](https://fred.stlouisfed.org/docs/api/api_key.html) | 120/min | 5 per deploy | 0 |
 
 ---
 
-## Tech Stack
+## 🚀 Get started
+
+**1 · Just use it.** Open the [live dashboard](https://hutuleac.github.io/Stock_Anaysis_Dashboard/). No keys needed.
+
+**2 · Go live.** Get free [Finnhub](https://finnhub.io/register) and [TwelveData](https://twelvedata.com/register) keys, paste them into ⚙ Settings, and press **Refresh** (or `R`). Keys stay in your browser and are only ever sent to those two providers.
+
+**3 · Run your own copy.** Fork the repo, then:
+
+1. Put your tickers in [`watchlist.json`](watchlist.json). That is the list the job snapshots.
+2. Add three repo secrets: `FINNHUB_API_KEY`, `TWELVEDATA_API_KEY`, `FRED_API_KEY`.
+3. Set **Settings → Pages → Source** to *GitHub Actions*.
+4. In `.github/workflows/deploy.yml`, point `LIVE_URL` at your own Pages URL.
+5. Run the workflow once (`gh workflow run deploy.yml`). After that the schedule takes over.
+
+**Develop locally:**
+
+```bash
+git clone https://github.com/hutuleac/Stock_Anaysis_Dashboard
+cd Stock_Anaysis_Dashboard
+npm install
+npm run dev     # http://localhost:5173 (demo data until you add keys)
+npm test        # 534 unit tests, ~1 s
+```
+
+---
+
+## 🔒 Privacy, honestly
+
+- **Your keys** live in your browser's localStorage and go only to Finnhub and TwelveData.
+- **Your watchlist and settings** never leave your browser.
+- **The published snapshot** (the tickers in `watchlist.json`) is public, like the site itself.
+- No analytics, no tracking, no server of our own.
+
+---
+
+## ⌨️ Handy extras
+
+- **Keyboard**: `R` refresh · `/` search · `J` `K` move between tickers · `Esc` close
+- **🤖 Copy for AI**: turns the full reading of a ticker into a ready-to-paste prompt (editable templates in Settings), with a share-sheet button on mobile
+- **CSV export**, bulk ticker import, drag-and-drop ordering
+- **Auto-refresh** every 5 / 15 / 30 min while the market is open
+- **Notifications** for new `ACT` / `SOON` signals (opt-in)
+
+---
+
+## 🧰 Under the hood
 
 | Layer | Choice |
-|-------|--------|
-| Framework | Svelte 5 (runes — `$state`, `$derived`, `$props`, `$effect`) |
-| Build | Vite + Tailwind v4 |
-| Charts | TradingView lightweight-charts |
-| Data | Finnhub.io free tier + optional TwelveData free tier |
-| Storage | localStorage (client-side only, nothing sent to any server) |
-| Deploy | GitHub Actions → GitHub Pages |
+|---|---|
+| Framework | Svelte 5 (runes) |
+| Build | Vite 8 + Tailwind v4 |
+| Charts | TradingView lightweight-charts v5 |
+| Data | Finnhub + TwelveData + FRED free tiers |
+| Storage | Browser localStorage only |
+| Hosting | GitHub Pages, deployed and snapshotted by GitHub Actions |
+| Tests | Vitest: 534 tests over every engine (indicators, scoring, setups, dips, ETFs, long-term, snapshot) |
 
-## Cache TTLs
+<details>
+<summary><b>Indicator maths notes</b></summary>
 
-| Data | TTL |
-|------|-----|
-| Quotes | No cache (always fresh on refresh) |
-| News / Earnings / Candles | 24h |
-| Indicators (TwelveData) | 1h |
-| Fundamentals / Profile | 7d |
+- **RSI(14)**: Wilder smoothing, matches TradingView. A flat series reads 50, not 100.
+- **EMA**: SMA seed for the first `period` values, then `k = 2/(n+1)`.
+- **MACD(12,26,9)**: a crossover is a histogram sign flip.
+- **ATR(14)**: simple average of 14 true ranges, not Wilder. It diverges slightly from TradingView; fine for stop placement.
+- **Bollinger Bands(20,2)**: population standard deviation, matches TradingView.
+- **ADX(14)**: full Wilder-smoothed +DM/−DM/TR pipeline, bounded 0–100.
+- **Stochastic(14,3,3)**: raw %K, 3-bar SMA for %D.
+
+</details>
 
 ---
 
-## Changelog
+<div align="center">
 
-### v0.25 (2026-09-13) — distance-to-next-tier and "waiting on" for Dip Hunter, Setup Radar, ETF
-- **"+X to next tier"** on Dip Hunter and ETF entry/exit scores — a `6.2 SOON` now shows `+0.8 to ACT`, the same fix the Long-Term Setup card got in v0.24. Dip Hunter's hidden ACT gates are named explicitly: a score ≥7 that's still SOON reads `needs market fear` or `capped by downtrend` instead of leaving the rule buried in the source. (Setup Radar's readiness runs on an urgency-adjusted rank, not the displayed score, so it keeps its own `~Xw to full setup` hint rather than borrowing this one — see CLAUDE.md.)
-- **"Waiting on"** — the component with the most points left on the table, e.g. `Waiting on: Turn +1.0, Smart Money +0.6`, now shows on Dip Hunter (9 components), Setup Radar (4 per setup) and both ETF entry/exit scores (4 each). The ranking helper (`waitingOn`/`qualityWaitingOn` in `longTermIndicators.js`) is unchanged for callers; its ranking logic moved into the shared `readiness.js` layer (`rankGaps`) so every panel's own `components[]` can reuse it.
-- Display-only, zero new API calls, zero new math — pure formatting of scores already computed.
+**[Changelog](CHANGELOG.md)** · **[Latest QA report](docs/QA_2026-09-24_improvements.md)** · **[Backlog](BACKLOG.md)**
 
-### v0.24 (2026-09-12) — two-view playbooks + dashboard-wide colour ramp
-- **Demo mode shows the whole dashboard** — without API keys, Setup Radar, Dip Hunter, Long-Term Setup and the ETF table were all empty, because they need price history rather than summary fields. Demo mode now generates deterministic synthetic candle series per ticker and ETF proxy and runs them through the real engines, so every panel shows a plausible reading and both Setup Radar buckets, the dip scan and the ETF entry/exit table populate.
-- **A strong SELL no longer looks green** — the ETF table rendered `SELL ACT` and a high Exit score through the same green as a buy signal, so the colour said "good" when the signal said "get out". Sell signals now have their own red/orange ramp, and the Exit score's ramp is inverted.
-- **One readiness ramp** — ACT / SOON / WATCH / WAIT colours were duplicated in four components and had drifted: SOON rendered purple in one place and amber in another, WATCH grey in two panels and near-white in a third. All four now read from one palette (`tone.js` + `readiness.js`), so a colour means the same thing wherever you see it. Same for the class-vs-hex mismatches inside the indicator bar (RSI, ADX, Stochastic, Conviction, Volume).
-- **Long-Term Setup reads at a glance** — one colour ramp across the status badge, the Timing/Quality totals, all 11 chips and the verdict: green = working for you, amber = partly there, orange = caution, slate = not yet (what you're waiting on), grey = no data. ACCUMULATE, WATCHLIST and CHECK QUALITY now have three distinct colours instead of sharing one.
-- **"X pts to the next band"** — a bare `Timing: 42` now reads `42 (WEAK) · 8 pts to watchlist timing (50+)`, so the gap to a better entry is explicit.
-- **"Waiting on"** — the components with the most points still on the table, shown as `Oversold +18 · Drawdown +16`. When the quality total is below the ≥60 gate it names the quality components instead, since that's what's actually blocking. Hidden on ACCUMULATE. A five-dot legend at the bottom of the card explains the ramp.
-- **Trend Setup / Pullback Setup tabs** — the expanded row's indicator bar (~29 cards) now has an `All | Trend Setup | Pullback Setup` toggle that narrows the technical cards to the playbook being considered: Trend shows weekly trend, Momentum setup, RS vs SPY, ADX, ROC, AVWAP, OBV; Pullback shows RSI, Stochastic, BB position, oversold confluence, swing-low support, POC, the Pullback setup. Fundamentals and the score-context cards (T/F/S, Conviction, Score Z) stay visible in every tab. `All` is the default — nothing is hidden until a playbook is picked. Same tabs on mobile.
-- **Docs + dead-code sweep** — `BACKLOG.md` holds only open items (shipped ones live here), `CLAUDE.md` dropped its per-release narrative for durable rules, the README's feature list now matches the app (the News panel, price alerts and the Notes field it still advertised were removed rounds ago), and the orphaned `stores/notes.svelte.js` was deleted.
+<sub>Built for learning and decision support. Not financial advice: always do your own research.</sub>
 
-### v0.23.1 (2026-09-12) — chart no longer hijacks page scroll
-- **Click-to-activate scroll-zoom** — wheel over the candlestick chart used to zoom it while trying to scroll the page. Wheel zoom is now off until the chart is clicked and releases when the pointer leaves (hint badge shown while inactive); on touch, a vertical drag scrolls the page instead of panning the chart. Drag-pan, pinch and double-click reset unchanged.
-
-### v0.23 (2026-09-11) — AI export: mobile copy & share
-- **Manual-copy fallback** — "Copy for AI" now shows a selectable-text panel when the Clipboard API write silently fails (common in mobile in-app browsers like the Instagram/Facebook webview), so the prompt is never a dead end.
-- **Share sheet button** — a 📤 button (shown only where `navigator.share` is supported) drops the prompt straight into the phone's native share sheet — Messages, Notes, an AI app — skipping the clipboard entirely.
-- **Mobile-skimmable prompts** — all 4 export templates now ask for short paragraphs/bullets, since the AI's reply is usually read on a phone too.
-
-### v0.22 (2026-09-03 → 2026-09-10) — readability, regime-adaptive timing, mobile fit
-- **Readability + contrast pass** — sector moved under the ticker symbol (its own table column dropped), the muted/secondary/border color tokens lifted to meet AA contrast, dense-UI text floor raised from 10/11px to 12/13px.
-- **Setup Radar / Dip Hunter mobile wrap** — rows wrap instead of scrolling sideways on a phone; RS spans are self-labelled ("vs SPY") instead of a bare percentage.
-- **Regime-adaptive Timing Score** — a new composite market-regime detector (`detectMarketRegime` in `macro.js`) widens/narrows the Timing Score's drawdown and oversold bands and adds a market-context bonus, so quality names pulling back in a bull market score higher without loosening the gate in a real downturn.
-- **Mobile perf + polish** — the ETF dashboard gained stacked mobile cards, the ticker-expansion panel now mounts only the active breakpoint's markup (was double-mounting chart/news), and duplicated FundamentalsBar empty-state markup was deduped.
-- **Ticker-search race guard** — typing fast enough to overlap two in-flight searches could show a stale result; a request token now discards out-of-order responses.
-
-### v0.21 (2026-07-20 → 2026-08) — Long-Term Setup UI + ETF/valuation polish
-- **Long-Term Setup card merged into the main expanded row** — previously split across two components, now one card with larger text and a rich hover tooltip on every status badge, score, and chip explaining the underlying thresholds.
-- **Indicator breakdown chips** — timing and quality sub-scores render as labelled, fill-coloured chips (`longTermIndicators.js`); a missing component reads muted grey, distinct from a real 0.
-- **HY credit-spread risk gate** — FRED `BAMLH0A0HYM2` feeds a `creditStress` regime (CALM/ELEVATED/STRESS) that can demote an ACCUMULATE verdict when the broader credit market is stressed, overriding the Fear & Greed panic boost.
-- **Setup Radar split into Accumulation / Breakout** — the "leaders only" (RS > 0) gate no longer suppresses laggards in the buy-the-dip Pullback setup; it still applies to the Momentum/Breakout setup.
-- **Dip Hunter fear-gate fix** — the market-fear score component now only fires when the *stock itself* is oversold, not just because the tape is fearful.
-- **Revenue history mini-chart** — 5-year YoY revenue bars in the Long-Term Setup card, reusing the financials-reported payload already fetched for the Quality Score (zero new API calls).
-- **XDEW added to the ETF catalog** (S&P 500 Equal Weight); every Entry/Exit score component in the ETF expanded row gained a hover tooltip.
-
-### v0.20 (2026-07-18 → 2026-07-20) — Long-Term Dip Buying framework
-- **Timing Score (0–100)** — drawdown, oversold (daily+weekly+monthly RSI), reversal, consolidation, volume, and market-context components computed from candles already fetched.
-- **Quality Score (0–100)** — profitability, cash flow, balance sheet, shareholder return, and earnings quality; fetched lazily on row expand (2 extra Finnhub calls, cached, never on a batch refresh).
-- **Long-Term Setup** — a fixed timing×quality gate matrix producing ACCUMULATE / WATCHLIST / OVERSOLD_BUT_CAUTION / WAIT, with a Fear & Greed panic boost for oversold-but-cautious names.
-- **Data enrichment** — dividend yield, watchlist breadth, and sector momentum surfaced in the Fundamentals Bar and AI export snapshot.
-- **Deep code-review fixes** — Finnhub metric percent-vs-fraction unit bugs and a metric-object unwrap bug (both silently produced wrong scores) found and fixed; stale git worktrees removed from the repo. 424 tests.
-
-### v0.19 (2026-07-12 → 2026-07-15) — mobile pass
-- **Touch tooltips** — tap-to-open on iOS/Android, desktop hover unchanged; one shared expanded-row layout used by both breakpoints for parity.
-- **Mobile card redesign** — collapsible sections (Chart/Indicators open by default, Entry Plan closed), a sticky bottom action bar (Copy for AI · Alert · Remove), and a horizontally scrollable chip rail.
-- **Dedup** — the four duplicated TD-candle-mapping blocks in `App.svelte` became one `candles.js` helper; a shared `scoreStyle`/chip-row snippet replaced separate desktop/mobile copies.
-- **Mobile-fit follow-up** — News, Notes, and score history dropped from the mobile card (desktop-only from here on), 3-column indicator grid, one-line ticker header, the Alerts feature removed entirely, Market Context's rotation tile made readable, and the Entry Panel compacted to a single column.
-
-### v0.18 (2026-07-12) — Copy-for-AI export
-- **Copy for AI** — one click formats a ticker's full dashboard reading (price, score, technicals, weekly setups, fundamentals, relative strength, smart money, dip score, market context) into a plain-text snapshot, merges it into an editable prompt template, and copies it for pasting into any external LLM chat.
-- **4 starter templates** — Deep Dive, Trade Setup Review, Risk Check, News Catalyst Scan — editable and resettable from Settings.
-- Zero new API calls; Stocks view only for now (ETF export is a future round).
-
-### v0.17 (2026-07-10) — ETF refinement round
-- **UCITS catalog search** — searchable curated catalog (55 funds pre-mapped to US proxies) in the ETF add bar: one-click add, already-added entries disabled, manual entry stays as fallback.
-- **Tooltip viewport clamp** — tooltips measure their real height, flip above the cursor near the bottom edge, clamp to the viewport, and close on scroll. No more clipped hover info.
-- **Setup Radar weekly RSI** — each radar row shows the raw weekly RSI value (display-only, not part of either setup score).
-- **ETF decision indicators** — the ETF expanded row gains trend state (weekly close vs EMA10/EMA30), weekly RSI, 52-week range position, and 13-week momentum — all computed from candles already fetched, none feed any score.
-- **ETF thesis + highlights + notifications** — plain-English thesis sentence per ETF, a cross-view "Today" highlights strip (ACT/SOON digest with click-through), and opt-in in-browser notifications for newly arrived signals.
-
-### v0.16 (2026-07-02) — Dip Hunter
-- **Dip Hunter card** — finds early entries when quality stocks go on sale. A strict quality gate must pass first (EPS growth > 0, revenue growth > 0, profitability, PEG < 3, fundamental score ≥ 60); survivors are scored 0–10 on **Market Fear** (F&G zone + SPY below EMA50), **Oversold** (RSI tiers, RSI z-score, BB confluence), **Drawdown** (60d/20d decline, lower half of 52w range), and **Smart Money** (insider net buying + analyst buy ratio). ACT requires an active fear component — the card never says ACT in a greedy market. Display-only; the composite score is untouched.
-- **Smart-money data** — two new free Finnhub endpoints (`/stock/recommendation`, `/stock/insider-sentiment`), combined into one 7-day cache entry: +2 calls/ticker on the first refresh of a week, zero after.
-- 16 new unit tests (210 total).
-
-### v0.15.1 (2026-07-02) — audit fixes
-- **Real weekly bars** — daily candles are now aggregated into true weekly OHLCV (max high / min low / last close / summed volume, current partial week included) instead of sampling every 5th bar. Weekly ATR is now a true weekly value (Entry Panel suggested stops widen accordingly) and setup signals always reflect the latest trading day.
-- **Volatility regime proxy** — Finnhub free tier returns zeros for VIX, so the regime logic silently never fired. The market bar now shows **VOL**: SPY 20-day realized volatility (annualized, VIX-comparable), computed from already-fetched SPY closes. Two dead API calls per refresh removed.
-- **SPY trend** — the "SPY downtrend" score penalty now uses SPY below its EMA50 instead of a single red day (dp < −0.5%).
-- **Short Interest removed** — `/stock/short-interest` regressed to 403 (premium) on the free tier; the dead cell and fetch are gone.
-- Full audit report: `docs/audit-2026-07-02.md`. 7 new unit tests (194 total).
-
-### v0.15 (2026-06-20)
-- **OBV** — On-Balance Volume with 20-bar EMA trend; Accumulation / Neutral / Distribution cell in Fundamentals Bar.
-- **52w-High Volume Confirmation** — breakout chip in the watchlist table now shows `· ↑ vol` / `· low vol` based on recent vs baseline average volume ratio.
-- **Swing-Low Support Levels** — S1/S2/S3 pivot lows in Fundamentals Bar (price + % above); SUP toggle on price chart draws dashed green lines.
-- **Beta-Adjusted Position Sizing** — tiered risk % (β ≤ 0.8 → 2.5%, normal → 2%, elevated → 1.5%, β > 1.8 → 1%); Entry Panel shows β value colour-coded by tier.
-- **Short Interest** — days-to-cover from Finnhub `/stock/short-interest` (free tier); "Short" cell in Fundamentals Bar; 7-day cache.
-- 24 new unit tests (187 total); all backlog items 1–5 shipped.
-
-### v0.14 (2026-06-20)
-- **Interface cleanup** — removed four features that were non-functional on the Finnhub free tier: **Insider 90d** (endpoint always returned empty), **Pre-Buy Checklist** (friction with no payoff), **Trade Log**, and **Paper Trades** (including the Paper Trades Overview panel and Settings backup). **Replay / Backtest** panel also removed.
-- **Entry Panel always unlocked** — no longer gated behind the checklist. Stop-loss input replaced by the ATR-derived suggested stop (2× weekly ATR) which now drives all risk math: risk/share, risk %, position sizing, and the scenario table.
-- ~500 lines of dead UI removed; scoring engine, indicators, and test suite unchanged (163 tests).
-
-### v0.13 (2026-06-19)
-- **Chart anchors** — four price-anchored signals from one zero-API-call module (`chartAnchors.js`, computed on daily candles). **AVWAP** (anchored to the most significant swing low — institutional cost basis) and **POC + value area** surface as Fundamentals-Bar pills; **Fibonacci retracements** and **Fair Value Gaps** are optional daily-only chart overlays (FIB/FVG toggles). AVWAP-reclaimed + POC-not-below nudge a name's Setup-Radar readiness one tier (WATCH→SOON→ACT); the calibrated `computeScore` and `signals.js` are untouched.
-- 19 new unit tests (163 total).
-
-### v0.12 (2026-06-17)
-- **Free signal batch** — four zero-API-call signals computed in `computeIndicatorsFromCandles` (52w at display): **EMA Stack** (`BULL STACK`/`BROKEN` chip), **Oversold Confluence** (RSI < 35 + lower-BB badge), **ROC 20d/60d** momentum cell, and **52-week-high proximity** chip. All display-only with tooltips. *Deferred:* the 52w-high volume-confirmation overlay (proximity only for now).
-- **ATR-based stop + R:R** — EntryPanel now shows a suggested long stop (entry − 2× *weekly* ATR; weekly over daily so the stop isn't inside the noise on a 2mo–1yr hold) and R:R to the analyst target (keys off the manual stop when set, else the suggested stop; guarded for no-upside/inverted-stop). Daily `atr` exposed from `computeIndicatorsFromCandles`, letting EntryPanel drop its own daily candle fetch — one fewer Finnhub call per ticker.
-- 13 new unit tests (136 total).
-
-### v0.11 (2026-06-14)
-- **Relative Strength vs SPY (1M/3M)** — each stock's return minus the S&P 500's over ~21 and ~63 trading days; outperform/underperform chip on watchlist rows + Fundamentals Bar cell. SPY daily closes fetched once per refresh (cached).
-- **Revenue growth, P/S, PEG** — growth-and-valuation metrics for cases where P/E misleads (growth names, ADRs). Fundamentals Bar cells + "so what" tooltips. PEG computed client-side (`valuation.js`), guarded against zero/negative growth.
-- Display-only — no change to the scoring engine. 13 new unit tests (123 total).
-
-### v0.10 (2026-06-14)
-- **Weekly Setup Signals** — leading-indicator layer adapted from grid-bot signal research: Pullback (accumulation) and Momentum (breakout) setups scored 0–10 on weekly candles, with readiness (WATCH/SOON/ACT) + ETA in weeks. Surfaced as a table badge and Fundamentals Bar cells with "so what" tooltips. Built from the weekly candles already fetched — no new API calls.
-- **Test suite expanded** — 32 new unit tests for `signals.js` (111 total).
-
-### v0.9 (2026-04-01)
-- **Paper Trades** — record a hypothetical BUY/SELL, snapshot score + thesis at entry, track live P&L and CONFIRMED/AGAINST verdict over weeks/months; close with exit score snapshot; Paper Trades Overview panel on main dashboard
-- **Chart sub-panes** — Volume bars (default on), MACD histogram/line/signal, RSI(14) with 30/70 lines, Bollinger Bands overlay; VOL and MACD are exclusive (one at a time); dynamic chart height
-- **Configurable default watchlist** — editable in Settings (chip UI, add/remove/reset); updated to AMZN · GOOGL · SKM · TSLA · HOOD · NVDA · SOFI
-- **TwelveData rate limiter** — sliding-window queue (8 calls/min) prevents hitting free tier limits; progressive retry on 429
-- **Finnhub 403 tombstone** — restricted endpoints cached for 24h to stop repeated console errors
-- **ADR ticker search** — SKM and other ADRs now appear in search results
-- **Score arrow/sparkline fix** — shows → flat arrow and center line even with just 1 snapshot; `sv_*` keys now preserved by Clear API Cache
-
-### v0.8 (2026-03-28)
-- **Score z-score display** — surfaced in WatchlistTable (desktop, lg+) and Fundamentals Bar; shows how many std-devs current score is above/below its 90-day mean
-- **Correlation warning** — Portfolio Stats now flags when 2+ open positions share the same sector with ⚡ warning and plain-English guidance
-- **README + changelog** synced to v0.8
-
-### v0.7 (2026-03-28)
-- **Mobile card layout** — single-column morning scan mode for < sm breakpoint with expandable rows
-- **"So what" tooltips** — hover RSI, MACD, ADX, Stochastic, Conviction, or Score for plain-English interpretation
-- **Volume profile** — horizontal histogram SVG overlay on chart right side (toggle ▣ button)
-- **Earnings annotations** — past earnings markers on chart coloured by surprise % (fetch from Finnhub `/stock/earnings`)
-- **Analyst price target zone** — PT↓ / PT / PT↑ dashed lines on chart from Finnhub price target data
-- **Drawing tools** — horizontal line (─), trend line (╱), rectangle (▭) drawn directly on chart and persisted to localStorage per symbol
-
-### v0.6 (2026-03-28)
-- **Fear & Greed index** — CNN F&G gauge in Market Context Bar; integrates into score modifier (extreme fear −3, extreme greed −2)
-- **SPY downtrend penalty** — when SPY dp < −0.5%, all LONG scores pulled 20% toward neutral; ⚡ shown in table
-- **Regime-aware weights** — VIX > 25: fund 55%; VIX > 35: fund 60%; regimeNote shown in thesis + score tooltip
-- **Conviction scoring** — signal agreement % separate from directional score; HIGH/MODERATE/LOW/MIXED labels in table + Fundamentals Bar
-- **RSI z-score** — 90-day rolling z-score in Fundamentals Bar with "unusually high/low vs history" tooltip
-
-### v0.5 (2026-03-28)
-- **Default watchlist** — first-time users see TSLA · SKM · SOFI · GOOGL · AMZN · HOOD immediately; no empty state
-- **Startup hydration** — on every open the app loads last-cached quotes, scores, indicators, and news instantly without hitting any API; data only updates when Refresh is clicked
-- **Intraday candles** — 1D (1h bars) and 5D (1h bars) timeframes on the price chart with 15-min cache
-- **TwelveData as primary chart source** — all 6 timeframes (1D/5D/1M–1Y) via `/time_series`; 365 daily bars fetched once, `setVisibleRange` zooms per timeframe; shared cache eliminates duplicate API calls
-- **ADX(14) signal (T7)** — trend strength scoring: strong trending + MACD direction = high conviction; Ranging/Emerging/Trending/Strong pill in Fundamentals Bar
-- **Stochastic(14,3,3) signal (T8)** — %K/%D oversold/overbought zones + crossover detection; bull/bear cross badge in Fundamentals Bar
-- **EMA50 + MA200 local fallback** — computed from cached candles so Fundamentals Bar always shows values even without Finnhub metrics
-- **Credit budget** — 6 indicators × ~6 tickers = 36 credits/refresh (~22 full refreshes/day on free tier)
-
-### v0.4 (2026-03-28)
-- **Local RSI(14) + MACD** computed from Finnhub candles — T5/T6 scoring active for all users with no extra API key
-- **TwelveData integration** — optional second key adds BB position + higher-precision indicator values; overrides local computation when available
-- **ATR(14) volatility card** in Entry Panel — intraday range, stop-too-tight warnings (< 0.5 ATR)
-- **High-volatility day warning** — |dp| ≥ 5% nudge in Entry Panel with contextual copy
-- **Score history chart** — full-width SVG in expanded row with area fill, delta, 50-pt reference line
-- **Edge Analysis** in Portfolio Stats — Expectancy, Kelly %, 5/10 loss streak probability (≥ 5 closed trades)
-- **Per-ticker notes** — auto-saved textarea, 📝 badge on table row, survives cache clear
-
-### v0.3 (2026-03-28)
-- **Morning Brief** — top setups, earnings warnings, movers, blocked tickers at a glance
-- **Thesis Summary** — plain-English score explanation per ticker (bulls ▲, bears ▼, warnings ⚠)
-- **Trade Window card** — explicit earnings countdown in Entry Panel with risk colour coding
-- **MA50/MA200 overlays** on price chart with toggle
-- **Score sparkline** — inline SVG trend chart per row (last 7 snapshots)
-- **Sector sort** + sortable Earnings column header
-- **Sector concentration risk** warning + exposure breakdown bars
-- **Portfolio beta** (weighted) + unrealized P&L in Portfolio Stats
-- **BLOCKED badge** wired to hard warning state
-- **CSV export** — watchlist with all metrics
-- **j/k keyboard navigation** through watchlist rows
-- **Auto-refresh** setting (5/15/30 min, market hours only) in Settings
-
-### v0.2 (2026-03-28)
-- 9-signal scoring engine (Technical/Fundamental/Sentiment) with T/F/S sub-score bars + velocity
-- Candlestick chart (1M–1Y), news panel, fundamentals bar
-- Trade log (FIFO P&L + CSV), portfolio stats (win rate, R:R, best/worst)
-- Price alerts, bulk import, drag-and-drop reorder
-- Market hours indicator, mobile responsive, position sizing (2% rule)
-- Stop-loss quick-picks (3/5/8%), portfolio concentration risk
-
-### v0.1 (2026-03-27)
-- Watchlist, pre-buy checklist (friction layer), entry panel, market context bar (VIX + sectors)
-- 3-signal score, onboarding modal, settings panel, GitHub Pages deploy
+</div>
