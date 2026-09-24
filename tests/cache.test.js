@@ -28,7 +28,7 @@ const NOW = Date.now();
 const entry = (data, ageMs = 0) => JSON.stringify({ data, ts: NOW - ageMs });
 
 // Imported after the stub is in place (finnhub reads localStorage at module load).
-const { pruneOrphanedCache, evictStaleCache } = await import('../src/lib/api/finnhub.svelte.js');
+const { pruneOrphanedCache, evictStaleCache, parseFearGreed } = await import('../src/lib/api/finnhub.svelte.js');
 
 beforeEach(() => { localStorage.clear(); });
 
@@ -138,5 +138,27 @@ describe('quota eviction frees room for a retry', () => {
     expect(() => capped.setItem('fh_fundamentals_NEW', entry('y'.repeat(300)))).not.toThrow();
 
     vi.stubGlobal('localStorage', makeStorage()); // restore for other suites
+  });
+});
+
+describe('parseFearGreed', () => {
+  it('keeps history + the 7 sub-indicators from the CNN payload', () => {
+    const fg = parseFearGreed({
+      fear_and_greed: { score: 36.11, rating: 'fear', previous_close: 34.69, previous_1_week: 28.29, previous_1_month: 54.97, previous_1_year: 54.57 },
+      market_momentum_sp500: { score: 31.8, rating: 'fear' },
+      stock_price_strength:  { score: 0, rating: 'extreme fear' },
+      junk_bond_demand:      { score: 63, rating: 'greed' },
+      market_momentum_sp125: { score: 31.8, rating: 'fear' }, // not one of the 7 — ignored
+    });
+    expect(fg).toMatchObject({ score: 36, rating: 'fear', prev: { close: 35, week: 28, month: 55, year: 55 } });
+    expect(fg.components).toEqual([
+      { name: 'Momentum', score: 32, rating: 'fear' },
+      { name: 'Price Strength', score: 0, rating: 'extreme fear' },
+      { name: 'Junk Bonds', score: 63, rating: 'greed' },
+    ]);
+  });
+
+  it('throws on an unexpected shape so the stale cache is used', () => {
+    expect(() => parseFearGreed({})).toThrow();
   });
 });

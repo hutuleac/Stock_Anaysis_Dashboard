@@ -416,7 +416,37 @@ export async function fetchFinancialsReported(symbol) {
 }
 
 // ── CNN Fear & Greed Index ────────────────────────────────────────────────────
-// Returns { score: 0–100, rating: string } or null on failure.
+// Returns { score, rating, prev, components } or null on failure. prev/components
+// come free in the same payload — the CNN page's history row and 7 sub-indicators.
+const FG_COMPONENTS = {
+  market_momentum_sp500: 'Momentum',
+  stock_price_strength:  'Price Strength',
+  stock_price_breadth:   'Breadth',
+  put_call_options:      'Put/Call',
+  market_volatility_vix: 'Volatility',
+  junk_bond_demand:      'Junk Bonds',
+  safe_haven_demand:     'Safe Haven',
+};
+const roundOrNull = (v) => Number.isFinite(v) ? Math.round(v) : null;
+
+export function parseFearGreed(json) {
+  const fg = json?.fear_and_greed;
+  if (!fg?.score) throw new Error('Unexpected F&G shape');
+  return {
+    score:  Math.round(fg.score),
+    rating: fg.rating ?? 'Unknown',
+    prev: {
+      close: roundOrNull(fg.previous_close),
+      week:  roundOrNull(fg.previous_1_week),
+      month: roundOrNull(fg.previous_1_month),
+      year:  roundOrNull(fg.previous_1_year),
+    },
+    components: Object.entries(FG_COMPONENTS)
+      .filter(([k]) => Number.isFinite(json[k]?.score))
+      .map(([k, name]) => ({ name, score: Math.round(json[k].score), rating: json[k].rating ?? '' })),
+  };
+}
+
 async function fetchFearAndGreed() {
   const key = 'fh_feargreed_market';
   const ttl = CACHE_TTL.feargreed;
@@ -426,10 +456,7 @@ async function fetchFearAndGreed() {
   try {
     const res  = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    const fg   = json.fear_and_greed;
-    if (!fg?.score) throw new Error('Unexpected F&G shape');
-    const data = { score: Math.round(fg.score), rating: fg.rating ?? 'Unknown' };
+    const data = parseFearGreed(await res.json());
     writeCache(key, data);
     return { data, stale: false };
   } catch (err) {

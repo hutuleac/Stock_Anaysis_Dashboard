@@ -68,7 +68,13 @@ export const DEMO_MARKET_CONTEXT = {
   volProxy:  22.4,
   spyBelowEma50: true,
   spy:       { data: { c: 534.20, dp: -0.8 } },
-  fearGreed: { data: { score: 38, rating: 'Fear' } },
+  fearGreed: { data: { score: 38, rating: 'Fear', prev: { close: 36, week: 29, month: 55, year: 54 },
+    components: [
+      { name: 'Momentum', score: 32, rating: 'fear' }, { name: 'Price Strength', score: 12, rating: 'extreme fear' },
+      { name: 'Breadth', score: 20, rating: 'extreme fear' }, { name: 'Put/Call', score: 54, rating: 'neutral' },
+      { name: 'Volatility', score: 50, rating: 'neutral' }, { name: 'Junk Bonds', score: 63, rating: 'greed' },
+      { name: 'Safe Haven', score: 54, rating: 'neutral' },
+    ] } },
   btc:       { data: { price: 61840, dp: -2.3 } },
   macro:     { curveInverted: false, fedRising: false, t10y2y: 0.35, fedFunds: 3.63, fedFundsPrev: 3.63, cpi: 320.6, cpiYoY: 2.4, unemployment: 4.1 },
   sectors: {

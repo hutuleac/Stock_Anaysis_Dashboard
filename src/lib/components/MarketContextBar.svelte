@@ -66,17 +66,32 @@
     return { ...STATES.good, value, label: 'NORMAL', sub, hex: '#22c55e' };
   }
 
+  const fgBand = (s) =>
+    s <= 25 ? { ...STATES.bad,     label: 'Extreme Fear',  hex: '#ef4444' } :
+    s <= 40 ? { ...STATES.caution, label: 'Fear',          hex: '#f97316' } :
+    s <= 60 ? { ...STATES.neutral, label: 'Neutral',       hex: '#9ca3af' } :
+    s <= 75 ? { ...STATES.good,    label: 'Greed',         hex: '#f59e0b' } :
+              { ...STATES.warn,    label: 'Extreme Greed', hex: '#ef4444' };
+
   function getFgInfo(fg) {
     if (fg?.score == null) return null;
-    const s = fg.score;
-    const base =
-      s <= 25 ? { ...STATES.bad,     label: 'Extreme Fear',  hex: '#ef4444' } :
-      s <= 40 ? { ...STATES.caution, label: 'Fear',          hex: '#f97316' } :
-      s <= 60 ? { ...STATES.neutral, label: 'Neutral',       hex: '#9ca3af' } :
-      s <= 75 ? { ...STATES.good,    label: 'Greed',         hex: '#f59e0b' } :
-                { ...STATES.warn,    label: 'Extreme Greed', hex: '#ef4444' };
-    return { ...base, score: s, label: fg.rating ?? base.label };
+    const base = fgBand(fg.score);
+    const p = fg.prev ?? {};
+    const sub = [['1W', p.week], ['1M', p.month], ['1Y', p.year]]
+      .filter(([, v]) => v != null).map(([k, v]) => `${k} ${v}`).join(' · ') || null;
+    return { ...base, score: fg.score, label: fg.rating ?? base.label, sub, components: fg.components ?? [] };
   }
+
+  // What each CNN sub-indicator measures — shown in the F&G hover card.
+  const FG_DESC = {
+    'Momentum':       'S&P 500 vs its 125-day average.',
+    'Price Strength': 'NYSE stocks at 52-week highs vs lows.',
+    'Breadth':        'Volume in advancing vs declining stocks.',
+    'Put/Call':       '5-day put/call options ratio.',
+    'Volatility':     'VIX vs its 50-day average.',
+    'Junk Bonds':     'Junk vs investment-grade bond yield spread.',
+    'Safe Haven':     'Stocks vs Treasuries, last 20 days.',
+  };
 
   // One Rotation tile replaces Leading/Lagging: breadth (advancers/total) is
   // the state, top/bottom sectors are the context lines.
@@ -116,6 +131,9 @@
   let btcInfo  = $derived(getBtcInfo(marketData?.btc?.data ?? null));
   let macroInfo = $derived(getMacroInfo(marketData?.macro ?? null));
   let fgInfo   = $derived(getFgInfo(marketData?.fearGreed?.data ?? null));
+  let fgLevels = $derived((fgInfo?.components ?? []).map(c => ({
+    range: c.name, label: `${c.score} ${c.rating}`, color: fgBand(c.score).hex, desc: FG_DESC[c.name] ?? '',
+  })));
   let rotation = $derived(getRotation(marketData?.sectors));
   let breadthInfo = $derived(getBreadthInfo(marketData?.breadth ?? null));
   let nudge    = $derived(getNudge(vixInfo.level, spyInfo.label, fgInfo));
@@ -186,7 +204,7 @@
         <!-- Fear & Greed -->
         {#if fgInfo}
           <div class="bg-surface-800 px-3 py-2 flex flex-col gap-0.5 cursor-default min-w-0"
-            use:tipAction={() => ({ ...TIPS.fearGreed, current: { value: String(fgInfo.score), label: fgInfo.label, color: fgInfo.hex } })}>
+            use:tipAction={() => ({ ...TIPS.fearGreed, levels: fgLevels.length ? fgLevels : TIPS.fearGreed.levels, current: { value: String(fgInfo.score), label: fgInfo.label, color: fgInfo.hex } })}>
             {@render tileHeader({ ...fgInfo, value: String(fgInfo.score) }, 'Fear & Greed')}
             <div class="w-full max-w-24 h-1 bg-surface-700 rounded-full overflow-hidden mt-0.5">
               <div
@@ -194,6 +212,9 @@
                 style="width: {fgInfo.score}%"
               ></div>
             </div>
+            <span class="text-[12px] text-text-muted font-mono sm:truncate">
+              {#if fgInfo.sub}{fgInfo.sub}&nbsp;·&nbsp;{/if}<a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" class="font-sans underline hover:text-text-secondary">CNN ↗</a>
+            </span>
           </div>
         {/if}
 
