@@ -3,6 +3,12 @@
 
 import { emaArray } from './indicators.js';
 
+export const FRED_SERIES = ['CPIAUCSL', 'FEDFUNDS', 'UNRATE', 'T10Y2Y', 'BAMLH0A0HYM2'];
+
+// BAMLH0A0HYM2 (HY credit spread) is daily and needs ~20 trading days of
+// history for the Δ20d stress rule; the rest need 13 (a year of monthly CPI).
+export const SERIES_LIMIT = { BAMLH0A0HYM2: 30 };
+
 // FRED marks missing observations with the string '.' (weekends/holidays on
 // daily series like T10Y2Y). Returns [{ date, value }] newest-first.
 export function parseFredObservations(json) {

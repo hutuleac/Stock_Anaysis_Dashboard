@@ -121,7 +121,7 @@ src/lib/
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache + evictStaleCache
     twelvedata.svelte.js — TwelveData API calls (optional, rate-limited)
-    fred.js           — FRED macro series (dev: vite proxy /fred-api; prod: corsproxy.io — API key visible to that proxy)
+    fred.js           — FRED macro series (dev: vite proxy /fred-api; prod: same-origin macro.json written at deploy by scripts/fetch-macro.mjs from the FRED_API_KEY repo secret, refreshed by a daily cron)
   components/
     WatchlistTable.svelte   — main table + expanded row (incl. Long-Term Setup card, Copy for AI)
     EntryPanel.svelte       — Entry & Risk: one-line entry→stop→target + R:R, price ladder (1R/2R/3R), daily ATR line
@@ -143,7 +143,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 24 files, 530 tests (~1s). One test file per lib module, same basename.
+tests/                — 25 files, 531 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -345,7 +345,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 530 unit tests, ~1s
+npm test          # 531 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 

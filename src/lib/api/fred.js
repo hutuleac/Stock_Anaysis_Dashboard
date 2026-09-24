@@ -1,10 +1,12 @@
 // FRED macroeconomic series — CPI, Fed Funds rate, unemployment, 10Y-2Y spread.
 // FRED's API sends no CORS headers, so the browser cannot call it directly:
-// dev goes through the Vite proxy (/fred-api → api.stlouisfed.org), production
-// through corsproxy.io. Failures degrade to stale cache, then null — same
-// pattern as the CNN Fear & Greed fetch.
+// dev goes through the Vite proxy (/fred-api → api.stlouisfed.org); production
+// reads macro.json, a same-origin snapshot the deploy workflow fetches daily
+// (scripts/fetch-macro.mjs) — no third-party proxy, no key in the browser.
+// Failures degrade to stale cache, then null — same pattern as the CNN Fear &
+// Greed fetch.
 
-import { parseFredObservations, deriveMacroRegime } from '../macro.js';
+import { parseFredObservations, deriveMacroRegime, FRED_SERIES, SERIES_LIMIT } from '../macro.js';
 
 const FRED_TTL = 86400; // 24h — these series update monthly (T10Y2Y daily)
 
@@ -17,12 +19,6 @@ export function setFredApiKey(key) {
   catch (e) { console.warn('localStorage full:', e); }
 }
 try { apiKey = localStorage.getItem('fred_api_key') || ''; } catch { /* noop */ }
-
-export const FRED_SERIES = ['CPIAUCSL', 'FEDFUNDS', 'UNRATE', 'T10Y2Y', 'BAMLH0A0HYM2'];
-
-// BAMLH0A0HYM2 (HY credit spread) is daily and needs ~20 trading days of
-// history for the Δ20d stress rule; the rest need 13 (a year of monthly CPI).
-const SERIES_LIMIT = { BAMLH0A0HYM2: 30 };
 
 function cacheKey(seriesId) {
   return `fred_${seriesId}`;
@@ -51,10 +47,23 @@ function writeCache(key, data) {
 function fredUrl(seriesId) {
   // default limit=13: thirteen monthly observations span a full year → real CPI YoY
   const limit = SERIES_LIMIT[seriesId] ?? 13;
-  const params = `series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
-  if (import.meta.env.DEV) return `/fred-api/fred/series/observations?${params}`;
-  const direct = `https://api.stlouisfed.org/fred/series/observations?${params}`;
-  return `https://corsproxy.io/?url=${encodeURIComponent(direct)}`;
+  return `/fred-api/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
+}
+
+let snapshot = null; // one macro.json request per page load
+async function fetchSeriesJson(seriesId) {
+  if (import.meta.env.DEV) {
+    if (!apiKey) throw new Error('No FRED API key');
+    const res = await fetch(fredUrl(seriesId));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+  snapshot ??= fetch(`${import.meta.env.BASE_URL}macro.json`, { cache: 'no-cache' })
+    .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+    .catch(err => { snapshot = null; throw err; });
+  const json = (await snapshot)[seriesId];
+  if (!json) throw new Error(`${seriesId} missing from macro.json`);
+  return json;
 }
 
 // Returns { data: [{date, value}] newest-first | null, stale, error? }
@@ -62,12 +71,9 @@ export async function fetchFredSeries(seriesId) {
   const key = cacheKey(seriesId);
   const cached = readCache(key, FRED_TTL);
   if (cached) return { data: cached, stale: false };
-  if (!apiKey) return { data: null, stale: true, error: 'No FRED API key' };
 
   try {
-    const res = await fetch(fredUrl(seriesId));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = parseFredObservations(await res.json());
+    const data = parseFredObservations(await fetchSeriesJson(seriesId));
     if (!data.length) throw new Error('Unexpected FRED shape');
     writeCache(key, data);
     return { data, stale: false };

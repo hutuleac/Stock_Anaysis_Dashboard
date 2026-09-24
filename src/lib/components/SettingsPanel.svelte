@@ -167,7 +167,8 @@
         </p>
       </div>
 
-      <!-- FRED API Key -->
+      <!-- FRED API Key — dev only; production reads the deploy-time macro.json -->
+      {#if import.meta.env.DEV}
       <div class="space-y-2">
         <label class="block">
           <span class="text-sm font-medium text-text-secondary">FRED API Key</span>
@@ -190,6 +191,7 @@
           Free key from <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener" class="text-uncertain hover:underline">fred.stlouisfed.org</a>
         </p>
       </div>
+      {/if}
 
       <!-- Default Watchlist -->
       <div class="space-y-2">
