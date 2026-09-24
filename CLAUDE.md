@@ -112,7 +112,8 @@ src/lib/
   qualityScore.js     — Quality Score (0–100) from Finnhub metrics + financials-reported + earnings history
   longTermSetup.js    — buildLongTermSetup: timing×quality gate matrix → ACCUMULATE/WATCHLIST/…; F&G<30 panic boost
   macro.js            — FRED parsing + macro regime derivation (pure)
-  defaultLists.js     — HARDCODED_DEFAULTS (watchlist) + HARDCODED_ETFS; plain module so scripts/fetch-candles.mjs can import it
+  defaultLists.js     — HARDCODED_DEFAULTS (= repo-root watchlist.json) + HARDCODED_ETFS; plain module so scripts/snapshot.mjs can import it
+  snapshot.js         — seedSnapshot(): copies published snapshot.json cache entries into localStorage (newer ts wins)
   demoData.js         — no-API-key demo fixtures: seeded synthetic OHLCV per ticker + ETF proxy, run through the real engines
   longTermIndicators.js — timing/quality chips, band hints, waiting-on ranking (pure formatting)
   tone.js             — the one colour palette (good/partial/caution/danger/waiting/none)
@@ -121,7 +122,7 @@ src/lib/
   actions/tooltip.js  — Svelte action: desktop hover + mobile tap-to-open (touchend on iOS)
   api/
     finnhub.svelte.js — Finnhub API calls + localStorage cache + evictStaleCache
-    twelvedata.svelte.js — TwelveData candles (optional, rate-limited); in prod a daily-bars cache miss first seeds from the deploy-time candles.json
+    twelvedata.svelte.js — TwelveData candles (optional, rate-limited)
     fred.js           — FRED macro series (dev: vite proxy /fred-api; prod: same-origin macro.json written at deploy by scripts/fetch-macro.mjs from the FRED_API_KEY repo secret, refreshed by a daily cron)
   components/
     WatchlistTable.svelte   — main table + expanded row (incl. Long-Term Setup card, Copy for AI)
@@ -144,7 +145,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 25 files, 532 tests (~1s). One test file per lib module, same basename.
+tests/                — 26 files, 534 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -228,7 +229,9 @@ Display-only (does not feed `computeScore`). Catalog in `etflist.svelte.js`, loc
 
 Each proxy also carries display-only `indicators { trendState, wRsi, rangePos52w, roc13w }` feeding `generateEtfThesis()` in the expanded row. The add panel searches a curated ~55-fund UCITS catalog (`etfCatalog.js`). `highlights.js` turns the ACT/SOON rows from here and from the stock setups into the cross-view "Today" digest (`computeHighlights`) plus a notification diff (`computeNotifications`, localStorage `notifySeen`, opt-in `notifyEnabled` in Settings), rendered by `HighlightsStrip.svelte`.
 
-**Deploy-time snapshots (deploy.yml, nightly cron 22:15 UTC + every push):** `scripts/fetch-macro.mjs` → `macro.json` (FRED, `FRED_API_KEY` secret) and `scripts/fetch-candles.mjs` → `candles.json` (400 daily bars for `HARDCODED_DEFAULTS` + ETF proxies + SPY, `TWELVEDATA_API_KEY` secret, 8/min pacing ≈ 4 min). Push deploys reuse the live `candles.json` when it's < 24h old and covers every symbol; the cron always refetches. `seedFromSnapshot` writes a snapshot series into `td_ts_1day_*` stamped with `generatedAt`, so the normal 24h TTL decides freshness and a stale or missing snapshot falls through to the live fetch. Tickers added in the browser aren't in the snapshot, so they still cost live credits. Both scripts exit 0 when their key is missing. Both JSONs are gitignored build outputs.
+**Published snapshots (deploy.yml + scripts/snapshot.mjs):** weekday runs at ~10:00 ET (`open`) and ~16:30 ET (`close`). There are two UTC crons per slot because cron ignores daylight saving; the `gate` job keeps the one whose New York time is inside the window (09:55–10:45 / 16:25–17:20) and skips the other. `snapshot.mjs` loads the **real** `finnhub.svelte.js` / `twelvedata.svelte.js` through Vite `ssrLoadModule` against an in-memory localStorage, runs the same fetches the app does for `watchlist.json` + ETF proxies + SPY, and publishes the resulting `fh_*` / `td_*` cache entries as `snapshot.json` (it aborts if a key string would leak). `close` = a fresh run; `open` = start from the live snapshot so only expired entries refetch (quotes, F&G, BTC); push deploys `reuse` the live file and make zero calls. `scripts/fetch-macro.mjs` → `macro.json` runs on every deploy. Secrets: `FINNHUB_API_KEY`, `TWELVEDATA_API_KEY`, `FRED_API_KEY`. Deploys queue (`cancel-in-progress: false`) so a push never kills a snapshot run.
+
+In the browser (prod only), `seedSnapshot` writes the entries that are newer than this browser's own. Then `handleRefresh({ offline: true })` recomputes every panel with `setNetworkEnabled(false)`: fetchers resolve from cache, quotes come back `stale` from the snapshot, and nothing is spent. That works **with no API keys**: it replaces demo mode whenever a snapshot exists. The header shows "Open/Close snapshot · <time>"; Refresh (keys required) is the live path and clears the label. Offline runs skip `storeScoreSnapshot` (reloads would stack duplicates). The snapshot is skipped if this browser refreshed live after it was generated. Tickers not in `watchlist.json` need browser keys. Intraday chart timeframes (1h) are not in the snapshot.
 
 **`HARDCODED_ETFS` additions are not migrated into existing installs** — `localStorage['etfList']` is written once and never reconciled, so a user from before the change (e.g. `XDEW`, added Aug 2026) has to re-add the fund via catalog search. Keep that in mind before assuming a catalog entry is visible to everyone.
 
@@ -348,7 +351,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 532 unit tests, ~1s
+npm test          # 534 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 

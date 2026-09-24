@@ -1,23 +1,11 @@
-// Built-in lists shared by the stores and scripts/fetch-candles.mjs (the daily
-// candle prefetch) — plain module, no runes, so Node can import it.
+// Built-in lists shared by the stores and scripts/snapshot.mjs (the scheduled
+// snapshot job) — plain module, no runes, so Node can import it.
 
-// Built-in fallback defaults — used only when no user-configured defaults exist
-export const HARDCODED_DEFAULTS = [
-  { symbol: 'AAPL',  name: 'Apple Inc',             sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'AVGO',  name: 'Broadcom Inc',           sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'CRDO',  name: 'Credo Technology Group', sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'NET',   name: 'Cloudflare Inc',         sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'RKLB',  name: 'Rocket Lab USA',         sector: 'Industrials',            sectorETF: 'XLI' },
-  { symbol: 'LLY',   name: 'Eli Lilly and Company',  sector: 'Healthcare',             sectorETF: 'XLV' },
-  { symbol: 'MRVL',  name: 'Marvell Technology',     sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'AMZN',  name: 'Amazon.com Inc',         sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
-  { symbol: 'GOOGL', name: 'Alphabet Inc',            sector: 'Communication Services', sectorETF: 'XLC' },
-  { symbol: 'TSLA',  name: 'Tesla Inc',               sector: 'Consumer Cyclical',      sectorETF: 'XLY' },
-  { symbol: 'HOOD',  name: 'Robinhood Markets',       sector: 'Financial Services',     sectorETF: 'XLF' },
-  { symbol: 'NVDA',  name: 'NVIDIA Corporation',      sector: 'Technology',             sectorETF: 'XLK' },
-  { symbol: 'SOFI',  name: 'SoFi Technologies',       sector: 'Financial Services',     sectorETF: 'XLF' },
-  { symbol: 'AAOI',  name: 'Applied Optoelectronics',  sector: 'Technology',             sectorETF: 'XLK' },
-];
+import watchlist from '../../watchlist.json' with { type: 'json' };
+
+// Default watchlist — edit watchlist.json at the repo root. It is also the list
+// the scheduled snapshot job fetches (scripts/snapshot.mjs).
+export const HARDCODED_DEFAULTS = watchlist;
 
 export const HARDCODED_ETFS = [
   { ucits: 'VUAA', isin: 'IE00BFMXXD54', name: 'Vanguard S&P 500 (Acc)',      ter: '0.07%', category: 'Core US',      proxy: 'SPY'  },

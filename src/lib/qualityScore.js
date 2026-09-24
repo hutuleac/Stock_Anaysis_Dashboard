@@ -32,6 +32,18 @@ const REVENUE_CONCEPTS = [
   'revenues',
 ];
 
+// Keeps only the lines parseFinancials / parseRevenueHistory read (ic + cf,
+// matching concepts, original order so first-match priority is unchanged) —
+// a filing's full statements are ~12 KB, the fields we use a few hundred bytes.
+const READ_CONCEPTS = [...Object.values(CONCEPTS), ...REVENUE_CONCEPTS];
+export function trimFinancials(reported) {
+  const keep = (lines) => (Array.isArray(lines) ? lines : [])
+    .filter(l => typeof l?.concept === 'string' && READ_CONCEPTS.some(c => l.concept.toLowerCase().includes(c)))
+    .map(({ concept, value }) => ({ concept, value }));
+  return { data: (reported?.data ?? []).map(({ year, quarter, form, report }) =>
+    ({ year, quarter, form, report: { ic: keep(report?.ic), cf: keep(report?.cf) } })) };
+}
+
 function findRevenue(lines) {
   for (const c of REVENUE_CONCEPTS) {
     const v = findConcept(lines, c);

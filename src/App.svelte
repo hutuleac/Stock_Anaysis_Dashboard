@@ -1,8 +1,9 @@
 <script>
-  import { getApiKey, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, setNetworkEnabled, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { detectMarketRegime } from './lib/macro.js';
+  import { seedSnapshot } from './lib/snapshot.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeTimingScore } from './lib/timingScore.js';
@@ -41,6 +42,7 @@
   let activeView = $state('stocks'); // 'stocks' | 'etfs'
   let isDemoMode = $state(false);
   let lastRefreshed = $state(null);
+  let snapshot = $state(null); // { generatedAt, mode } while the view comes from the published snapshot
   let offline = $state(!navigator.onLine);
   let refreshError = $state('');
   let marketContextData = $state(null);
@@ -163,14 +165,17 @@
     });
   }
 
-  async function handleRefresh() {
-    if (!getApiKey() || inFlight) return;
+  // offline: recompute every panel from cache (the seeded snapshot) with the
+  // network off — no API key needed, no calls spent.
+  async function handleRefresh({ offline = false } = {}) {
+    if ((!getApiKey() && !offline) || inFlight) return;
     refreshError = '';
 
     const symbols = getSymbols();
     if (symbols.length === 0) return;
 
     inFlight = true;
+    setNetworkEnabled(!offline);
     try {
       // FRED macro context (CPI, Fed funds, unemployment, yield curve) —
       // 24h localStorage cache, so this is usually a no-op. Non-blocking.
@@ -201,7 +206,7 @@
       // SPY daily closes (fetched once, cached) — benchmark for Relative Strength
       let spyCloses = null;
       try {
-        if (hasTDApiKey()) {
+        if (hasTDApiKey() || snapshot) {
           const r = await fetchTimeSeries('SPY', '1day', TD_DAILY_BARS);
           if (r?.data?.length) spyCloses = r.data.map(v => parseFloat(v.close));
         } else {
@@ -283,7 +288,7 @@
 
         // Daily candles → local RSI/MACD indicators
         try {
-          if (hasTDApiKey()) {
+          if (hasTDApiKey() || snapshot) {
             // TwelveData — Finnhub free tier blocks /candle
             const candleRes = await fetchTimeSeries(ticker.symbol, '1day', TD_DAILY_BARS);
             if (candleRes?.data?.length) {
@@ -374,7 +379,7 @@
       for (const proxy of getUniqueProxies()) {
         try {
           let synthetic = null;
-          if (hasTDApiKey()) {
+          if (hasTDApiKey() || snapshot) {
             const r = await fetchTimeSeries(proxy, '1day', TD_DAILY_BARS);
             if (r?.data?.length) {
               const vals = r.data;
@@ -397,7 +402,7 @@
       // Store score snapshots for velocity tracking
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
-        if (data) storeScoreSnapshot(ticker.symbol, computeScore(data).score);
+        if (data && !offline) storeScoreSnapshot(ticker.symbol, computeScore(data).score); // snapshot reloads would stack duplicates
       }
 
       // Watchlist breadth (%>EMA50/EMA200) — pure local aggregation, no new calls
@@ -413,7 +418,8 @@
         marketContextData = { ...marketContextData, breadth: computeBreadth(breadthEntries) };
       }
 
-      lastRefreshed = new Date();
+      lastRefreshed = offline ? new Date(snapshot.generatedAt) : new Date();
+      if (!offline) snapshot = null;
       try { localStorage.setItem('lastRefreshed', String(lastRefreshed.getTime())); } catch { /* noop */ }
 
       // First remove the old large snapshot key to free quota space.
@@ -422,6 +428,7 @@
     } catch (err) {
       refreshError = err.message;
     } finally {
+      setNetworkEnabled(true);
       inFlight = false;
       enrichProgress = null;
     }
@@ -461,6 +468,10 @@
     if (!date) return 'unknown';
     const m = Math.max(0, Math.round((now - date.getTime()) / 60000));
     return m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+  }
+
+  function fmtSnapshot(snap) {
+    return new Date(snap.generatedAt).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
   function formatTime(date) {
@@ -557,7 +568,7 @@
   // per-ticker objects, losing fields from the first call.
   function hydrateStartup() {
     // No API key — show demo dashboard instead of blank screen
-    if (!getApiKey()) {
+    if (!getApiKey() && !snapshot) {
       loadDemoTickers(DEMO_TICKERS);
       marketContextData = DEMO_MARKET_CONTEXT;
       setMarketContext({ vixPrice: 22.4, spyDowntrend: true, fearGreedValue: 38 });
@@ -688,19 +699,25 @@
     setMarketData(results);
   }
 
-  hydrateStartup();
+  // Production: seed the cache from the published open/close snapshot, then
+  // compute from it offline — no keys needed, Refresh stays the live path.
+  // Skipped when this browser already refreshed live after the snapshot.
+  (import.meta.env.PROD ? seedSnapshot(`${import.meta.env.BASE_URL}snapshot.json`) : Promise.resolve(null)).then(snap => {
+    if (snap && (!lastRefreshed || snap.generatedAt >= lastRefreshed.getTime())) snapshot = snap; // equal = our own last offline pass
+    hydrateStartup();
+    if (snapshot) handleRefresh({ offline: true });
+    // First run with keys set: nothing cached to show, so load instead of
+    // leaving a table of NO DATA until the user finds the Refresh button.
+    else if (getApiKey() && !lastRefreshed) handleRefresh();
 
-  // First run with keys set: nothing cached to show, so load instead of
-  // leaving a table of NO DATA until the user finds the Refresh button.
-  if (getApiKey() && !lastRefreshed) handleRefresh();
-
-  // One-time-per-load cleanup: drop cached quotes/candles/fundamentals/news for
-  // symbols no longer in the watchlist or ETF proxy list. Prevents the
-  // "storage full" warning from creeping back as tickers are added/removed
-  // over time (see Settings > Clear API cache for a manual full wipe).
-  try {
-    pruneOrphanedCache([...getSymbols(), ...getUniqueProxies(), 'SPY']);
-  } catch { /* noop — non-critical maintenance */ }
+    // One-time-per-load cleanup: drop cached quotes/candles/fundamentals/news for
+    // symbols no longer in the watchlist or ETF proxy list. Prevents the
+    // "storage full" warning from creeping back as tickers are added/removed
+    // over time (see Settings > Clear API cache for a manual full wipe).
+    try {
+      pruneOrphanedCache([...getSymbols(), ...getUniqueProxies(), 'SPY']);
+    } catch { /* noop — non-critical maintenance */ }
+  });
 </script>
 
 <div class="min-h-screen bg-surface-900">
@@ -755,7 +772,12 @@
         {/if}
 
         <!-- Last refreshed -->
-        {#if staleCount && !inFlight}
+        {#if snapshot && !inFlight}
+          <span class="text-xs text-text-muted cursor-default" use:tipAction={() => ({
+            title: `${snapshot.mode === 'open' ? 'Market-open' : 'Market-close'} snapshot`,
+            description: `Data published by the scheduled job at ${fmtSnapshot(snapshot)} (runs ~10:00 and ~16:30 New York time on weekdays). ${getApiKey() ? 'Press R or Refresh for live prices.' : 'Add API keys in Settings for live prices.'}`,
+          })}>{snapshot.mode === 'open' ? 'Open' : 'Close'} snapshot<span class="hidden sm:inline">&nbsp;· {fmtSnapshot(snapshot)}</span></span>
+        {:else if staleCount && !inFlight}
           <span class="text-xs text-warning cursor-default" use:tipAction={() => ({
             title: 'Cached quotes',
             description: `${staleCount} of ${getTickers().length} tickers show quotes cached at the last refresh (${lastRefreshed ? formatTime(lastRefreshed) : 'unknown'}). Press R or Refresh for live prices.`,
