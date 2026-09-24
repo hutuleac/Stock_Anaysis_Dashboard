@@ -49,6 +49,10 @@ export function computeTimingScore(input = {}) {
   const { dailyCandles, weeklyCandles, marketContext = {} } = input;
   const signals = [];
   const warnings = [];
+  // Same strings, keyed by component — lets the UI put each reading on its own row.
+  const notes = {};
+  const add = (list, warn) => (key, text) => { list.push(text); (notes[key] ??= []).push({ text, warn }); };
+  const sig = add(signals, false), warn = add(warnings, true);
   const components = {
     drawdown: null, oversold: null, reversal: null,
     consolidation: null, volumeBehavior: null, marketContext: null,
@@ -69,20 +73,20 @@ export function computeTimingScore(input = {}) {
     if (dd != null) {
       let pts;
       if (isBull) {
-        if (dd <= -20) { pts = 20; warnings.push('Deep drawdown: verify whether the investment thesis changed'); }
+        if (dd <= -20) { pts = 20; warn('drawdown', 'Deep drawdown: verify whether the investment thesis changed'); }
         else if (dd <= -12) pts = 18;
         else if (dd <= -8) pts = 12;
         else if (dd <= -4) pts = 6;
         else pts = 2;
       } else {
-        if (dd <= -40) { pts = 20; warnings.push('Deep drawdown: verify whether the investment thesis changed'); }
+        if (dd <= -40) { pts = 20; warn('drawdown', 'Deep drawdown: verify whether the investment thesis changed'); }
         else if (dd <= -25) pts = 18;
         else if (dd <= -15) pts = 12;
         else if (dd <= -10) pts = 6;
         else pts = 2;
       }
       components.drawdown = cap(pts, TIMING_MAX.drawdown);
-      signals.push(`Drawdown ${dd.toFixed(1)}% from 52-week high`);
+      sig('drawdown', `Drawdown ${dd.toFixed(1)}% from 52-week high`);
     }
   }
 
@@ -105,18 +109,18 @@ export function computeTimingScore(input = {}) {
     }
     components.oversold = cap(pts, TIMING_MAX.oversold);
     const r = (x) => (x == null ? 'n/a' : x.toFixed(0));
-    signals.push(`Daily RSI ${r(dRsi)} | Weekly RSI ${r(wRsi)} | Monthly RSI ${r(mRsi)}`);
+    sig('oversold', `Daily RSI ${r(dRsi)} | Weekly RSI ${r(wRsi)} | Monthly RSI ${r(mRsi)}`);
   }
 
   // ── Reversal confirmation (max 15) ──
   if (dCloses && dailyCandles.h && dailyCandles.l) {
     let pts = 0;
     const div = detectDivergence(dCloses, dailyCandles.h, dailyCandles.l);
-    if (div?.type === 'BULL') { pts += 6; signals.push('Bullish RSI divergence detected'); }
-    if (emaReclaim(dailyCandles)) { pts += 4; signals.push('Reclaimed the 20-day EMA'); }
-    if (macdHistogramImproving(dCloses)) { pts += 3; signals.push('MACD histogram improving 3 days'); }
+    if (div?.type === 'BULL') { pts += 6; sig('reversal', 'Bullish RSI divergence detected'); }
+    if (emaReclaim(dailyCandles)) { pts += 4; sig('reversal', 'Reclaimed the 20-day EMA'); }
+    if (macdHistogramImproving(dCloses)) { pts += 3; sig('reversal', 'MACD histogram improving 3 days'); }
     const macd = computeMACD(dCloses);
-    if (macd?.crossover === 'bullish_cross') { pts += 2; signals.push('MACD bullish crossover'); }
+    if (macd?.crossover === 'bullish_cross') { pts += 2; sig('reversal', 'MACD bullish crossover'); }
     components.reversal = cap(pts, TIMING_MAX.reversal);
   }
 
@@ -130,7 +134,7 @@ export function computeTimingScore(input = {}) {
     if (con) {
       pts += con.days >= 60 ? 7 : con.days >= 40 ? 4 : con.days >= 20 ? 2 : 0;
       consolidationHigh = con.high;
-      signals.push(`Consolidation: ${con.days} trading days, range ${con.rangePct.toFixed(1)}%${bb ? `, BB Width percentile ${bb.percentile.toFixed(0)}` : ''}`);
+      sig('consolidation', `Consolidation: ${con.days} trading days, range ${con.rangePct.toFixed(1)}%${bb ? `, BB Width percentile ${bb.percentile.toFixed(0)}` : ''}`);
     }
     if (bb || con) components.consolidation = cap(pts, TIMING_MAX.consolidation);
   }
@@ -139,15 +143,15 @@ export function computeTimingScore(input = {}) {
   if (dCloses && dailyCandles.v) {
     let pts = 0;
     const capit = detectCapitulation(dailyCandles);
-    if (capit.detected) { pts += 6; signals.push('Capitulation-style volume detected'); }
+    if (capit.detected) { pts += 6; sig('volumeBehavior', 'Capitulation-style volume detected'); }
     const udr = upDownVolumeRatio(dailyCandles);
     if (udr != null) {
       if (udr > 1.3) pts += 6;
       else if (udr >= 1.0) pts += 3;
-      else if (udr < 0.7) warnings.push('Selling volume remains dominant');
+      else if (udr < 0.7) warn('volumeBehavior', 'Selling volume remains dominant');
     }
     if (consolidationHigh != null && breakoutConfirmation(dailyCandles, consolidationHigh)) {
-      pts += 3; signals.push('Breakout on above-average volume');
+      pts += 3; sig('volumeBehavior', 'Breakout on above-average volume');
     }
     components.volumeBehavior = cap(pts, TIMING_MAX.volumeBehavior);
   }
@@ -157,27 +161,27 @@ export function computeTimingScore(input = {}) {
     const mc = marketContext || {};
     let pts = 0, any = false;
     if (mc.spyAboveEma50 === true) { pts += 3; any = true; }
-    if (mc.spyAboveEma50 === false && mc.spyDowntrend === true) { warnings.push('Broad market trend is still negative'); any = true; }
+    if (mc.spyAboveEma50 === false && mc.spyDowntrend === true) { warn('marketContext', 'Broad market trend is still negative'); any = true; }
     if (mc.sectorOutperforming === true) { pts += 3; any = true; }
     const fg = num(mc.fearGreed);
     if (fg != null) { any = true; if (fg < 30) pts += 2; }
     const vp = num(mc.volProxy);
     if (vp != null) {
       any = true;
-      if (vp > 35) warnings.push('Extreme volatility: use staged entries only');
+      if (vp > 35) warn('marketContext', 'Extreme volatility: use staged entries only');
       else if (vp >= 25) pts += 2;
     }
     // Regime bonus: buying a dip inside a confirmed uptrend is the
     // highest-quality setup this engine can see — reward it directly rather
     // than relying only on the compressed drawdown/oversold bands above.
     if (regime === 'BULL') { pts += 4; any = true; }
-    else if (regime === 'BULL_LATE') { pts += 2; any = true; warnings.push('Late-cycle greed: trim position size'); }
-    else if (regime === 'CHOP') { any = true; warnings.push('Mixed market regime: reduce position size'); }
+    else if (regime === 'BULL_LATE') { pts += 2; any = true; warn('marketContext', 'Late-cycle greed: trim position size'); }
+    else if (regime === 'CHOP') { any = true; warn('marketContext', 'Mixed market regime: reduce position size'); }
     if (any) components.marketContext = cap(pts, TIMING_MAX.marketContext);
   }
 
   // ── Total + label ──
   const present = Object.values(components).filter(v => v != null);
   const total = present.length ? Math.round(present.reduce((s, v) => s + v, 0)) : null;
-  return { total, label: labelForTiming(total), components, signals, warnings };
+  return { total, label: labelForTiming(total), components, signals, warnings, notes };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { timingChips, qualityChips, chipColor, chipTone, chipStyle, statusTone, timingTone, qualityTone, timingHint, qualityHint, waitingOn, qualityWaitingOn } from '../src/lib/longTermIndicators.js';
+import { timingChips, qualityChips, chipColor, chipTone, chipStyle, statusTone, timingTone, qualityTone, timingHint, qualityHint, timingRows, qualityRows } from '../src/lib/longTermIndicators.js';
 import { TIMING_MAX } from '../src/lib/timingScore.js';
 
 describe('timingChips', () => {
@@ -115,28 +115,22 @@ describe('band hints', () => {
   });
 });
 
-describe('waitingOn', () => {
-  const components = { drawdown: 4, oversold: 2, reversal: 15, consolidation: 5, volumeBehavior: null, marketContext: 9 };
+describe('timingRows / qualityRows', () => {
+  const ts = { components: { drawdown: 4, oversold: 2, reversal: 15, consolidation: 5, volumeBehavior: null, marketContext: 9 },
+    notes: { oversold: [{ text: 'Daily RSI 55', warn: false }] } };
 
-  it('ranks components by the points still on the table', () => {
-    expect(waitingOn(components).map(c => `${c.label} +${c.gap}`))
-      .toEqual(['Oversold +18', 'Drawdown +16', 'Base +10']);
+  it('ranks components by the points still on the table, nulls last', () => {
+    expect(timingRows(ts).map(r => `${r.label} ${r.gap}`))
+      .toEqual(['Oversold 18', 'Drawdown 16', 'Base 10', 'Market 6', 'Reversal 0', 'Volume null']);
   });
 
-  it('qualityWaitingOn ranks the quality components the same way', () => {
-    expect(qualityWaitingOn({ profitability: 4, cashFlow: null, balanceSheet: 0, shareholderReturn: 2, earningsQuality: 10 }).map(c => `${c.label} +${c.gap}`))
-      .toEqual(['Profit +26', 'Balance +25', 'Payout +8']);
+  it('attaches the reading behind each component', () => {
+    expect(timingRows(ts)[0].notes[0].text).toBe('Daily RSI 55');
+    expect(timingRows(ts)[1].notes).toEqual([]);
   });
 
-  it('skips maxed and missing components', () => {
-    const keys = waitingOn(components, 10).map(c => c.key);
-    expect(keys).not.toContain('reversal');        // 15/15 — nothing to wait for
-    expect(keys).not.toContain('volumeBehavior');  // null — nothing is known
-  });
-
-  it('reports the gap size and respects the limit', () => {
-    expect(waitingOn(components, 1)).toHaveLength(1);
-    expect(waitingOn(components, 1)[0].gap).toBe(18);
-    expect(waitingOn({})).toEqual([]);
+  it('qualityRows ranks the quality components the same way', () => {
+    expect(qualityRows({ components: { profitability: 4, cashFlow: null, balanceSheet: 0, shareholderReturn: 2, earningsQuality: 10 } }).map(r => r.label))
+      .toEqual(['Profit', 'Balance', 'Payout', 'Earnings', 'Cash']);
   });
 });

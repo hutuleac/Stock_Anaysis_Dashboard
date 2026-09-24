@@ -10,7 +10,7 @@
   import { TIPS } from '../tooltipDefs.js';
   import { buildStockSnapshot, buildPrompt } from '../export.js';
   import { buildLongTermSetup } from '../longTermSetup.js';
-  import { timingChips, qualityChips, chipColor, chipStyle, statusStyle as ltStatusStyle, statusColor, timingHint, qualityHint, timingTone, qualityTone, waitingOn, qualityWaitingOn } from '../longTermIndicators.js';
+  import { chipColor, statusStyle as ltStatusStyle, statusColor, timingHint, qualityHint, timingTone, qualityTone, timingRows, qualityRows } from '../longTermIndicators.js';
   import { toneColor } from '../tone.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
@@ -524,116 +524,81 @@
   {/snippet}
 
   <!-- Long-Term Setup + thesis + trade window — the "why" card. -->
+  <!-- One Long-Term score: total + distance to the next band, then one row per
+       component (score bar · the reading behind it · points left), biggest gap
+       first — so the top row is what the entry is waiting on. -->
+  {#snippet ltSection(title, total, color, hint, tip, rows)}
+    <div>
+      <div class="flex flex-wrap items-baseline gap-x-2 mb-1 text-[13px]">
+        <span class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={tip}>{title}</span>
+        <span class="font-mono font-semibold" style="color:{color}">{total ?? 'n/a'}<span class="text-text-muted font-normal">/100</span></span>
+        {#if hint}<span class="text-text-muted">· {hint}</span>{/if}
+      </div>
+      <div class="space-y-1">
+        {#each rows as c}
+          <div class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-2 text-[13px] cursor-default"
+            use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}>
+            <span class="w-[4.5rem] sm:w-20 shrink-0 text-text-secondary">{c.label}</span>
+            <span class="w-10 sm:w-16 h-1.5 shrink-0 self-center rounded-full bg-surface-700 overflow-hidden">
+              <span class="block h-full rounded-full" style="width:{c.score == null ? 0 : (c.score / c.max) * 100}%; background:{chipColor(c.score, c.max)}"></span>
+            </span>
+            <span class="w-12 shrink-0 font-mono text-text-muted">{c.score ?? '–'}/{c.max}</span>
+            <span class="sm:w-16 shrink-0 font-mono text-[12px]" style="color:{c.gap ? toneColor('partial') : 'var(--color-text-muted)'}">{c.gap ? `+${c.gap} left` : c.gap === 0 ? 'maxed' : ''}</span>
+            <span class="flex-1 min-w-0 basis-full sm:basis-auto text-text-muted">
+              {#each c.notes as n, i}{i ? ' · ' : ''}<span class={n.warn ? 'text-bear-strong/80' : ''}>{n.warn ? '⚠ ' : ''}{n.text}</span>{/each}
+              {#if c.score == null}no data{/if}
+            </span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/snippet}
+
   {#snippet ltCard(ticker, data, setup, daysToEarnings)}
     <div class="mb-3 px-3 py-3 rounded-lg bg-surface-800/60 border border-border/40 space-y-3">
       {#if setup}
         {@const tTotal = data.timingScore?.total ?? null}
         {@const qTotal = data.qualityScore?.total ?? null}
+        <!-- Verdict first, once: badge + the matrix's own sentence. -->
         <div>
-          <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center gap-2 mb-1">
             <span class="text-xs font-semibold text-text-muted uppercase tracking-wider cursor-default" use:tipAction={TIPS.ltStatus}>Long-Term Setup</span>
             <span class="text-xs px-1.5 py-0.5 rounded font-semibold cursor-default" style={ltStatusStyle(setup.status)}
               use:tipAction={() => ({ ...TIPS.ltStatus, current: { value: setup.status.replace(/_/g, ' '), label: '', color: 'inherit' } })}
-            >{setup.status.replace(/_/g, ' ')}</span>
+            >{setup.status === 'OVERSOLD_BUT_CAUTION' ? 'CHECK QUALITY' : setup.status.replace(/_/g, ' ')}</span>
           </div>
-          <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-1.5">
-            <span class="cursor-default" style="color:{toneColor(timingTone(tTotal))}"
-              use:tipAction={() => ({ ...TIPS.ltTiming, current: { value: tTotal ?? 'n/a', label: data.timingScore?.label ?? 'n/a', color: toneColor(timingTone(tTotal)) } })}
-            >Timing: {tTotal ?? 'n/a'} ({data.timingScore?.label ?? 'n/a'})
-              {#if timingHint(tTotal)}<span class="text-text-muted font-normal"> · {timingHint(tTotal)}</span>{/if}
-            </span>
-            <span class="cursor-default" style="color:{qTotal == null ? 'var(--color-text-muted)' : toneColor(qualityTone(qTotal))}"
-              use:tipAction={() => ({ ...TIPS.ltQuality, current: { value: qTotal ?? 'not checked', label: data.qualityScore?.label ?? '', color: qTotal == null ? '#6b7280' : toneColor(qualityTone(qTotal)) } })}
-            >Quality: {qTotal ?? 'not checked'} {data.qualityScore ? `(${data.qualityScore.label})` : ''}
-              {#if qualityHint(qTotal)}<span class="text-text-muted font-normal"> · {qualityHint(qTotal)}</span>{/if}
-            </span>
-          </div>
-
-          <!-- Timing indicator breakdown (the components feeding the 0–100 score) -->
-          {#if data.timingScore?.components}
-            <div class="flex flex-wrap gap-1.5 mb-1.5">
-              <span class="text-xs text-text-muted uppercase tracking-wider self-center mr-0.5">Timing</span>
-              {#each timingChips(data.timingScore.components) as c}
-                <span class="text-xs px-1.5 py-0.5 rounded font-mono cursor-default"
-                  style={chipStyle(c.score, c.max)}
-                  use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}
-                >{c.label} {c.score ?? '–'}/{c.max}</span>
-              {/each}
-            </div>
-          {/if}
-
-          <!-- What has to improve before the entry gets better — the timing components
-               with the most points still on the table. Ranking only, no new math. -->
-          {#if setup.status !== 'ACCUMULATE' && setup.status !== 'INSUFFICIENT_DATA'}
-            <!-- When the quality gate is what's blocking, the timing gaps aren't the
-                 answer — name the quality components instead. -->
-            {@const qBlocks = qTotal != null && qTotal < 60}
-            {@const gaps = qBlocks ? qualityWaitingOn(data.qualityScore.components) : waitingOn(data.timingScore?.components)}
-            {#if gaps.length}
-              <p class="text-xs mb-1.5" style="color:{toneColor('partial')}">
-                <span class="uppercase tracking-wider text-text-muted">Waiting on {qBlocks ? 'quality' : 'timing'}</span>
-                {#each gaps as g, i}<span>{i ? ' · ' : ' '}{g.label} +{g.gap}</span>{/each}
-                <span class="text-text-muted"> pts</span>
-              </p>
-            {/if}
-          {/if}
-
-          <!-- Quality indicator breakdown (lazy — only after the row's fundamentals fetch) -->
-          {#if data.qualityScore?.components}
-            <div class="flex flex-wrap gap-1.5 mb-1.5">
-              <span class="text-xs text-text-muted uppercase tracking-wider self-center mr-0.5">Quality</span>
-              {#each qualityChips(data.qualityScore.components) as c}
-                <span class="text-xs px-1.5 py-0.5 rounded font-mono cursor-default"
-                  style={chipStyle(c.score, c.max)}
-                  use:tipAction={() => ({ ...TIPS[LT_CHIP_TIPS[c.key]], current: { value: c.score == null ? 'no data' : `${c.score}/${c.max}`, label: '', color: chipColor(c.score, c.max) } })}
-                >{c.label} {c.score ?? '–'}/{c.max}</span>
-              {/each}
-            </div>
-          {/if}
-
-          <!-- Concrete readings behind the timing score (RSI/drawdown/consolidation/etc.) -->
-          {#if data.timingScore?.signals?.length}
-            <div class="text-xs text-text-muted space-y-0.5 mb-1.5">
-              {#each data.timingScore.signals as s}<div>· {s}</div>{/each}
-            </div>
-          {/if}
-          {#if data.timingScore?.warnings?.length}
-            <div class="text-xs text-bear-strong/80 space-y-0.5 mb-1.5">
-              {#each data.timingScore.warnings as w}<div>⚠ {w}</div>{/each}
-            </div>
-          {/if}
-
-          <!-- Revenue history (lazy — same financials-reported fetch as Quality Score) -->
-          {#if data.revenueHistory?.length}
-            {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
-            <div class="mb-1.5">
-              <div class="text-xs text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
-              <div class="flex items-end gap-1.5 h-10">
-                {#each data.revenueHistory as r}
-                  {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
-                  {@const h = maxRev > 0 ? Math.max(12, Math.round((r.revenue / maxRev) * 100)) : 12}
-                  <div class="flex-1 flex flex-col items-center justify-end gap-0.5 h-full cursor-default"
-                    use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}
-                  >
-                    <div class="w-full rounded-t" style="height:{h}%; background:{barColor}"></div>
-                    <span class="text-[9px] text-text-muted">{String(r.year).slice(2)}</span>
-                  </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
-
           {#each setup.reasons as reason, i}
             <p class="text-sm" style={i === 0 ? `color:${statusColor(setup.status)}` : 'color:var(--color-text-muted)'}>{reason}</p>
           {/each}
-
-          <!-- Colour legend — the ramp means the same thing on every element above -->
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-border/30 text-[12px] text-text-muted">
-            {#each [['#22c55e', 'working for you'], ['#f59e0b', 'partly there'], ['#f97316', 'caution'], ['#94a3b8', 'not yet — what to wait for'], ['#6b7280', 'no data']] as [c, label]}
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:{c}"></span>{label}</span>
-            {/each}
-          </div>
         </div>
+
+        {@render ltSection('Timing', tTotal, toneColor(timingTone(tTotal)), timingHint(tTotal), TIPS.ltTiming, data.timingScore ? timingRows(data.timingScore) : [])}
+
+        {#if data.qualityScore}
+          {@render ltSection('Quality', qTotal, toneColor(qualityTone(qTotal)), qualityHint(qTotal), TIPS.ltQuality, qualityRows(data.qualityScore))}
+        {:else}
+          <p class="text-[13px] text-text-muted"><span class="uppercase tracking-wider">Quality</span> · not checked yet</p>
+        {/if}
+
+        <!-- Revenue history (lazy — same financials-reported fetch as Quality Score) -->
+        {#if data.revenueHistory?.length}
+          {@const maxRev = Math.max(...data.revenueHistory.map(r => r.revenue))}
+          <div>
+            <div class="text-xs text-text-muted uppercase tracking-wider mb-1 cursor-default" use:tipAction={TIPS.revenueHistory}>Revenue (5y)</div>
+            <div class="flex items-end gap-1.5 h-10 max-w-xs">
+              {#each data.revenueHistory as r}
+                {@const barColor = r.growthPct == null ? '#6b7280' : r.growthPct >= 0 ? '#22c55e' : '#ef4444'}
+                {@const h = maxRev > 0 ? Math.max(12, Math.round((r.revenue / maxRev) * 100)) : 12}
+                <div class="flex-1 flex flex-col items-center justify-end gap-0.5 h-full cursor-default"
+                  use:tipAction={() => ({ ...TIPS.revenueGrowth, current: { value: fmtRevenue(r.revenue), label: r.growthPct == null ? `FY${r.year}` : `${r.growthPct > 0 ? '+' : ''}${r.growthPct.toFixed(1)}% · FY${r.year}`, color: barColor } })}
+                >
+                  <div class="w-full rounded-t" style="height:{h}%; background:{barColor}"></div>
+                  <span class="text-[9px] text-text-muted">{String(r.year).slice(2)}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       {/if}
 
       <!-- Why this score + trade window + ATR — consolidated with Long-Term Setup above -->

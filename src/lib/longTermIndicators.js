@@ -10,7 +10,6 @@
 // (tests/longTermIndicators.test.js asserts both sets still sum to 100).
 import { TIMING_MAX } from './timingScore.js';
 import { toneColor, toneStyle } from './tone.js';
-import { rankGaps } from './readiness.js';
 
 const TIMING = [
   ['drawdown', 'Drawdown', TIMING_MAX.drawdown],
@@ -99,9 +98,12 @@ export const qualityHint = (total) => bandHint(total, QUALITY_BANDS);
 export const timingTone  = (total) => total == null ? 'none' : total >= 70 ? 'good' : total >= 50 ? 'partial' : 'waiting';
 export const qualityTone = (total) => total == null ? 'none' : total >= 65 ? 'good' : total >= 60 ? 'partial' : 'caution';
 
-// ─── What to wait for ───────────────────────────────────────────────────────
-// The components with the most points still on the table — i.e. what has to
-// improve before the entry gets better. Pure ranking of existing sub-scores:
-// a null component is skipped (nothing is known about it, so it isn't a wait).
-export const waitingOn = (components, limit = 3) => rankGaps(chips(TIMING, components), limit);
-export const qualityWaitingOn = (components, limit = 3) => rankGaps(chips(QUALITY, components), limit);
+// ─── One row per component ──────────────────────────────────────────────────
+// Score, the reading behind it and the points still on the table, ranked by
+// that gap — so the top row is what the entry is waiting on. A null component
+// sinks to the bottom (nothing is known, so nothing is being waited on).
+const rows = (list, notes) => list
+  .map(c => ({ ...c, gap: c.score == null ? null : Math.round((c.max - c.score) * 10) / 10, notes: notes?.[c.key] ?? [] }))
+  .sort((a, b) => (b.gap ?? -1) - (a.gap ?? -1));
+export const timingRows  = (ts) => rows(timingChips(ts?.components), ts?.notes);
+export const qualityRows = (qs) => rows(qualityChips(qs?.components));
