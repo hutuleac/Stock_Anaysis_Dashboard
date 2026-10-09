@@ -2,6 +2,23 @@
 
 All notable changes to the Stock Analysis Dashboard. Newest first. The version badge in the app header is read from `package.json`: the minor number moves for each feature round, and patch releases don't change the badge.
 
+## v0.29 (2026-10-09): long-term entries you get told about
+
+**The long-term view can now find, rank and announce an entry.** v0.28 made the signal reachable; this round makes it visible and checks the price.
+
+- **Today strip + notifications include Long-Term Setup**: ACCUMULATE is an ACT item, WATCHLIST a SOON item. A move from WATCHLIST to ACCUMULATE notifies once (#71).
+- **Valuation vs the stock's own 5-year history** on the Long-Term card: P/E and P/S against their own median (e.g. NVDA P/E −43%, TSLA +194% on the day it shipped). Taken from the metric call the app already makes; display-only (#72).
+- **ETF entry score fires on core index funds**: SPY/QQQ/RSP no longer lose 3 of 10 points to "lagging SPY", drawdown is measured in each fund's own volatility, and Oversold + Turn remember 3 weeks. SPY now reaches SOON at a real dip; it never got past 3.8 before (#70).
+- **One definition of "quality company"**: Dip Hunter gates on the Quality Score ≥ 60, the same bar as Long-Term. A good company with one down year stays eligible (#73).
+- **Quality reads the real filings**: capex tags for NVDA/AMZN/LLY and GOOGL's share count (derived from net income ÷ diluted EPS), checked against live data. GOOGL 67 → 70 (#73).
+- **The snapshot carries Fear & Greed**: CNN rejected the bare Node request ("418 You're a bot") (#74).
+
+## v0.28 (2026-10-09): the long-term signal can fire
+
+- **Timing scores the best entry phase, not the sum** (#68): Drawdown 25 + Phase 50 (best of Oversold / Reversal / Base) + Market 25. Before, real data never reached the 70 gate (26 symbols × 19 months), so ACCUMULATE only came from the panic boost. Now STRONG fires on ~2% of days in a calm bull market and ~10% in a fearful one. The volume-breakout bonus can now fire. Fear counts as opportunity in the Market component.
+- **Quality stops scoring missing data as zero** (#69): FCF from P/FCF when the filing lacks it, interest coverage uses the better of TTM and annual, negative equity no longer scores as low debt, and the balance sheet reaches its 25-point cap. AMZN 51 → 61 (clears the gate), NVDA 75 → 84. Quality is computed at refresh from cached data, so the Long-Term scan no longer needs every row expanded. The market regime is restored on reload.
+- **Fear & Greed tile** uses CNN's bands (25/45/55/75): a "greed" reading of 56–60 no longer shows grey (#67).
+
 ## v0.27 (2026-09-24): snapshots, and the site works without keys
 
 **Open the site and it just works.** A scheduled job now publishes the whole dashboard's data twice every weekday, so visitors see real scores, scans, charts and ETFs without entering an API key.
