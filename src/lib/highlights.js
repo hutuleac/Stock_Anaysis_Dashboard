@@ -2,10 +2,12 @@
 // Consumes hits already computed by radar.js / dip.js / etf.js; no API calls.
 
 const READINESS_RANK = { SOON: 1, ACT: 2 };
+const LONG_TERM_READINESS = { ACCUMULATE: 'ACT', WATCHLIST: 'SOON' };
 
 // radarHits: computeRadar() output · dipHits: computeDipRadar() output
 // etfRows: [{ ucits, sig }] — etflist store rows joined with computeEtfSignals
-export function computeHighlights({ radarHits = [], dipHits = [], etfRows = [] }) {
+// longTerm: [{ symbol, setup }] — buildLongTermSetup() per ticker
+export function computeHighlights({ radarHits = [], dipHits = [], etfRows = [], longTerm = [] }) {
   const items = [];
 
   for (const h of radarHits) {
@@ -21,6 +23,16 @@ export function computeHighlights({ radarHits = [], dipHits = [], etfRows = [] }
         score: h.score, readiness: h.readiness,
         label: `${h.symbol} dip ${h.score.toFixed(1)}` });
     }
+  }
+  // Long-term entries: ACCUMULATE is the act state, WATCHLIST (good company,
+  // timing forming) the heads-up. Score on the 0–10 scale of the other kinds.
+  for (const { symbol, setup } of longTerm) {
+    const readiness = LONG_TERM_READINESS[setup?.status];
+    if (!readiness) continue;
+    const t = setup.timingScore?.total ?? 0;
+    items.push({ kind: 'long-term', symbol, view: 'stocks',
+      score: t / 10, readiness,
+      label: `${symbol} long-term ${setup.status === 'ACCUMULATE' ? 'accumulate' : 'watchlist'} ${t}` });
   }
   for (const row of etfRows) {
     const sig = row.sig;
