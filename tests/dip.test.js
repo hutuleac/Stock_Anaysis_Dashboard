@@ -47,6 +47,19 @@ describe('computeDipRadar quality gate', () => {
     });
   }
 
+  it('uses the Quality Score as the gate when it is known — same bar as Long-Term', () => {
+    const good = makeTicker({ qualityScore: { total: 70, label: 'MEDIUM' } });
+    Object.assign(good.data.metrics.data.metric, { epsGrowthTTMYoy: -5 }); // one down year: still eligible
+    expect(computeDipRadar([good], FEAR).length).toBe(1);
+    const weak = makeTicker({ qualityScore: { total: 45, label: 'LOW' } }); // passes the growth filters, fails quality
+    expect(computeDipRadar([weak], FEAR).length).toBe(0);
+  });
+
+  it('falls back to the growth filters when quality is insufficient', () => {
+    const t = makeTicker({ qualityScore: { total: 20, label: 'INSUFFICIENT_DATA' } });
+    expect(computeDipRadar([t], FEAR).length).toBe(1);
+  });
+
   it('excludes tickers without a quote', () => {
     const t = makeTicker({ quote: { data: null } });
     expect(computeDipRadar([t], FEAR).length).toBe(0);

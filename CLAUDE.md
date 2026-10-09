@@ -194,7 +194,7 @@ Each hit carries **`waitingOn`** (v0.25) — the active setup's own `components[
 
 Watchlist-wide scan for early entries in quality names on sale — display-only, does not feed `computeScore`. Two stages, entry point `computeDipRadar(list, marketCtx)`:
 
-1. **Quality gate** (`gateMetrics`, ALL must pass): EPS growth > 0, revenue growth > 0, net margin > 0, PEG < 3 (via `valuation.js`, skipped if growth ≤ 0), fundamental score ≥ 60. Filters falling knives before any dip scoring happens.
+1. **Quality gate** (`gateMetrics`): when `data.qualityScore` is known, it is the gate — total ≥ `QUALITY_GATE` (60, exported from `longTermSetup.js`), one definition of "quality company" shared with Long-Term. A good name with one down year (negative EPS/revenue growth) stays eligible. Fallback while quality isn't loaded (or INSUFFICIENT_DATA), ALL must pass: EPS growth > 0, revenue growth > 0, net margin > 0, PEG < 3 (via `valuation.js`, skipped if growth ≤ 0), fundamental score ≥ 60.
 2. **Dip score**, 0–10 across 9 components, rebalanced whenever a component is added — always keep the maxes summing to 10:
 
 | Component | Max | Signal |

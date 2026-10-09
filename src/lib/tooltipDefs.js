@@ -544,7 +544,7 @@ export const TIPS = {
     title: 'Dip Hunter',
     subtitle: 'Quality stocks on sale',
     category: 'Signals',
-    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A strict quality gate (EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) must pass first — then the dip is scored 0–10 across market fear, oversold readings, drawdown depth, 52w-low proximity, a MACD turn signal, relative strength vs SPY, PEG-based value, OBV accumulation, and smart-money confirmation. A strong-ADX downtrend or a broken swing-low support level caps readiness rather than excluding the name — context for the trader, not a gate.',
+    description: 'Scans the watchlist for beaten-down entries in fundamentally solid names. A quality gate must pass first — the Quality Score ≥ 60, the same bar Long-Term Setup uses, so the two panels never disagree on a name (until quality loads: EPS growth, revenue growth, profitability, PEG < 3, fundamental score ≥ 60) — then the dip is scored 0–10 across market fear, oversold readings, drawdown depth, 52w-low proximity, a MACD turn signal, relative strength vs SPY, PEG-based value, OBV accumulation, and smart-money confirmation. A strong-ADX downtrend or a broken swing-low support level caps readiness rather than excluding the name — context for the trader, not a gate.',
     why: 'The best swing entries happen when a great business goes on sale for market-wide reasons, not company-specific ones. The gate filters falling knives; the fear component ensures you buy weakness, not strength. Display-only — does not feed the composite score.',
   },
 

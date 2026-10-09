@@ -6,6 +6,7 @@
 import { computeScore } from './scoring.js';
 import { computePEG } from './valuation.js';
 import { scoreTierHint, rankGaps } from './readiness.js';
+import { QUALITY_GATE } from './longTermSetup.js';
 
 const READINESS_RANK = { ACT: 3, SOON: 2, WATCH: 1 };
 
@@ -19,6 +20,13 @@ function gateMetrics(data) {
   const rev = num(m.revenueGrowthTTMYoy);
   const margin = num(m.netProfitMarginTTM) ?? num(m.netMargin);
   const peg = eps !== null ? computePEG(m.peNormalizedAnnual ?? m.peBasicExclExtraTTM ?? null, eps) : null;
+  // One definition of "quality company" across Dip Hunter and Long-Term: when
+  // the Quality Score is known it is the gate, so the two panels can't disagree
+  // on the same name. A good company with one down year (negative EPS/revenue
+  // growth) stays eligible — that is exactly the dip a long-term buyer wants.
+  // The filters below are the fallback while quality isn't loaded.
+  const q = data?.qualityScore;
+  if (q?.total != null && q.label !== 'INSUFFICIENT_DATA') return { peg, pass: q.total >= QUALITY_GATE };
   const fund = computeScore(data).fundamental;
   const pass = eps !== null && eps > 0 && rev !== null && rev > 0 && margin !== null && margin > 0 &&
     (peg === null || peg < 3) && fund !== null && fund >= 60;
