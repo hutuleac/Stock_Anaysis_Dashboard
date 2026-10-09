@@ -12,7 +12,7 @@ and explains every call in plain English. Free, private, no backend.
 [![Deploy](https://img.shields.io/github/actions/workflow/status/hutuleac/Stock_Anaysis_Dashboard/deploy.yml?style=for-the-badge&label=snapshot&logo=github)](https://github.com/hutuleac/Stock_Anaysis_Dashboard/actions/workflows/deploy.yml)
 
 ![Version](https://img.shields.io/badge/version-0.27-blue)
-![Tests](https://img.shields.io/badge/tests-534_passing-brightgreen?logo=vitest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-565_passing-brightgreen?logo=vitest&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-FF3E00?logo=svelte&logoColor=white)
 ![Cost](https://img.shields.io/badge/cost-%240_·_free_API_tiers-555)
 
@@ -111,7 +111,7 @@ flowchart LR
     LT --> V
 ```
 
-The score adapts to the market: in high volatility it leans on fundamentals, a falling S&P 500 pulls bullish scores toward neutral, and extreme fear or greed nudges them. A **conviction** figure shows how many signals agree, which is separate from how bullish the score is.
+The score is built for a months-to-years horizon: fundamentals lead (55% — PEG, EPS growth and the Quality Score), a new high on solid numbers is not penalised, and headline sentiment counts only 10%. It adapts to the market: in high volatility it leans further on fundamentals, a falling S&P 500 pulls bullish scores toward neutral, and extreme fear or greed nudges them. A **conviction** figure shows how many signals agree, which is separate from how bullish the score is.
 
 ---
 
@@ -146,7 +146,7 @@ git clone https://github.com/hutuleac/Stock_Anaysis_Dashboard
 cd Stock_Anaysis_Dashboard
 npm install
 npm run dev     # http://localhost:5173 (demo data until you add keys)
-npm test        # 534 unit tests, ~1 s
+npm test        # 565 unit tests, ~1 s
 ```
 
 ---
@@ -180,7 +180,7 @@ npm test        # 534 unit tests, ~1 s
 | Data | Finnhub + TwelveData + FRED free tiers |
 | Storage | Browser localStorage only |
 | Hosting | GitHub Pages, deployed and snapshotted by GitHub Actions |
-| Tests | Vitest: 534 tests over every engine (indicators, scoring, setups, dips, ETFs, long-term, snapshot) |
+| Tests | Vitest: 565 tests over every engine (indicators, scoring, setups, dips, ETFs, long-term, snapshot) |
 
 <details>
 <summary><b>Indicator maths notes</b></summary>

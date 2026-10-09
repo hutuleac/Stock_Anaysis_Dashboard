@@ -365,6 +365,6 @@ Vitest is scoped to `tests/**` in vite.config.js — do not remove that `include
 
 ## What's next (BACKLOG.md)
 
-Open queue: **#1 Gemini inline analysis** (the only item needing a new outbound API call). Deferred from the v0.29 review: ~10y of weekly candles in the snapshot (≈26 extra TD calls per close run) so the long-term signals can be back-tested beyond 19 months; a valuation-vs-history input to the Long-Term status (display-only today). Calibration tools used in that review (timing / ETF replays over `snapshot.json`) lived in a scratchpad, not the repo.
+Open queue: **#1 Gemini inline analysis** (new outbound call, opt-in) · **#2 longer price history + a replay script** (≈26 extra TD calls per close run) · **#3 valuation vs history into the Long-Term status** · **#4 STRONG_LONG threshold review**. Details and costs in `BACKLOG.md`. The v0.28–v0.30 calibration replays lived in a scratchpad, not the repo — #2 is where they'd become a script.
 
 `BACKLOG.md` also carries the parked/rejected decisions and the per-iteration rules: one feature = one branch = one PR, zero new API calls by default, display-only unless agreed, tests gate the merge.

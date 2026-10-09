@@ -25,6 +25,18 @@ Forward-looking work only. Shipped features live in the README changelog; curren
 - Spec reference: `docs/superpowers/specs/2026-07-11-ai-export-prompt-design.md`.
 - Cost: **1 call per "Analyze" click, opt-in only**.
 
+### 2. Longer price history for back-testing the long-term signals
+- Today each ticker has ~400 daily bars (≈19 months): enough for monthly RSI, too short to test whether ACCUMULATE / ETF ACT actually preceded good 6–12 month returns. The v0.28–v0.29 calibrations used that window (scratchpad replays over `snapshot.json`).
+- Add ~10 years of weekly candles to the `close` snapshot run; a repo script that replays Timing / ETF entry over it and reports hit rates.
+- Cost: **≈26 extra TwelveData calls per close run** (snapshot job only, not the browser).
+
+### 3. Valuation vs own history into the Long-Term status
+- v0.29 shows P/E and P/S vs the stock's own 5-year median on the Long-Term card, display-only. Candidate: demote ACCUMULATE → WATCHLIST when the stock is ≥ 30% above its own norm, or boost when ≥ 15% below.
+- Changes classification, so it needs the same replay check as v0.28 before shipping. Cost: zero calls.
+
+### 4. STRONG_LONG threshold review
+- v0.30's fundamentals-led score puts 6 of 14 watchlist names at STRONG_LONG (≥ 72). Raising the band to 77 would leave 4 (NVDA, LLY, CRDO, GOOGL). One line in `BADGE_BANDS`; decide after a few weeks of live readings.
+
 ---
 
 ## Parked / decided against
