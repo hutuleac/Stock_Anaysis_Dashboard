@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.29
+# Project State — Stock Analysis Dashboard v0.30
 
 ## What this is
 
@@ -145,7 +145,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 26 files, 561 tests (~1s). One test file per lib module, same basename.
+tests/                — 26 files, 565 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -357,7 +357,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 561 unit tests, ~1s
+npm test          # 565 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 

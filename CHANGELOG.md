@@ -2,6 +2,14 @@
 
 All notable changes to the Stock Analysis Dashboard. Newest first. The version badge in the app header is read from `package.json`: the minor number moves for each feature round, and patch releases don't change the badge.
 
+## v0.30 (2026-10-09): the score looks for strong companies, not swing trades
+
+- **Fundamentals lead the overall score**: weights are now 35 / 55 / 10 (Technical / Fundamental / Sentiment), was 35 / 45 / 20. Sentiment (headlines + sector momentum) is cut to 10% because it rises with hype (#76).
+- **Fundamental = PEG + EPS growth + Quality Score ×2.** PEG replaces the fixed P/E bands, so a 30× compounder growing 30% no longer reads as "premium" (#76).
+- **A new high is not penalised**: a high 52-week position, RSI ≥ 70 and a high Stochastic no longer lower the score. **3-month strength vs SPY** replaces the one-day price move (#76).
+- Same-day replay: NVDA 60 → 83, LLY 67 → 78, AAPL 63 → 75, AVGO 48 → 68; HOOD 58 → 42, AAOI 55 → 42, NET 56 → 47. STRONG_LONG covers 6 of 14 watchlist names (was 1); the threshold stays at 72.
+- **Trade windows removed**: no "days before earnings" box, warning, column or chip. It never fed a score; the horizon is months to years (#75).
+
 ## v0.29 (2026-10-09): long-term entries you get told about
 
 **The long-term view can now find, rank and announce an entry.** v0.28 made the signal reachable; this round makes it visible and checks the price.
