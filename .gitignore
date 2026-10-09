@@ -39,3 +39,6 @@ Thumbs.db
 graphify-out/
 public/macro.json
 public/snapshot.json
+
+# Session handoff notes (local only)
+handoffs/
