@@ -1,4 +1,8 @@
-// 9-signal scoring engine — Technical 35% / Fundamental 45% / Sentiment 20%
+import { computePEG } from './valuation.js';
+
+// Scoring engine — Technical 35% / Fundamental 55% / Sentiment 10% (v0.30:
+// months-to-years horizon). Fundamental = PEG (P/E fallback) + EPS growth +
+// Quality Score ×2; Technical includes 3-month RS vs SPY.
 // Missing data → signal neutral (0.5), not penalised. Factor count tracks completeness.
 // Regime-aware: VIX > 25 shifts weight toward fundamentals.
 // Market-context penalties: SPY downtrend (-20% pull toward neutral) + F&G adjustments.
@@ -71,13 +75,15 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   if (ind?.macd   != null) techTotal++;
   if (ind?.adx    != null) techTotal++;
   if (ind?.stochK != null) techTotal++;
-  let fundScore = 0, fundFactors = 0, fundTotal = 2;
+  let fundScore = 0, fundFactors = 0, fundTotal = 4; // PEG/PE 1 + EPS growth 1 + Quality 2
   let sentScore = 0, sentFactors = 0, sentTotal = 2;
 
   // Collect individual signal values for conviction scoring (only when data present)
   const signals = [];
 
   // ── TECHNICAL (35%) ─────────────────────────────────────────────────────────
+  // Horizon is months to years: strength near highs is not penalised (a new
+  // high on solid fundamentals can be an entry) — only weakness scores low.
 
   // T1: Price vs EMA50
   const ema50 = metrics['50DayMovingAverage'] ?? ind?.ema50;
@@ -100,24 +106,22 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   const low52  = metrics['52WeekLow'];
   if (high52 && low52 && quote.c && high52 > low52) {
     const pos = (quote.c - low52) / (high52 - low52);
-    const v = pos >= 0.4 && pos <= 0.7 ? 0.9
-            : pos > 0.7 && pos <= 0.85 ? 0.7
-            : pos > 0.85               ? 0.5
-            : pos >= 0.2               ? 0.4
-            :                            0.1;
+    const v = pos >= 0.4 ? 0.8 : pos >= 0.2 ? 0.4 : 0.1;
     techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
-  // T4: Daily momentum
-  if (quote.dp !== undefined && quote.dp !== null) {
-    const v = quote.dp > 2 ? 1 : quote.dp > 0 ? 0.65 : quote.dp > -2 ? 0.35 : 0;
+  // T4: 3-month relative strength vs SPY — the momentum factor. Replaced the
+  // one-day % move, which is noise on this horizon.
+  const rs3m = tickerData.rs?.rs3m;
+  if (Number.isFinite(rs3m)) {
+    const v = rs3m > 10 ? 1 : rs3m > 3 ? 0.8 : rs3m > -3 ? 0.55 : rs3m > -10 ? 0.35 : 0.15;
     techScore += v; techFactors++; signals.push(v);
   } else techScore += 0.5;
 
   // T5: RSI(14) — oversold = buying opportunity for swing traders
   if (ind?.rsi != null) {
     const rsi = ind.rsi;
-    const v = rsi < 30 ? 1.0 : rsi < 40 ? 0.8 : rsi < 55 ? 0.55 : rsi < 70 ? 0.75 : 0.25;
+    const v = rsi < 30 ? 1.0 : rsi < 40 ? 0.8 : rsi < 55 ? 0.55 : rsi < 70 ? 0.75 : 0.5; // ≥70 in a strong trend is neutral, not a sell
     techScore += v; techFactors++; signals.push(v);
   }
 
@@ -159,17 +163,24 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     else if (k < 20)  v = 0.85;
     else if (k < 35)  v = 0.65;
     else if (k < 60)  v = 0.5;
-    else if (k < 75)  v = 0.4;
-    else              v = 0.2;
+    else              v = 0.4; // high %K in a trend: neutral-ish, not a penalty
     techScore += v; techFactors++; signals.push(v);
   }
 
   const techNorm = techScore / techTotal;
 
-  // ── FUNDAMENTAL (45%) ────────────────────────────────────────────────────────
+  // ── FUNDAMENTAL (55%) ────────────────────────────────────────────────────────
 
+  // F1: PEG (P/E ÷ EPS growth) where it exists — growth-adjusted, so a 30×
+  // compounder isn't marked down as "premium". P/E bands only when PEG is
+  // undefined (growth ≤ 0 or no P/E).
   const pe = metrics['peNormalizedAnnual'] ?? metrics['peBasicExclExtraTTM'];
-  if (pe != null && pe > 0) {
+  const epsGrowth = metrics['epsGrowthTTMYoy'] ?? metrics['epsGrowth3Y'];
+  const peg = computePEG(pe ?? null, epsGrowth ?? null);
+  if (peg != null) {
+    const v = peg <= 1 ? 1 : peg <= 1.5 ? 0.85 : peg <= 2 ? 0.65 : peg <= 3 ? 0.4 : 0.15;
+    fundScore += v; fundFactors++; signals.push(v);
+  } else if (pe != null && pe > 0) {
     let v;
     if (pe >= 10 && pe <= 25)      v = 1;
     else if (pe > 25 && pe <= 40)  v = 0.65;
@@ -179,15 +190,23 @@ export function computeScore(tickerData, marketContext = _marketContext) {
     fundScore += v; fundFactors++; signals.push(v);
   } else fundScore += 0.5;
 
-  const epsGrowth = metrics['epsGrowthTTMYoy'] ?? metrics['epsGrowth3Y'];
+  // F2: EPS growth
   if (epsGrowth != null) {
     const v = epsGrowth > 20 ? 1 : epsGrowth > 5 ? 0.75 : epsGrowth > 0 ? 0.55 : epsGrowth > -10 ? 0.3 : 0;
     fundScore += v; fundFactors++; signals.push(v);
   } else fundScore += 0.5;
 
+  // F3: Quality Score (ROIC, margins, FCF, balance sheet, buybacks, earnings
+  // beats) — the broadest read on "strong company", weighted ×2.
+  const q = tickerData.qualityScore;
+  if (q?.total != null && q.label !== 'INSUFFICIENT_DATA') {
+    const v = q.total >= 75 ? 1 : q.total >= 65 ? 0.8 : q.total >= 60 ? 0.65 : q.total >= 50 ? 0.45 : q.total >= 40 ? 0.3 : 0.1;
+    fundScore += 2 * v; fundFactors++; signals.push(v);
+  } else fundScore += 1; // neutral 0.5 × 2
+
   const fundNorm = fundScore / fundTotal;
 
-  // ── SENTIMENT (20%) ──────────────────────────────────────────────────────────
+  // ── SENTIMENT (10%) ──────────────────────────────────────────────────────────
 
   const newsSent = scoreNewsHeadlines(news);
   if (newsSent !== null) {
@@ -206,15 +225,17 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   // When VIX is elevated, fundamentals are more reliable than technical noise.
 
   const vixPrice = marketContext?.vixPrice ?? null;
-  let techWeight = 0.35, fundWeight = 0.45, sentWeight = 0.20;
+  // Fundamentals lead (months-to-years horizon); sentiment (headlines + sector
+  // momentum) is cut to 10% — it rises with hype, not with value.
+  let techWeight = 0.35, fundWeight = 0.55, sentWeight = 0.10;
   let regimeNote = null;
 
   if (vixPrice !== null && vixPrice > 35) {
-    techWeight = 0.20; fundWeight = 0.60; sentWeight = 0.20;
-    regimeNote = `VIX ${vixPrice.toFixed(0)} extreme — fundamentals heavily weighted (60%)`;
+    techWeight = 0.22; fundWeight = 0.68; sentWeight = 0.10;
+    regimeNote = `VIX ${vixPrice.toFixed(0)} extreme — fundamentals heavily weighted (68%)`;
   } else if (vixPrice !== null && vixPrice > 25) {
-    techWeight = 0.25; fundWeight = 0.55; sentWeight = 0.20;
-    regimeNote = `VIX ${vixPrice.toFixed(0)} elevated — fundamentals weighted higher (55%)`;
+    techWeight = 0.28; fundWeight = 0.62; sentWeight = 0.10;
+    regimeNote = `VIX ${vixPrice.toFixed(0)} elevated — fundamentals weighted higher (62%)`;
   }
 
   // Macro regime (FRED): a rising Fed funds rate makes technical momentum less

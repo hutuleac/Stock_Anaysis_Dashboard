@@ -289,8 +289,8 @@
       <!-- T/F/S sub-scores + regime weights -->
       {#if score.score != null}
         {@const wT = Math.round((score.weights?.tech ?? 0.35) * 100)}
-        {@const wF = Math.round((score.weights?.fund ?? 0.45) * 100)}
-        {@const wS = Math.round((score.weights?.sent ?? 0.20) * 100)}
+        {@const wF = Math.round((score.weights?.fund ?? 0.55) * 100)}
+        {@const wS = Math.round((score.weights?.sent ?? 0.10) * 100)}
         {@const isRegime = score.regimeNote != null}
         <div class="flex flex-col sm:min-w-[120px] cursor-default" use:tipAction={TIPS.tfsScore}>
           <span class="text-[12px] sm:text-[13px] text-text-muted uppercase tracking-wider">T / F / S</span>

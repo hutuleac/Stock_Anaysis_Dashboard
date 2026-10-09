@@ -200,12 +200,42 @@ describe('computeScore', () => {
   });
 
   // ── T3: 52-week range ──
-  it('T3 — 40–70th percentile of 52w range scores highest', () => {
-    // price=160, range 100–200 → pos = (160-100)/(200-100) = 0.6 → sweet spot (0.9)
-    const sweet = makeTicker({ price: 160, high52: 200, low52: 100 });
-    // price=198 → pos=0.98 → near highs (0.5)
-    const extended = makeTicker({ price: 198, high52: 200, low52: 100 });
-    expect(computeScore(sweet).technical).toBeGreaterThan(computeScore(extended).technical);
+  it('T3 — a new high is not penalised; only the bottom of the range scores low', () => {
+    const mid = makeTicker({ price: 160, high52: 200, low52: 100 });   // pos 0.6
+    const atHigh = makeTicker({ price: 199, high52: 200, low52: 100 }); // pos 0.99
+    const nearLow = makeTicker({ price: 110, high52: 200, low52: 100 }); // pos 0.1
+    expect(computeScore(atHigh).technical).toBe(computeScore(mid).technical);
+    expect(computeScore(nearLow).technical).toBeLessThan(computeScore(mid).technical);
+  });
+
+  it('T4 — 3-month RS vs SPY replaces the one-day move', () => {
+    const leader = { ...makeTicker({ dp: -4 }), rs: { rs3m: 15 } };
+    const laggard = { ...makeTicker({ dp: 4 }), rs: { rs3m: -15 } };
+    expect(computeScore(leader).technical).toBeGreaterThan(computeScore(laggard).technical);
+  });
+
+  it('T5 — RSI ≥ 70 is neutral, not a sell signal', () => {
+    // 0.5 vs 0.55 at RSI 50 — within a point; it used to be 0.25, a 6-point hit
+    const diff = computeScore(makeTicker({ rsi: 50 })).technical - computeScore(makeTicker({ rsi: 75 })).technical;
+    expect(Math.abs(diff)).toBeLessThanOrEqual(1);
+  });
+
+  // ── F1: PEG first, P/E fallback ──
+  it('F1 — uses PEG when growth is positive: a 30× P/E growing 30% scores like a bargain', () => {
+    // PEG 1 → 1.0, EPS growth 30 → 1.0, no quality → neutral 0.5×2 → (1+1+1)/4
+    expect(computeScore(makeTicker({ pe: 30, epsGrowth: 30 })).fundamental).toBeCloseTo(75, 0);
+    // same P/E, growth 5 → PEG 6 → 0.15
+    expect(computeScore(makeTicker({ pe: 30, epsGrowth: 5 })).fundamental).toBeLessThan(55);
+  });
+
+  // ── F3: Quality Score ──
+  it('F3 — Quality Score counts double; insufficient data stays neutral', () => {
+    const base = makeTicker({ pe: 20, epsGrowth: 10 });
+    const strong = computeScore({ ...base, qualityScore: { total: 80, label: 'HIGH' } }).fundamental;
+    const weak = computeScore({ ...base, qualityScore: { total: 30, label: 'LOW' } }).fundamental;
+    const none = computeScore(base).fundamental;
+    expect(strong - weak).toBeCloseTo((1 - 0.1) * 2 / 4 * 100, 5);
+    expect(computeScore({ ...base, qualityScore: { total: 10, label: 'INSUFFICIENT_DATA' } }).fundamental).toBe(none);
   });
 
   // ── F1: P/E ──
@@ -241,23 +271,23 @@ describe('computeScore', () => {
   });
 
   // ── Regime weights ──
-  it('VIX > 35 shifts fund weight to 60%', () => {
+  it('VIX > 35 shifts fund weight to 68%', () => {
     const ticker = makeTicker({ price: 100 });
     const { weights } = computeScore(ticker, { vixPrice: 40 });
-    expect(weights.fund).toBeCloseTo(0.60, 5);
-    expect(weights.tech).toBeCloseTo(0.20, 5);
+    expect(weights.fund).toBeCloseTo(0.68, 5);
+    expect(weights.tech).toBeCloseTo(0.22, 5);
   });
 
-  it('VIX > 25 shifts fund weight to 55%', () => {
+  it('VIX > 25 shifts fund weight to 62%', () => {
     const { weights } = computeScore(makeTicker(), { vixPrice: 30 });
-    expect(weights.fund).toBeCloseTo(0.55, 5);
+    expect(weights.fund).toBeCloseTo(0.62, 5);
   });
 
-  it('normal VIX uses default 35/45/20 weights', () => {
+  it('normal VIX uses default 35/55/10 weights — fundamentals lead, sentiment is minor', () => {
     const { weights } = computeScore(makeTicker(), { vixPrice: 15 });
     expect(weights.tech).toBeCloseTo(0.35, 5);
-    expect(weights.fund).toBeCloseTo(0.45, 5);
-    expect(weights.sent).toBeCloseTo(0.20, 5);
+    expect(weights.fund).toBeCloseTo(0.55, 5);
+    expect(weights.sent).toBeCloseTo(0.10, 5);
   });
 
   // ── SPY downtrend penalty ──
