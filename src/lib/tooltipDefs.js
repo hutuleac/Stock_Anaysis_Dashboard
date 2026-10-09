@@ -816,6 +816,19 @@ export const TIPS = {
     why: 'A stock can have a great Timing Score (deep drawdown) and a weak Quality Score at the same time — that combination is flagged OVERSOLD_BUT_CAUTION, never ACCUMULATE. Cheap does not mean good.',
   },
 
+  ltValuation: {
+    title: 'Valuation vs own history',
+    subtitle: 'Current P/E and P/S vs this stock\'s 5-year median',
+    category: 'Long-Term',
+    description: 'Quality says whether it\'s a good company and Timing whether the chart is washed out — neither says whether the price is cheap. This compares today\'s multiple with where this same stock has traded over the last 5 years (quarterly TTM history from Finnhub; loss years excluded). Display-only: it does not change the Long-Term status.',
+    levels: [
+      { range: '≥ 15% below median', label: 'Cheap',  color: C.green, desc: 'Trading at a discount to its own norm — the market is paying less than usual for this business.' },
+      { range: 'within ±15%',        label: 'Normal', color: C.dim,   desc: 'Around its usual valuation.' },
+      { range: '≥ 15% above median', label: 'Rich',   color: C.orange, desc: 'Priced above its own norm — the dip may be from an expensive starting point.' },
+    ],
+    why: 'A 20% drawdown from a valuation 60% above normal is still expensive. A long-term entry is strongest when Timing, Quality and this all agree.',
+  },
+
   ltDrawdown: {
     title: 'Drawdown',
     subtitle: 'Timing component · max 25 pts',

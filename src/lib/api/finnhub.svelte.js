@@ -1,3 +1,4 @@
+import { trimValuationSeries } from '../valuation.js';
 import { trimFinancials } from '../qualityScore.js';
 
 const CACHE_TTL = {
@@ -233,10 +234,11 @@ export async function fetchProfile(symbol) {
 }
 
 async function fetchMetrics(symbol) {
-  // Only `metric` is read; `series` (years of per-metric history) is most of the payload.
+  // `series` (years of per-metric history) is most of the payload — keep only
+  // the P/E and P/S histories that valuationVsHistory reads.
   return fetchWithCache('fundamentals', symbol, async () => {
     const json = await fetchFinnhub(`/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`);
-    return { metric: json?.metric ?? {} };
+    return { metric: json?.metric ?? {}, valuationHistory: trimValuationSeries(json?.series) };
   });
 }
 
