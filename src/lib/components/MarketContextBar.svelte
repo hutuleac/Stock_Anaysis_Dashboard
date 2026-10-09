@@ -66,12 +66,14 @@
     return { ...STATES.good, value, label: 'NORMAL', sub, hex: '#22c55e' };
   }
 
+  // CNN's own bands (same as export.js fgZone) — else a CNN "greed" 58 reads grey.
+  // Sentiment is contrarian: heat rises away from neutral on both sides.
   const fgBand = (s) =>
-    s <= 25 ? { ...STATES.bad,     label: 'Extreme Fear',  hex: '#ef4444' } :
-    s <= 40 ? { ...STATES.caution, label: 'Fear',          hex: '#f97316' } :
-    s <= 60 ? { ...STATES.neutral, label: 'Neutral',       hex: '#9ca3af' } :
-    s <= 75 ? { ...STATES.good,    label: 'Greed',         hex: '#f59e0b' } :
-              { ...STATES.warn,    label: 'Extreme Greed', hex: '#ef4444' };
+    s < 25 ? { ...STATES.bad,     label: 'Extreme Fear',  hex: '#ef4444' } :
+    s < 45 ? { ...STATES.caution, label: 'Fear',          hex: '#f97316' } :
+    s < 55 ? { ...STATES.neutral, label: 'Neutral',       hex: '#9ca3af' } :
+    s < 75 ? { ...STATES.warn,    label: 'Greed',         hex: '#f59e0b' } :
+             { ...STATES.bad,     label: 'Extreme Greed', hex: '#ef4444' };
 
   function getFgInfo(fg) {
     if (fg?.score == null) return null;
@@ -208,7 +210,7 @@
             {@render tileHeader({ ...fgInfo, value: String(fgInfo.score) }, 'Fear & Greed')}
             <div class="w-full max-w-24 h-1 bg-surface-700 rounded-full overflow-hidden mt-0.5">
               <div
-                class="h-full rounded-full transition-all {fgInfo.score <= 40 ? 'bg-bear-strong' : fgInfo.score <= 60 ? 'bg-text-muted' : 'bg-bull-strong'}"
+                class="h-full rounded-full transition-all {fgInfo.dot}"
                 style="width: {fgInfo.score}%"
               ></div>
             </div>
