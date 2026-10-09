@@ -230,9 +230,9 @@ export const TIPS = {
     description: 'Composite of 7 market indicators: price momentum, breadth, put/call ratio, junk bond demand, safe haven demand, volatility, and stock strength. A contrarian indicator — extreme readings precede reversals.',
     levels: [
       { range: '0–25',   label: 'Extreme Fear',  color: C.red,    desc: 'Capitulation zone — historically a contrarian buy signal. Market pricing in too much bad news.' },
-      { range: '25–40',  label: 'Fear',          color: C.orange, desc: 'Cautious sentiment — market pricing risk premium. Good backdrop for bottom-fishing.' },
-      { range: '40–60',  label: 'Neutral',       color: C.dim,    desc: 'Balanced sentiment — no extreme signal. Trade individual setups on their merits.' },
-      { range: '60–75',  label: 'Greed',         color: C.amber,  desc: 'Optimism rising — late-cycle thinking. Be selective, reduce broad beta exposure.' },
+      { range: '25–45',  label: 'Fear',          color: C.orange, desc: 'Cautious sentiment — market pricing risk premium. Good backdrop for bottom-fishing.' },
+      { range: '45–55',  label: 'Neutral',       color: C.dim,    desc: 'Balanced sentiment — no extreme signal. Trade individual setups on their merits.' },
+      { range: '55–75',  label: 'Greed',         color: C.amber,  desc: 'Optimism rising — late-cycle thinking. Be selective, reduce broad beta exposure.' },
       { range: '75–100', label: 'Extreme Greed', color: C.red,    desc: 'Euphoria — historically precedes corrections. Contrarian sell signal for broad exposure.' },
     ],
     why: 'Be fearful when others are greedy; greedy when others are fearful. Extreme Fear readings below 20 have historically delivered above-average 6-month forward returns.',
