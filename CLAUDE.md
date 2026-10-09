@@ -150,8 +150,10 @@ tests/                — 26 files, 561 tests (~1s). One test file per lib modul
 
 ## Scoring engine (scoring.js)
 
-- **Weights:** Technical 35% / Fundamental 45% / Sentiment 20% (default)
-- **Regime shift:** VIX > 25 → fund 55%; VIX > 35 → fund 60%
+- **Weights (v0.30):** Technical 35% / Fundamental 55% / Sentiment 10% (default). Horizon is months to years: fundamentals lead, sentiment (keyword headlines + sector momentum) is small because it rises with hype.
+- **Fundamental (v0.30):** F1 PEG via `computePEG` (≤1 → 1.0 · ≤1.5 .85 · ≤2 .65 · ≤3 .4 · else .15), P/E bands only when PEG is undefined · F2 EPS growth · F3 Quality Score ×2 (≥75 1.0 · ≥65 .8 · ≥60 .65 · ≥50 .45 · ≥40 .3 · else .1; missing/INSUFFICIENT → neutral). Without quality loaded, fundamental is capped near 75 — Dip Hunter's fallback gate (fund ≥ 60) is therefore stricter than before.
+- **Technical (v0.30):** strength is not penalised — 52w position ≥ 0.4 → 0.8 flat (a new high on solid numbers can be an entry), RSI ≥ 70 → 0.5 (was 0.25), Stoch ≥ 60 → 0.4 (was 0.2 above 75). T4 is now **3-month RS vs SPY** (`data.rs.rs3m`: >10 1.0 · >3 .8 · >−3 .55 · >−10 .35 · else .15); it replaced the one-day % move.
+- **Regime shift:** VIX > 25 → 28/62/10; VIX > 35 → 22/68/10 (T/F/S)
 - **SPY penalty:** downtrend → LONG scores pulled 20% toward 50
 - **F&G modifier:** extreme fear < 25 → −3; extreme greed > 75 → −2
 - **Badges:** STRONG_LONG ≥ 72 · LEAN_LONG ≥ 58 · NEUTRAL ≥ 42 · LEAN_SHORT ≥ 28 · STRONG_SHORT < 28
@@ -342,7 +344,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 - **Metric object path is `data.metrics?.data?.metric`** — the Finnhub payload wraps it in `{ metric, series }`. Passing `data.metrics?.data` gives a truthy object with zero expected fields (silent all-undefined reads, PR #49 bug).
 - **profile2 marketCapitalization is in millions USD** — qualityScore multiplies by 1e6 for FCF yield.
 - **Relative Strength (v0.11)** needs SPY history: App.svelte fetches SPY daily closes once per refresh (TD or Finnhub path, cached) and passes them to `computeRelativeStrength` per ticker → `data.rs = { rs1m, rs3m }`. RS = stock return − SPY return over ~21/63 trading bars. Candle sources are both oldest-first ascending (TD uses `order=ASC`).
-- **Valuation metric keys (Finnhub):** `revenueGrowthTTMYoy`, `psTTM`/`psAnnual`. PEG is computed client-side from existing pe + epsGrowth (`valuation.js`), null when growth ≤ 0 or P/E ≤ 0. All four (RS, Rev growth, P/S, PEG) are **display-only** — they do NOT feed `computeScore` or the setups (deliberate, to keep the calibrated engine stable).
+- **Valuation metric keys (Finnhub):** `revenueGrowthTTMYoy`, `psTTM`/`psAnnual`. PEG is computed client-side from existing pe + epsGrowth (`valuation.js`), null when growth ≤ 0 or P/E ≤ 0. Since v0.30 **PEG and RS 3m feed `computeScore`** (plus the Quality Score); revenue growth and P/S stay display-only (they overlap PEG/Quality). The setup engines are unchanged.
 - **RSI on a flat/halted series returns 50, not 100.** `computeRSI` / `computeRSISeries`: `avgLoss === 0 && avgGain === 0` → neutral 50. The genuine all-gains case (`avgLoss === 0, avgGain > 0`) still returns 100. Without this a frozen ticker reads "Overbought".
 - **`chartAnchors.js` `MIN_BARS` is 30**, aligned with `computeIndicatorsFromCandles`' floor so AVWAP/POC/Fib/FVG never silently vanish while RSI/MACD still render off the same daily set. Don't raise it to 60.
 - **`pct52wRange(price, low, high)`** clamps 0–100 (null on `high <= low` or falsy inputs). A live price can exceed the 7-day-cached 52w high on a breakout; this keeps the marker inside the bar.

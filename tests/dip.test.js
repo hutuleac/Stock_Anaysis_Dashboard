@@ -171,7 +171,7 @@ describe('dip score components', () => {
 
   it('value: PEG < 1 → 1.0, < 1.5 → 0.7, < 2 → 0.4, else 0', () => {
     for (const [pe, expected] of [[10, 1.0], [18, 0.7], [25, 0.4], [35, 0]]) {
-      const t = makeTicker();
+      const t = makeTicker({ qualityScore: { total: 70, label: 'MEDIUM' } }); // gate on quality, isolate Value
       t.data.metrics.data.metric.peNormalizedAnnual = pe; // eps growth 15 → PEG = pe/15
       const hits = computeDipRadar([t], FEAR);
       expect(comp(hits, 'Value').score).toBe(expected);

@@ -448,7 +448,7 @@ export const TIPS = {
     title: 'T / F / S Sub-Scores',
     subtitle: 'Technical · Fundamental · Sentiment',
     category: 'Composite',
-    description: 'The three pillars of the composite score. T scores price action and momentum signals. F scores valuation and earnings quality. S scores news sentiment and sector positioning. Weights shown are regime-adjusted when VIX is elevated.',
+    description: 'The three pillars of the composite score, weighted 35 / 55 / 10 for a months-to-years horizon. T: trend (EMA50/200), 52-week position (a new high is not penalised), 3-month strength vs SPY, RSI/MACD/ADX/Stochastic. F: PEG (P/E when growth ≤ 0), EPS growth, and the Quality Score counted double. S: news headlines + sector momentum — kept small because it rises with hype. Weights shift further toward F when VIX is elevated.',
     levels: [
       { range: '> 60',  label: 'Bullish',  color: C.green, desc: 'This pillar is sending a bullish signal — contributes positively to overall score.' },
       { range: '40–60', label: 'Neutral',  color: C.dim,   desc: 'Neutral pillar — neither confirming nor contradicting the thesis.' },
@@ -759,7 +759,7 @@ export const TIPS = {
     title: 'Composite Score',
     subtitle: 'Weighted Technical + Fundamental + Sentiment',
     category: 'Composite',
-    description: 'Combines technical (momentum, trend), fundamental (valuation, earnings), and sentiment (news, sector) signals into a single 0–100 score. Weights shift in high-VIX regimes to reduce technical exposure.',
+    description: 'Combines fundamental (55%: PEG, EPS growth, Quality Score ×2), technical (35%: trend, 3-month strength vs SPY, momentum) and sentiment (10%: news, sector) into a single 0–100 score — tuned to find strong companies at good entries, including at new highs. Weights shift further toward fundamentals in high-VIX regimes.',
     levels: [
       { range: '72–100', label: 'Bullish',  color: C.green,  desc: 'Strong directional thesis with broad signal support. Size up with conviction.' },
       { range: '58–72',  label: 'Positive', color: C.amber,  desc: 'More bullish signals than bearish — favorable setup, not unanimous.' },
