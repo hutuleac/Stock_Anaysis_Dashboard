@@ -458,14 +458,14 @@ describe('generateThesis', () => {
     expect(hasBear).toBe(true);
   });
 
-  it('adds earnings warning when within 14 days', () => {
+  it('does not warn about earnings proximity — trade windows were removed (v0.30)', () => {
     const soon = new Date(); soon.setDate(soon.getDate() + 7);
     const ticker = {
       ...makeTicker({ price: 100 }),
       earnings: { data: { earningsCalendar: [{ date: soon.toISOString().split('T')[0] }] } },
     };
     const thesis = generateThesis(ticker, computeScore(ticker));
-    expect(thesis.warnings.some(w => w.includes('Earnings'))).toBe(true);
+    expect(thesis.warnings.some(w => /earnings|trade window/i.test(w))).toBe(false);
   });
 });
 

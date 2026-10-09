@@ -536,12 +536,6 @@ export function generateThesis(tickerData, scoreResult) {
 
 
   // ── WARNINGS ──
-  const daysToEarnings = getDaysToEarnings(tickerData.earnings);
-  if (daysToEarnings !== null && daysToEarnings <= 14)
-    warnings.push(`Earnings in ${daysToEarnings} day${daysToEarnings === 1 ? '' : 's'} — binary event risk, size down or wait.`);
-  else if (daysToEarnings !== null && daysToEarnings <= 30)
-    warnings.push(`Trade window: ~${daysToEarnings} days before earnings — factor into your hold time.`);
-
   if (scoreResult.regimeNote)
     warnings.push(scoreResult.regimeNote + ' — weight technicals lightly.');
   if (scoreResult.spyPenaltyApplied)

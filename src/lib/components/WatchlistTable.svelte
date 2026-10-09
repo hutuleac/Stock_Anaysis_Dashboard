@@ -2,7 +2,7 @@
   import { tick, onMount } from 'svelte';
   import { getTickers, getSelectedSymbol, selectTicker, removeTicker, getTickerData, addTicker, reorderTickers } from '../stores/watchlist.svelte.js';
   import { searchTicker } from '../api/finnhub.svelte.js';
-  import { computeScore, computeScoreZScore, getBadgeStyle, getDaysToEarnings, getScoreVelocity, getScoreHistory, getMarketContext, BADGE_BANDS } from '../scoring.js';
+  import { computeScore, computeScoreZScore, getBadgeStyle, getScoreVelocity, getScoreHistory, getMarketContext, BADGE_BANDS } from '../scoring.js';
   import { tickerSetups } from '../radar.js';
   import { reconcileVerdict, readinessStyle, signalChips } from '../readiness.js';
   import { proximityTo52wHigh } from '../indicators.js';
@@ -189,7 +189,7 @@
   }
 
   function exportCSV() {
-    const rows = [['Symbol', 'Sector', 'Price', 'Change%', 'Score', 'Badge', 'Technical', 'Fundamental', 'Sentiment', 'EarningsDays']];
+    const rows = [['Symbol', 'Sector', 'Price', 'Change%', 'Score', 'Badge', 'Technical', 'Fundamental', 'Sentiment']];
     for (const t of getTickers()) {
       const d = getTickerData(t.symbol);
       const s = computeScore(d);
@@ -204,7 +204,6 @@
         s.technical ?? '',
         s.fundamental ?? '',
         s.sentiment ?? '',
-        getDaysToEarnings(d?.earnings) ?? '',
       ]);
     }
     const csv = rows.map(r => r.join(',')).join('\n');
@@ -243,9 +242,6 @@
       } else if (sortBy === 'change') {
         aVal = aData?.quote?.data?.dp ?? 0;
         bVal = bData?.quote?.data?.dp ?? 0;
-      } else if (sortBy === 'earnings') {
-        aVal = getDaysToEarnings(aData?.earnings) ?? 999;
-        bVal = getDaysToEarnings(bData?.earnings) ?? 999;
       }
 
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
@@ -523,7 +519,7 @@
     {/if}
   {/snippet}
 
-  <!-- Long-Term Setup + thesis + trade window — the "why" card. -->
+  <!-- Long-Term Setup + thesis — the "why" card. -->
   <!-- One Long-Term score: total + distance to the next band, then one row per
        component (score bar · the reading behind it · points left), biggest gap
        first — so the top row is what the entry is waiting on. -->
@@ -554,7 +550,7 @@
     </div>
   {/snippet}
 
-  {#snippet ltCard(ticker, data, setup, daysToEarnings)}
+  {#snippet ltCard(ticker, data, setup)}
     <div class="mb-3 px-3 py-3 rounded-lg bg-surface-800/60 border border-border/40 space-y-3">
       {#if setup}
         {@const tTotal = data.timingScore?.total ?? null}
@@ -598,24 +594,11 @@
         </div>
       {/if}
 
-      <!-- Why this score + trade window | Revenue (5y) on the right. -->
+      <!-- Why this score | Revenue (5y) on the right. -->
       <div class="grid {data.revenueHistory?.length ? 'lg:grid-cols-2' : ''} gap-x-8 gap-y-3 {setup ? 'pt-2.5 border-t border-border/30' : ''}">
         <div class="space-y-2.5">
           <ThesisSummary symbol={ticker.symbol} />
 
-          {#if daysToEarnings !== null}
-            <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg border {daysToEarnings <= 7 ? 'bg-danger/10 border-danger/40' : daysToEarnings <= 14 ? 'bg-warning/10 border-warning/40' : 'bg-surface-700/50 border-border/40'}">
-              <span class="text-lg shrink-0">{daysToEarnings <= 7 ? '🚨' : daysToEarnings <= 14 ? '⚠️' : '📅'}</span>
-              <div class="min-w-0">
-                <p class="text-sm font-semibold leading-tight {daysToEarnings <= 7 ? 'text-danger' : daysToEarnings <= 14 ? 'text-warning' : 'text-text-secondary'}">
-                  Trade window: {daysToEarnings === 0 ? 'Earnings today' : daysToEarnings === 1 ? '1 day left' : `${daysToEarnings} days left`}
-                </p>
-                <p class="text-xs text-text-muted leading-snug">
-                  {daysToEarnings <= 7 ? 'Binary event risk — size down or wait for post-earnings.' : daysToEarnings <= 14 ? 'Factor earnings into hold time and size.' : 'Earnings not imminent — window is open.'}
-                </p>
-              </div>
-            </div>
-          {/if}
         </div>
 
         <!-- Revenue history (lazy — same financials-reported fetch as Quality Score).
@@ -682,7 +665,6 @@
 
   {#snippet expandedPanel(ticker, data, score, variant)}
     {@const setup = ltSetupFor(data)}
-    {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
     {@const rows = tickerSetups(ticker.symbol, data, dipCtx())}
     {@const verdict = reconcileVerdict(score.badge, { ...rows, longTerm: setup })}
     {@const su = topSetup(data?.setups)}
@@ -699,7 +681,7 @@
       <div class="mb-4">
         <FundamentalsBar symbol={ticker.symbol} defaultView={playbook} />
       </div>
-      {@render ltCard(ticker, data, setup, daysToEarnings)}
+      {@render ltCard(ticker, data, setup)}
       <!-- AI export toolbar -->
       <div class="flex items-center justify-end gap-1 mb-3 relative">
         <button
@@ -765,7 +747,7 @@
       <div class="border-t border-border/30">
         {@render sectionHeader('longterm', 'Long-term & thesis')}
         {#if openSections.longterm}
-          <div class="pb-3">{@render ltCard(ticker, data, setup, daysToEarnings)}</div>
+          <div class="pb-3">{@render ltCard(ticker, data, setup)}</div>
         {/if}
       </div>
 
@@ -803,7 +785,6 @@
         {@const score = computeScore(data)}
         {@const badge = getBadgeStyle(score.badge)}
         {@const quote = data?.quote?.data}
-        {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
         {@const isSelected = getSelectedSymbol() === ticker.symbol}
         {@const velocity = getScoreVelocity(ticker.symbol)}
         {@const scoreZ = computeScoreZScore(ticker.symbol)}
@@ -816,13 +797,10 @@
           tabindex="0"
           onkeydown={(e) => e.key === 'Enter' && toggleTicker(ticker.symbol)}
         >
-          <!-- Row 1: ticker + sector + badge + earnings badge -->
+          <!-- Row 1: ticker + sector + badge -->
           <div class="flex items-start justify-between mb-1.5">
             <div class="flex items-center gap-2 flex-wrap min-w-0">
               <span class="font-mono font-bold text-text-primary">{ticker.symbol}</span>
-              {#if daysToEarnings !== null && daysToEarnings <= 14}
-                <span class="text-[13px] font-semibold text-warning bg-warning/10 px-1 rounded">E {daysToEarnings}d</span>
-              {/if}
               <span class="text-[13px] text-text-secondary truncate">{ticker.sector || '—'}</span>
             </div>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold shrink-0 {badge.bg} {badge.text}">{badge.label}</span>
@@ -906,9 +884,6 @@
             </th>
             <th class="px-3 py-3 text-center hidden sm:table-cell cursor-default" use:tipAction={TIPS.setupBadge}>Setup</th>
             <th class="px-3 py-3 text-left hidden md:table-cell">Signals</th>
-            <th class="px-3 py-3 text-center hidden md:table-cell cursor-pointer hover:text-text-secondary" onclick={() => handleSort('earnings')}>
-              Earnings {sortBy === 'earnings' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-            </th>
             <th class="w-10 px-2 py-3"></th>
           </tr>
         </thead>
@@ -917,7 +892,6 @@
             {@const data = getTickerData(ticker.symbol)}
             {@const score = computeScore(data)}
             {@const badge = getBadgeStyle(score.badge)}
-            {@const daysToEarnings = getDaysToEarnings(data?.earnings)}
             {@const isSelected = getSelectedSymbol() === ticker.symbol}
             {@const quote = data?.quote?.data}
             {@const velocity = getScoreVelocity(ticker.symbol)}
@@ -1005,15 +979,6 @@
               <td class="px-3 py-3 hidden md:table-cell">
                 <div class="flex flex-wrap gap-1">{#if chips.length}{@render signalChipList(chips)}{:else}<span class="text-text-muted text-xs">—</span>{/if}</div>
               </td>
-              <td class="px-3 py-3 text-center hidden md:table-cell">
-                {#if daysToEarnings !== null}
-                  <span class="text-xs font-mono {daysToEarnings < 7 ? 'text-danger font-bold' : daysToEarnings < 14 ? 'text-warning' : 'text-text-secondary'}">
-                    {daysToEarnings}d
-                  </span>
-                {:else}
-                  <span class="text-text-muted text-xs">—</span>
-                {/if}
-              </td>
               <td class="px-2 py-3">
                 <button
                   class="text-text-muted hover:text-danger transition-colors p-1"
@@ -1026,7 +991,7 @@
             <!-- Inline expansion: Checklist + Entry Panel -->
             {#if isSelected}
               <tr>
-                <td colspan="9" class="p-0">
+                <td colspan="8" class="p-0">
                   <div class="bg-surface-800 border-b border-border px-6 py-5 transition-all">
                     {@render expandedPanel(ticker, data, score, 'desktop')}
                   </div>
