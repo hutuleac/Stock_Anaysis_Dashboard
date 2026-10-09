@@ -12,13 +12,16 @@ function timingBand(timingScore) {
   return 'WEAK';
 }
 
+// The one "quality company" bar — Dip Hunter gates on it too.
+export const QUALITY_GATE = 60;
+
 function qualityBand(qualityScore) {
   const q = qualityScore?.total ?? null;
   const label = qualityScore?.label ?? null;
   if (label === 'INSUFFICIENT_DATA') return 'WEAK_OR_UNKNOWN';
   if (q !== null && q >= 75) return 'HIGH';
   if (q !== null && q >= 65) return 'GOOD';
-  if (q !== null && q >= 60) return 'OK';
+  if (q !== null && q >= QUALITY_GATE) return 'OK';
   return 'WEAK_OR_UNKNOWN';
 }
 

@@ -70,6 +70,33 @@ describe('parseFinancials', () => {
   });
 });
 
+describe('parseFinancials — filer-specific tags (live financials-reported, Oct 2026)', () => {
+  const line = (concept, value) => ({ concept: `us-gaap_${concept}`, value });
+
+  it('reads capex from the "productive assets" (NVDA/AMZN) and "other PP&E" (LLY) tags', () => {
+    for (const tag of ['PaymentsToAcquireProductiveAssets', 'PaymentsToAcquireOtherPropertyPlantAndEquipment']) {
+      const r = parseFinancials({ data: [reportEntry({ year: 2025, cf: [OCF, line(tag, 6000000000)] })] });
+      expect(r.fcf).toBe(111500000000 - 6000000000);
+    }
+  });
+
+  it('derives diluted shares from net income ÷ diluted EPS when the filer has no share-count tag (GOOGL)', () => {
+    const ic = (ni, eps) => [line('NetIncomeLossAttributableToNoncontrollingInterest', 1), line('NetIncomeLoss', ni), line('EarningsPerShareDiluted', eps)];
+    const r = parseFinancials({ data: [
+      reportEntry({ year: 2025, ic: ic(132000000000, 10.81) }),
+      reportEntry({ year: 2024, ic: ic(100100000000, 8.04) }),
+    ] });
+    expect(r.dilutedShares).toBeCloseTo(132000000000 / 10.81);       // exact tag, not the NCI line
+    expect(r.dilutedSharesPrior).toBeCloseTo(100100000000 / 8.04);        // buyback shows as a falling count
+  });
+
+  it('trimFinancials keeps the new tags so the cached payload still parses', () => {
+    const t = trimFinancials({ data: [reportEntry({ year: 2025, cf: [line('PaymentsToAcquireProductiveAssets', 1)], ic: [line('NetIncomeLoss', 2), line('EarningsPerShareDiluted', 3)] })] });
+    expect(t.data[0].report.cf).toHaveLength(1);
+    expect(t.data[0].report.ic).toHaveLength(2);
+  });
+});
+
 describe('computeQualityScore — profitability component', () => {
   it('scores ROIC tiers: >=20% -> 18, >=15% -> 15, >=10% -> 10, >=5% -> 5, <5% -> 0', () => {
     const base = { marketCap: null, financials: null, earnings: null };

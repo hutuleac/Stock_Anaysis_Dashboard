@@ -2,10 +2,19 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 const CONCEPTS = {
   ocf: 'netcashprovidedbyusedinoperatingactivities',
-  capex: 'paymentstoacquirepropertyplantandequipment',
   buyback: 'paymentsforrepurchaseofcommonstock',
   dilutedShares: 'weightedaveragenumberofdilutedsharesoutstanding',
+  netIncome: 'netincomeloss',
+  epsDiluted: 'earningspersharediluted',
 };
+// Capex tag varies by filer, tried in order: GOOGL/AAPL use the PP&E tag,
+// NVDA/AMZN "productive assets", LLY "other PP&E" (checked against live
+// financials-reported, Oct 2026).
+const CAPEX_CONCEPTS = [
+  'paymentstoacquirepropertyplantandequipment',
+  'paymentstoacquireproductiveassets',
+  'paymentstoacquireotherpropertyplantandequipment',
+];
 
 function findConcept(lines, conceptSubstring) {
   if (!Array.isArray(lines)) return null;
@@ -13,6 +22,28 @@ function findConcept(lines, conceptSubstring) {
     (l) => l && typeof l.concept === 'string' && l.concept.toLowerCase().includes(conceptSubstring)
   );
   return hit ? num(hit.value) : null;
+}
+
+const firstConcept = (lines, list) => {
+  for (const c of list) { const v = findConcept(lines, c); if (v !== null) return v; }
+  return null;
+};
+
+// Exact tag (e.g. us-gaap_NetIncomeLoss), not a substring — NetIncomeLoss is a
+// prefix of the noncontrolling-interest lines.
+function findExact(lines, concept) {
+  const hit = Array.isArray(lines) && lines.find(l => typeof l?.concept === 'string' && l.concept.toLowerCase().endsWith(`_${concept}`));
+  return hit ? num(hit.value) : null;
+}
+
+// Diluted share count; filers that don't tag it (GOOGL reports per class) get
+// net income ÷ diluted EPS — EPS is rounded to cents, ~0.1% error, well inside
+// the ±2% share-change bands it feeds.
+function dilutedShares(ic) {
+  const direct = findConcept(ic, CONCEPTS.dilutedShares);
+  if (direct !== null) return direct;
+  const ni = findExact(ic, CONCEPTS.netIncome), eps = findExact(ic, CONCEPTS.epsDiluted);
+  return ni !== null && eps !== null && eps > 0 && ni > 0 ? ni / eps : null;
 }
 
 function pickAnnualReports(data) {
@@ -35,7 +66,7 @@ const REVENUE_CONCEPTS = [
 // Keeps only the lines parseFinancials / parseRevenueHistory read (ic + cf,
 // matching concepts, original order so first-match priority is unchanged) —
 // a filing's full statements are ~12 KB, the fields we use a few hundred bytes.
-const READ_CONCEPTS = [...Object.values(CONCEPTS), ...REVENUE_CONCEPTS];
+const READ_CONCEPTS = [...Object.values(CONCEPTS), ...CAPEX_CONCEPTS, ...REVENUE_CONCEPTS];
 export function trimFinancials(reported) {
   const keep = (lines) => (Array.isArray(lines) ? lines : [])
     .filter(l => typeof l?.concept === 'string' && READ_CONCEPTS.some(c => l.concept.toLowerCase().includes(c)))
@@ -99,18 +130,16 @@ export function parseFinancials(reported) {
   const priorIc = prior && prior.report && Array.isArray(prior.report.ic) ? prior.report.ic : [];
 
   const ocf = findConcept(cf, CONCEPTS.ocf);
-  const capex = findConcept(cf, CONCEPTS.capex);
+  const capex = firstConcept(cf, CAPEX_CONCEPTS);
   const buyback = findConcept(cf, CONCEPTS.buyback);
-  const dilutedShares = findConcept(ic, CONCEPTS.dilutedShares);
-  const dilutedSharesPrior = findConcept(priorIc, CONCEPTS.dilutedShares);
 
   return {
     fcf: ocf !== null && capex !== null ? ocf - capex : null,
     ocf,
     capex,
     buyback,
-    dilutedShares,
-    dilutedSharesPrior,
+    dilutedShares: dilutedShares(ic),
+    dilutedSharesPrior: dilutedShares(priorIc),
   };
 }
 
