@@ -4,6 +4,7 @@
   import { computeRadar } from '../radar.js';
   import { computeDipRadar } from '../dip.js';
   import { computeEtfSignals } from '../etf.js';
+  import { buildLongTermSetup } from '../longTermSetup.js';
   import { computeHighlights, computeNotifications } from '../highlights.js';
   import { signalStyle } from '../readiness.js';
 
@@ -19,7 +20,12 @@
       fearGreedValue: marketData?.fearGreed?.data?.score ?? null,
       spyBelowEma50:  marketData?.spyBelowEma50 ?? null,
     };
+    // Same inputs as LongTermScanPanel / ScanSummary, so the strip matches the panel.
+    const ltCtx = { fearGreed: dipCtx.fearGreedValue, creditStress: marketData?.macro?.creditStress ?? null };
+    const longTerm = stockList.filter(x => x.data?.timingScore && x.data.quote?.data?.c)
+      .map(x => ({ symbol: x.symbol, setup: buildLongTermSetup(x.data.timingScore, x.data.qualityScore ?? null, ltCtx) }));
     return computeHighlights({
+      longTerm,
       radarHits: computeRadar(stockList),
       dipHits: computeDipRadar(stockList, dipCtx),
       etfRows: getEtfs().map(e => ({ ucits: e.ucits, sig: signals[e.proxy] ?? null })),
