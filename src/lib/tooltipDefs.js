@@ -949,7 +949,7 @@ export const TIPS = {
     title: 'Rotation',
     subtitle: 'Entry component · max 3.0 pts',
     category: 'ETF · Entry',
-    description: 'Rewards this proxy lagging SPY over 3 months — mild underperformance reads as a rotation discount, not weakness. Scored two ways: how far it lags SPY outright, plus how far it lags the median of your other ETFs (a genuine relative laggard, not just a soft market day).',
+    description: 'Rewards this proxy lagging SPY over 3 months — mild underperformance reads as a rotation discount, not weakness. Not used for the core index funds (SPY, QQQ, RSP proxies): they are the market, not a rotation trade, so their score is rescaled to 10 without it. Scored two ways: how far it lags SPY outright, plus how far it lags the median of your other ETFs (a genuine relative laggard, not just a soft market day).',
     levels: [
       { range: 'RS3m ≤ −10% vs SPY',        label: '+1.5 pts', color: C.green, desc: 'Meaningfully lagging the index.' },
       { range: 'RS3m −5% to −10%',          label: '+1.0 pt',  color: C.green, desc: 'Mildly lagging.' },
@@ -975,16 +975,17 @@ export const TIPS = {
     title: 'Drawdown',
     subtitle: 'Entry component · max 2.0 pts',
     category: 'ETF · Entry',
-    description: 'Distance below the ~52-week daily closing high. Deeper drawdown scores higher — more of the move down is already priced in.',
+    description: 'Distance below the ~52-week closing high, measured in the fund\'s own annual volatility (σ). −10% is a real correction for SPY (σ ≈ 15%) and noise for a leveraged chip fund (σ ≈ 80%), so one fixed % band can\'t fit both.',
     levels: [
-      { range: '≥ 20% off high', label: '2.0 pts', color: C.green, desc: 'Major pullback.' },
-      { range: '12–20% off high', label: '1.5 pts', color: C.green, desc: 'Significant pullback.' },
-      { range: '8–12% off high',  label: '1.0 pt',  color: C.amber, desc: 'Moderate pullback.' },
-      { range: '5–8% off high',   label: '0.5 pt',  color: C.amber, desc: 'Mild pullback.' },
-      { range: '< 5% off high',   label: '0 pts',   color: C.dim,   desc: 'Near highs — no discount to buy at.' },
+      { range: '≥ 0.6σ off high',   label: '2.0 pts', color: C.green, desc: 'Major pullback for this fund — SPY ≈ −9% or more.' },
+      { range: '0.45–0.6σ',         label: '1.5 pts', color: C.green, desc: 'Significant pullback.' },
+      { range: '0.3–0.45σ',         label: '1.0 pt',  color: C.amber, desc: 'Moderate pullback.' },
+      { range: '0.15–0.3σ',         label: '0.5 pt',  color: C.amber, desc: 'Mild pullback.' },
+      { range: '< 0.15σ',           label: '0 pts',   color: C.dim,   desc: 'Near highs — no discount to buy at.' },
     ],
-    why: 'On its own this only measures distance moved, not whether the selling is done — pair it with Oversold and Turn for confirmation.',
+    why: 'On its own this only measures distance moved, not whether the selling is done — pair it with Oversold and Turn. Oversold and Turn both remember the last 3 weeks: on a weekly chart the low and the MACD turn are weeks apart.',
   },
+
 
   etfOverboughtComp: {
     title: 'Overbought',
