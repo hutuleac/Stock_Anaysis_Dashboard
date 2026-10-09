@@ -12,6 +12,7 @@
   import { buildLongTermSetup } from '../longTermSetup.js';
   import { chipColor, statusStyle as ltStatusStyle, statusColor, timingHint, qualityHint, timingTone, qualityTone, timingRows, qualityRows } from '../longTermIndicators.js';
   import { toneColor } from '../tone.js';
+  import { valuationVsHistory, valuationTone } from '../valuation.js';
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import ThesisSummary from './ThesisSummary.svelte';
@@ -558,6 +559,7 @@
       {#if setup}
         {@const tTotal = data.timingScore?.total ?? null}
         {@const qTotal = data.qualityScore?.total ?? null}
+        {@const val = valuationVsHistory(data.metrics?.data?.metric, data.metrics?.data?.valuationHistory)}
         <!-- Verdict first, once: badge + the matrix's own sentence. -->
         <div>
           <div class="flex items-center gap-2 mb-1">
@@ -580,6 +582,16 @@
               {@render ltSection('Quality', qTotal, toneColor(qualityTone(qTotal)), qualityHint(qTotal), TIPS.ltQuality, qualityRows(data.qualityScore))}
             {:else}
               <p class="text-[13px] text-text-muted"><span class="uppercase tracking-wider">Quality</span> · not checked yet</p>
+            {/if}
+
+            <!-- Cheap vs this stock's OWN history — the question Quality and Timing don't ask. -->
+            {#if val}
+              <div class="text-[13px] cursor-default" use:tipAction={TIPS.ltValuation}>
+                <span class="uppercase tracking-wider text-text-muted">Valuation vs own 5y</span>
+                {#each [['P/E', val.pe], ['P/S', val.ps]].filter(([, v]) => v) as [name, v], i}
+                  <span class="text-text-muted"> · </span><span class="font-mono" style="color:{toneColor(valuationTone(v.pct))}">{name} {v.now.toFixed(1)} vs {v.median} median ({v.pct > 0 ? '+' : ''}{v.pct}%)</span>
+                {/each}
+              </div>
             {/if}
 
           </div>
