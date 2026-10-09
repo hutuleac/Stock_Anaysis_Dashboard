@@ -59,6 +59,12 @@ function cacheKey(type, symbol) {
   return `fh_${type}_${symbol}`;
 }
 
+// Cached payload regardless of age, never a network call — for derived scores
+// that tolerate stale inputs (Quality on last week's filings is still right).
+export function peekCache(type, symbol) {
+  try { return JSON.parse(localStorage.getItem(cacheKey(type, symbol)))?.data ?? null; } catch { return null; }
+}
+
 function readCache(key, ttl) {
   if (ttl === 0) return null;
   try {
