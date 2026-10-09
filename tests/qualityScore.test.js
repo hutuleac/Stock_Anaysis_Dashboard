@@ -150,6 +150,15 @@ describe('computeQualityScore — cashFlow component', () => {
     expect(computeQualityScore({ metric: {}, marketCap: 1000, financials: withFcf, earnings: null }).components.cashFlow).toBe(15);
   });
 
+  it('falls back to price/FCF for the yield when the filings have no capex line', () => {
+    // NVDA-shaped: OCF filed, capex under a non-PP&E tag → fcf null; pfcfShareTTM 20 → 5% yield → 8
+    const r = computeQualityScore({ metric: { pfcfShareTTM: 20 }, marketCap: 1000, financials: { fcf: null }, earnings: null });
+    expect(r.components.cashFlow).toBe(8);
+    const neg = computeQualityScore({ metric: { pfcfShareTTM: -15 }, marketCap: null, financials: null, earnings: null });
+    expect(neg.components.cashFlow).toBe(0);
+    expect(neg.redFlags).toContain('Negative free cash flow');
+  });
+
   it('caps cashFlow at 25', () => {
     const result = computeQualityScore({ metric: { pegTTM: 0.5 }, marketCap: 1000, financials: fin(200_000_000), earnings: null });
     expect(result.components.cashFlow).toBeLessThanOrEqual(25);
@@ -164,38 +173,49 @@ describe('computeQualityScore — cashFlow component', () => {
 describe('computeQualityScore — balanceSheet component', () => {
   const base = { metric: {}, marketCap: null, financials: null, earnings: null };
 
-  it('scores debt/equity fallback tiers: <0.5 -> 10, <1.0 -> 7, <2.0 -> 3, >=2.0 -> 0 + warning', () => {
-    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 0.3 } }).components.balanceSheet).toBe(10);
-    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 0.8 } }).components.balanceSheet).toBe(7);
-    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 1.5 } }).components.balanceSheet).toBe(3);
+  it('scores debt/equity tiers: <0.5 -> 12, <1.0 -> 8, <2.0 -> 4, >=2.0 -> 0 + warning', () => {
+    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 0.3 } }).components.balanceSheet).toBe(12);
+    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 0.8 } }).components.balanceSheet).toBe(8);
+    expect(computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 1.5 } }).components.balanceSheet).toBe(4);
     const high = computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': 2.5 } });
     expect(high.components.balanceSheet).toBe(0);
     expect(high.notes.some((n) => n.includes('High leverage'))).toBe(true);
   });
 
-  it('adds current ratio tiers: >=1.5 -> +5, >=1.0 -> +3, <1.0 -> 0 + warning', () => {
-    expect(computeQualityScore({ ...base, metric: { currentRatioQuarterly: 1.8 } }).components.balanceSheet).toBe(5);
+  it('negative debt/equity (negative equity) scores 0 with a warning, not the low-debt tier', () => {
+    const neg = computeQualityScore({ ...base, metric: { 'totalDebt/totalEquityQuarterly': -3.2 } });
+    expect(neg.components.balanceSheet).toBe(0);
+    expect(neg.notes.some((n) => n.includes('Negative shareholder equity'))).toBe(true);
+  });
+
+  it('adds current ratio tiers: >=1.5 -> +6, >=1.0 -> +3, <1.0 -> 0 + warning', () => {
+    expect(computeQualityScore({ ...base, metric: { currentRatioQuarterly: 1.8 } }).components.balanceSheet).toBe(6);
     expect(computeQualityScore({ ...base, metric: { currentRatioQuarterly: 1.2 } }).components.balanceSheet).toBe(3);
     const low = computeQualityScore({ ...base, metric: { currentRatioQuarterly: 0.7 } });
     expect(low.components.balanceSheet).toBe(0);
     expect(low.notes.some((n) => n.includes('Current ratio below 1'))).toBe(true);
   });
 
-  it('adds interest coverage tiers: >=8 -> +5, >=3 -> +3, <3 -> 0 + red flag', () => {
-    expect(computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 10 } }).components.balanceSheet).toBe(5);
-    expect(computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 4 } }).components.balanceSheet).toBe(3);
+  it('adds interest coverage tiers: >=8 -> +7, >=3 -> +4, <3 -> 0 + red flag', () => {
+    expect(computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 10 } }).components.balanceSheet).toBe(7);
+    expect(computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 4 } }).components.balanceSheet).toBe(4);
     const weak = computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 1 } });
     expect(weak.components.balanceSheet).toBe(0);
     expect(weak.redFlags).toContain('Weak interest coverage');
   });
 
-  it('sums leverage + liquidity + coverage, capped at 25', () => {
+  it('uses the better of TTM and annual coverage, so one odd quarter is not a red flag', () => {
+    const amzn = computeQualityScore({ ...base, metric: { netInterestCoverageTTM: 0.62, netInterestCoverageAnnual: 8.03 } });
+    expect(amzn.components.balanceSheet).toBe(7);
+    expect(amzn.redFlags).not.toContain('Weak interest coverage');
+  });
+
+  it('the three parts reach the full 25', () => {
     const result = computeQualityScore({
       ...base,
       metric: { 'totalDebt/totalEquityQuarterly': 0.3, currentRatioQuarterly: 1.8, netInterestCoverageTTM: 10 },
     });
-    expect(result.components.balanceSheet).toBe(10 + 5 + 5);
-    expect(result.components.balanceSheet).toBeLessThanOrEqual(25);
+    expect(result.components.balanceSheet).toBe(25);
   });
 
   it('balanceSheet is null when metric is entirely absent', () => {
@@ -326,9 +346,9 @@ describe('computeQualityScore — total, label, INSUFFICIENT_DATA', () => {
       financials: null,
       earnings: earn2([[2, 1], [1, 2]]),
     });
-    // profitability: 10+4=14, cashFlow: null, balanceSheet: 3+3=6, shareholderReturn: 0 (metric present, no dividend/payout keys), earningsQuality: 4 (50% beat)
-    expect(result.components).toEqual({ profitability: 14, cashFlow: null, balanceSheet: 6, shareholderReturn: 0, earningsQuality: 4 });
-    expect(result.total).toBe(24);
+    // profitability: 10+4=14, cashFlow: null, balanceSheet: 4+3=7, shareholderReturn: 0 (metric present, no dividend/payout keys), earningsQuality: 4 (50% beat)
+    expect(result.components).toEqual({ profitability: 14, cashFlow: null, balanceSheet: 7, shareholderReturn: 0, earningsQuality: 4 });
+    expect(result.total).toBe(25);
     expect(result.label).toBe('LOW');
   });
 });

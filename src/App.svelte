@@ -1,5 +1,5 @@
 <script>
-  import { getApiKey, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, setNetworkEnabled, fetchFinancialsReported, fetchHistoricalEarnings } from './lib/api/finnhub.svelte.js';
+  import { getApiKey, getRefreshProgress, refreshAll, fetchSectorETFQuote, getSectorETF, fetchMarketContext, isStorageFull, clearStorageFullFlag, fetchCandles, fetchProfile, fetchSmartMoney, hydrateFromCache, pruneOrphanedCache, delay, setNetworkEnabled, fetchFinancialsReported, fetchHistoricalEarnings, peekCache } from './lib/api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTimeSeries } from './lib/api/twelvedata.svelte.js';
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { detectMarketRegime } from './lib/macro.js';
@@ -231,6 +231,12 @@
         const marketRegime = detectMarketRegime({
           spyCloses, volProxy, fearGreed: fearGreedValue, macro: macroCtx?.regime ?? null,
         });
+        // Persisted with the supplement so a reload restores the regime-aware
+        // timing bands instead of falling back to bear/chop ones until refresh.
+        if (marketContextData) {
+          marketContextData.regime = marketRegime?.regime ?? null;
+          marketContextData.pullbackScale = marketRegime?.pullbackScale ?? null;
+        }
         setMarketContext({
           vixPrice:       volProxy,
           spyDowntrend:   spyBelowEma50 ?? ((marketContextData?.spy?.data?.dp ?? 0) < -0.5),
@@ -399,6 +405,15 @@
         await delay(100);
       }
 
+      // Quality from what is already cached (published snapshot or an earlier
+      // row expand) — zero calls, so the Long-Term scan sees quality without
+      // every row being expanded first. Uncached tickers stay lazy.
+      for (const ticker of tickers) {
+        const data = results[ticker.symbol];
+        const fin = peekCache('financials', ticker.symbol), earn = peekCache('earnings_hist', ticker.symbol);
+        if (data && fin && earn) Object.assign(data, qualityFrom(data, fin, earn));
+      }
+
       // Store score snapshots for velocity tracking
       for (const ticker of tickers) {
         const data = results[ticker.symbol];
@@ -494,14 +509,19 @@
         fetchFinancialsReported(symbol).catch(() => null),
         fetchHistoricalEarnings(symbol, 8).catch(() => null),
       ]);
-      const financials = finRes?.data ? parseFinancials(finRes.data) : null;
-      const revenueHistory = finRes?.data ? parseRevenueHistory(finRes.data) : null;
-      const earnings = Array.isArray(earnRes?.data) ? earnRes.data : null;
-      const marketCap = data.profile?.marketCapitalization ?? null;
-      const metric = data.metrics?.data?.metric ?? null;
-      const quality = computeQualityScore({ metric, marketCap, financials, earnings });
-      setMarketData({ [symbol]: { ...data, qualityScore: quality, revenueHistory } });
+      setMarketData({ [symbol]: { ...data, ...qualityFrom(data, finRes?.data, earnRes?.data) } });
     } catch { /* non-blocking — Long-Term Setup shows "not yet checked" */ }
+  }
+
+  function qualityFrom(data, fin, earn) {
+    const earnings = Array.isArray(earn) ? earn : null;
+    const qualityScore = computeQualityScore({
+      metric: data.metrics?.data?.metric ?? null,
+      marketCap: data.profile?.marketCapitalization ?? null,
+      financials: fin ? parseFinancials(fin) : null,
+      earnings,
+    });
+    return { qualityScore, revenueHistory: fin ? parseRevenueHistory(fin) : null };
   }
 
   // Market context for computeTimingScore — same source as the scoring engine
@@ -621,6 +641,8 @@
                                 ?? ((sup.marketContextData.spy?.data?.dp ?? 0) < -0.5),
               fearGreedValue: sup.marketContextData.fearGreed?.data?.score ?? null,
               macro:          macroCtx?.regime ?? null,
+              regime:         sup.marketContextData.regime ?? null,
+              pullbackScale:  sup.marketContextData.pullbackScale ?? null,
             });
           }
           if (sup.ts) lastRefreshed = new Date(sup.ts);

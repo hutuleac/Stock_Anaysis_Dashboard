@@ -159,10 +159,20 @@ function scoreProfitability(metric) {
   return { score: Math.min(30, score), notes, warnings };
 }
 
-function scoreCashFlow(metric, marketCap, financials) {
+// FCF yield (%) from the filed statements, else Finnhub's price/FCF ratio.
+// Capex tags vary by filer (NVDA, AMZN, LLY don't use the PP&E tag), and a
+// missing FCF used to score as 0 — up to 15 points lost on a data artifact.
+function fcfYieldPct(metric, marketCap, financials) {
   const fcf = financials ? num(financials.fcf) : null;
-  const marketCapNum = num(marketCap);
-  const hasFcfInputs = fcf !== null && marketCapNum !== null;
+  const mc = num(marketCap);
+  if (fcf !== null && mc !== null && mc > 0) return (fcf / (mc * 1e6)) * 100;
+  const pfcf = metric ? num(metric.pfcfShareTTM) : null;
+  return pfcf !== null && pfcf !== 0 ? 100 / pfcf : null;
+}
+
+function scoreCashFlow(metric, marketCap, financials) {
+  const fcfYield = fcfYieldPct(metric, marketCap, financials);
+  const hasFcfInputs = fcfYield !== null;
   const pegRaw = metric ? num(metric.pegTTM) : null;
   const hasPegInput = pegRaw !== null && pegRaw > 0;
   if (!hasFcfInputs && !hasPegInput) return { score: null, notes: [], warnings: [], redFlags: [] };
@@ -171,9 +181,7 @@ function scoreCashFlow(metric, marketCap, financials) {
   let score = 0;
 
   if (hasFcfInputs) {
-    const marketCapUsd = marketCapNum * 1e6;
-    const fcfYield = (fcf / marketCapUsd) * 100;
-    if (fcf < 0) {
+    if (fcfYield < 0) {
       redFlags.push('Negative free cash flow');
     } else if (fcfYield >= 8) score += 15;
     else if (fcfYield >= 6) score += 12;
@@ -199,25 +207,31 @@ function scoreBalanceSheet(metric) {
   const redFlags = [];
   let score = 0;
 
+  // 12 + 6 + 7 = 25 — the cap was 25 but the parts only reached 20.
   const debtEquity = num(metric['totalDebt/totalEquityQuarterly']);
   if (debtEquity !== null) {
-    if (debtEquity < 0.5) score += 10;
-    else if (debtEquity < 1.0) score += 7;
-    else if (debtEquity < 2.0) score += 3;
+    // Negative D/E = negative equity (buyback-heavy names): not "low debt".
+    if (debtEquity < 0) warnings.push('Negative shareholder equity — debt/equity not meaningful');
+    else if (debtEquity < 0.5) score += 12;
+    else if (debtEquity < 1.0) score += 8;
+    else if (debtEquity < 2.0) score += 4;
     else warnings.push('High leverage: debt/equity at or above 2');
   }
 
   const currentRatio = num(metric.currentRatioQuarterly);
   if (currentRatio !== null) {
-    if (currentRatio >= 1.5) score += 5;
+    if (currentRatio >= 1.5) score += 6;
     else if (currentRatio >= 1.0) score += 3;
     else warnings.push('Current ratio below 1');
   }
 
-  const coverage = num(metric.netInterestCoverageTTM);
+  // TTM coverage swings on one odd quarter (AMZN: TTM 0.6 vs annual 8.0) —
+  // use the better of TTM and annual so a single print can't raise a red flag.
+  const covTtm = num(metric.netInterestCoverageTTM), covAnn = num(metric.netInterestCoverageAnnual);
+  const coverage = covTtm === null ? covAnn : covAnn === null ? covTtm : Math.max(covTtm, covAnn);
   if (coverage !== null) {
-    if (coverage >= 8) score += 5;
-    else if (coverage >= 3) score += 3;
+    if (coverage >= 8) score += 7;
+    else if (coverage >= 3) score += 4;
     else redFlags.push('Weak interest coverage');
   }
 
