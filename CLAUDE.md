@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.27
+# Project State — Stock Analysis Dashboard v0.28
 
 ## What this is
 
@@ -145,7 +145,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 26 files, 534 tests (~1s). One test file per lib module, same basename.
+tests/                — 26 files, 541 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -241,13 +241,13 @@ All 8 Entry/Exit components and both section headers have `tipAction` tooltips (
 
 Three-slice framework for long-horizon accumulation, all display-only:
 
-- **Timing Score** `computeTimingScore({ dailyCandles, weeklyCandles, marketContext })` → 0–100 across drawdown 20 / oversold (D+W+M RSI) 20 / reversal 15 / consolidation 15 / volume 15 / market ctx 15 (caps exported as `TIMING_MAX` — `longTermIndicators.js` imports them, so chip maxes can no longer drift). Null-safe: missing components are omitted, all-null → total null. Primitives live in `technicalPatterns.js`. Market ctx comes from App.svelte's `timingMarketContext()` (derived from `getMarketContext()`; `spyAboveEma50 = !spyDowntrend` — same EMA50 semantic). `sectorOutperforming` is per-ticker and stays unset.
+- **Timing Score** `computeTimingScore({ dailyCandles, weeklyCandles, marketContext })` → 0–100 = drawdown 25 + **phase 50** + market 25 (caps exported as `TIMING_MAX`; `longTermIndicators.js` imports them). **Phase is the best of three paths, not their sum (v0.28):** Oversold (D/W/M RSI + capitulation volume), Reversal (divergence, EMA20 reclaim, MACD, up/down volume — scored 0 unless drawdown ≥ 8, i.e. something to turn from), Base (BB-width percentile, base length, volume breakout; the base is measured to the *prior* bar so a breakout can fire). Result carries `paths` + winning `phase`; the UI names the Phase row after the winner. Summing the paths capped real data at ~60 (Oct 2026 sweep: 26 symbols × 19 months, never ≥ 70), so ACCUMULATE could only come from the panic boost. After: STRONG on ~2% of days in a calm bull, ~10% in a fearful bull. Market = trend (BULL 10 / LATE 6 / CHOP 4 / BEAR 0, or SPY>EMA50 6) + sentiment (F&G <25 15 · <35 11 · <45 7 · <55 3; volatility fallback when F&G is missing) — fear is opportunity; systemic risk is the credit-stress gate's job. Null-safe: missing components are omitted, all-null → total null. Primitives live in `technicalPatterns.js`. Market ctx comes from App.svelte's `timingMarketContext()`.
 - **Quality Score** `computeQualityScore({ metric, marketCap, financials, earnings })` → 0–100 across profitability 30 / cashFlow 25 / balanceSheet 25 / shareholderReturn 10 / earningsQuality 10. Label INSUFFICIENT_DATA under 3 non-null components. Fetched **lazily on row expand** (`loadQualityScoreForTicker`, 2 extra cached Finnhub calls: financials-reported 7d + earnings 24h) — never on batch refresh. `parseFinancials` extracts FCF/buyback/diluted shares from the raw financials-reported payload by concept substring.
 - **Revenue history (v0.21):** `parseRevenueHistory(reported, years=5)` in `qualityScore.js` reuses the exact same financials-reported payload as `parseFinancials` (zero new API calls) to extract annual revenue + YoY growth per fiscal year, oldest→newest. Revenue concept tag varies by filer/era, tried in priority order (`REVENUE_CONCEPTS`: ASC 606 tags → `salesrevenuenet` → generic `revenues`) via the same `findConcept` substring-match helper. Stored as `data.revenueHistory` alongside `qualityScore` in `loadQualityScoreForTicker` (App.svelte). Rendered as a 5-bar mini chart (green/red by YoY sign, hover tooltip per bar) in the WatchlistTable Long-Term Setup card, right of "Why this score" (bottom row) — answers "is growth accelerating or decelerating", which the single YoY number in FundamentalsBar's `revenueGrowthTTMYoy` chip can't show on its own. Not surfaced in `LongTermScanPanel` (quality data stays lazy there too).
 - **Long-Term Setup** `buildLongTermSetup(timingScore, qualityScore, { fearGreed, creditStress })` — fixed gate matrix (never blends the totals): timing STRONG×quality ≥60 → ACCUMULATE; STRONG×weak/unknown → OVERSOLD_BUT_CAUTION (UI: "CHECK QUALITY"); WATCH×good → WATCHLIST (boosted to ACCUMULATE when F&G < 30); WEAK → WAIT. Rendered in the WatchlistTable expanded row + `LongTermScanPanel`.
 - **Indicator breakdown:** `longTermIndicators.js` (`timingChips` / `qualityChips`) maps the component sub-scores into labelled chips — pure formatting, zero new compute; colours come from the shared ramp (see Colour system). The expanded card uses `timingRows` / `qualityRows` instead (see Long-Term Setup card below); scan-panel rows show T/Q totals + timing chips (quality stays lazy). Timing chip maxes are imported from `TIMING_MAX`; the quality ones are mirrored literals — `tests/longTermIndicators.test.js` asserts both sets sum to 100.
 - **HY credit-stress gate (FRED `BAMLH0A0HYM2`):** `deriveMacroRegime` adds `creditStress` — STRESS when HY spread > 5% or Δ ≥ +0.5pp over ~20 sessions, ELEVATED 4–5%, CALM below. STRESS demotes ACCUMULATE → OVERSOLD_BUT_CAUTION and overrides the panic boost (systemic risk, not a dip); ELEVATED appends a staged-entries reason. This is the **only macro input that changes classification** — everything else in the Macro tile is context-only. Deliberately rejected as redundant/YAGNI (Jul 2026): T10Y3M, DFF, ICSA, Alpha Vantage fallback, CBOE vol indices, direct SEC EDGAR (Finnhub financials-reported *is* EDGAR data).
-- **Where it renders:** the Long-Term Setup card and the `ThesisSummary` / Trade-Window block are **one** card in `WatchlistTable.svelte`'s `expandedPanel` snippet. `ThesisSummary` is rendered only from there — `EntryPanel.svelte` does not import it. Every element in the card (status badge, both totals, all 11 component rows) has a `TIPS.lt*` tooltip; the chip→tooltip mapping is `WatchlistTable.svelte`'s `LT_CHIP_TIPS` — keep it in sync with `longTermIndicators.js`'s component keys.
+- **Where it renders:** the Long-Term Setup card and the `ThesisSummary` / Trade-Window block are **one** card in `WatchlistTable.svelte`'s `expandedPanel` snippet. `ThesisSummary` is rendered only from there — `EntryPanel.svelte` does not import it. Every element in the card (status badge, both totals, all 8 component rows) has a `TIPS.lt*` tooltip; the chip→tooltip mapping is `WatchlistTable.svelte`'s `LT_CHIP_TIPS` — keep it in sync with `longTermIndicators.js`'s component keys.
 
 ## UI conventions
 
@@ -270,7 +270,7 @@ Three-slice framework for long-horizon accumulation, all display-only:
 
 ### Long-Term Setup card
 
-One colour ramp across the whole card so a colour means the same thing on every element — status badge, Timing/Quality totals, all 11 component rows, the verdict line, and the scan-panel rows. Display-only, zero new math.
+One colour ramp across the whole card so a colour means the same thing on every element — status badge, Timing/Quality totals, all 8 component rows, the verdict line, and the scan-panel rows. Display-only, zero new math.
 
 - **`TONE`** (now in `tone.js`, shared with every readiness badge) is the single source: `good` #22c55e (working for you) · `partial` #f59e0b (partly there) · `caution` #f97316 (timing is there, quality gate is not) · `waiting` #94a3b8 (not contributing yet — what you're waiting on) · `none` #6b7280 (no data). A real **0 is `waiting`, a null is `none`** — a zero is information, a missing input is not. Both components render the tint via `chipStyle()` / `statusStyle()`, which return inline `color:…;background:…` strings, not Tailwind classes, so the ramp can't drift between the two panels.
 - **`statusTone`** gives ACCUMULATE / WATCHLIST / OVERSOLD_BUT_CAUTION three different colours. They used to share one purple `uncertain`, which hid the most important distinction in the matrix: a good name waiting on timing vs a cheap name that failed the quality gate.
@@ -324,7 +324,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 - **`end` rescales the finished series** so the last close lands on the price in `DEMO_MARKET_DATA` — otherwise the chart disagrees with the quote above it, and an uptrend shape walks a proxy to 3× its starting price.
 - **SPY carries `noTail: true`.** It is the RS benchmark; giving it the same breakout tail as the uptrend names cancels every ticker's relative strength to ~0 and the leaders gates then filter the whole watchlist out.
 - `DEMO_QUALITY` / `DEMO_REVENUE_HISTORY` are the exception — they'd normally come from the lazy financials-reported fetch, so the *computed* results are hardcoded rather than a fake XBRL payload.
-- Timing tops out around 44 (WEAK) on the dip name, so demo never reaches ACCUMULATE. Deliberate stopping point: pushing further is tuning a synthetic market, not building the product.
+- Demo timing is not tuned for ACCUMULATE (NVDA reads ~65 WATCH). Deliberate stopping point: pushing further is tuning a synthetic market, not building the product.
 
 ## Known conventions / gotchas
 
@@ -351,7 +351,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 534 unit tests, ~1s
+npm test          # 541 unit tests, ~1s
 npm run build     # production build → dist/
 ```
 

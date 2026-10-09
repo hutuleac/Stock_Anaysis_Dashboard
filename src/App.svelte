@@ -320,7 +320,7 @@
               results[ticker.symbol].timingScore = computeTimingScore({
                 dailyCandles: synthetic,
                 weeklyCandles: weeklyRaw,
-                marketContext: timingMarketContext(results[ticker.symbol].sectorMomentum),
+                marketContext: timingMarketContext(),
               });
 
               if (spyCloses) {
@@ -356,7 +356,7 @@
             results[ticker.symbol].timingScore = computeTimingScore({
               dailyCandles: candleRes?.data,
               weeklyCandles: weeklyRes?.data,
-              marketContext: timingMarketContext(results[ticker.symbol].sectorMomentum),
+              marketContext: timingMarketContext(),
             });
 
             if (spyCloses && candleRes?.data?.c?.length) {
@@ -505,9 +505,8 @@
   }
 
   // Market context for computeTimingScore — same source as the scoring engine
-  // (spyDowntrend there already means "SPY below EMA50"), plus the per-ticker
-  // sectorMomentum already computed on refresh (sector ETF avg daily % move).
-  function timingMarketContext(sectorMomentum) {
+  // (spyDowntrend there already means "SPY below EMA50") plus the macro regime.
+  function timingMarketContext() {
     const ctx = getMarketContext() ?? {};
     const spyKnown = typeof ctx.spyDowntrend === 'boolean';
     return {
@@ -515,8 +514,6 @@
       volProxy: ctx.vixPrice ?? null,
       spyAboveEma50: spyKnown ? !ctx.spyDowntrend : null,
       spyDowntrend: spyKnown ? ctx.spyDowntrend : null,
-      // sector ETF avg daily % move; > 1 matches scoring.js's positive tier
-      sectorOutperforming: Number.isFinite(sectorMomentum) ? sectorMomentum > 1 : null,
       regime: ctx.regime ?? null,
     };
   }
@@ -546,7 +543,7 @@
         const st = computeSetupSignals(weekly);  if (st) d.setups = st;
       }
       d.timingScore = computeTimingScore({
-        dailyCandles: daily, weeklyCandles: weekly, marketContext: timingMarketContext(d.sectorMomentum),
+        dailyCandles: daily, weeklyCandles: weekly, marketContext: timingMarketContext(),
       });
       if (DEMO_QUALITY[symbol]) d.qualityScore = DEMO_QUALITY[symbol];
       if (DEMO_REVENUE_HISTORY[symbol]) d.revenueHistory = DEMO_REVENUE_HISTORY[symbol];
@@ -640,7 +637,7 @@
         data.timingScore = computeTimingScore({
           dailyCandles: data._candlesDaily,
           weeklyCandles: data._candlesWeekly,
-          marketContext: timingMarketContext(data.sectorMomentum),
+          marketContext: timingMarketContext(),
         });
       }
       delete data._candlesDaily;
@@ -674,7 +671,7 @@
                 data.timingScore = computeTimingScore({
                   dailyCandles: synthetic,
                   weeklyCandles: weeklyRaw,
-                  marketContext: timingMarketContext(data.sectorMomentum),
+                  marketContext: timingMarketContext(),
                 });
               }
             }

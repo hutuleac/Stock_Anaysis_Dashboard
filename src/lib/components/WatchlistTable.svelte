@@ -346,8 +346,7 @@
   }
 
   const LT_CHIP_TIPS = {
-    drawdown: 'ltDrawdown', oversold: 'ltOversold', reversal: 'ltReversal',
-    consolidation: 'ltBase', volumeBehavior: 'ltVolume', marketContext: 'ltMarket',
+    drawdown: 'ltDrawdown', phase: 'ltPhase', marketContext: 'ltMarket',
     profitability: 'ltProfit', cashFlow: 'ltCash', balanceSheet: 'ltBalance',
     shareholderReturn: 'ltPayout', earningsQuality: 'ltEarnings',
   };
