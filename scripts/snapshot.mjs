@@ -31,6 +31,15 @@ if (mode === 'reuse' || !fhKey) {
 }
 if (mode === 'open' && !live) mode = 'close'; // nothing to start from
 
+// CNN answers a bare Node fetch with "418 I'm a teapot. You're a bot." —
+// browsers send a User-Agent, this run has to as well or the snapshot never
+// carries Fear & Greed (the app fetcher itself stays untouched).
+const nodeFetch = globalThis.fetch;
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36';
+globalThis.fetch = (url, opts = {}) => String(url).includes('dataviz.cnn.io')
+  ? nodeFetch(url, { ...opts, headers: { ...opts.headers, 'User-Agent': BROWSER_UA } })
+  : nodeFetch(url, opts);
+
 const store = new Map(mode === 'open' ? Object.entries(live.entries) : []);
 globalThis.localStorage = {
   getItem: (k) => (store.has(k) ? store.get(k) : null),
