@@ -156,11 +156,35 @@ describe('computeEtfSignals', () => {
 
   it('handles missing spyCloses (rs null, rotation components 0)', () => {
     const out = computeEtfSignals(
-      [{ proxy: 'QQQ', weeklyRaw: makeWeekly(ramp(100, 90, 52)), dailyCloses: ramp(100, 90, 252) }],
+      [{ proxy: 'SMH', weeklyRaw: makeWeekly(ramp(100, 90, 52)), dailyCloses: ramp(100, 90, 252) }],
       null,
     );
-    expect(out.QQQ.rs.rs3m).toBeNull();
-    expect(comp(out.QQQ.entry, 'Rotation').score).toBe(0);
+    expect(out.SMH.rs.rs3m).toBeNull();
+    expect(comp(out.SMH.entry, 'Rotation').score).toBe(0);
+  });
+
+  it('core index proxies drop Rotation and rescale to 10', () => {
+    const out = computeEtfSignals([{ proxy: 'SPY', weeklyRaw: makeWeekly(ramp(100, 90, 52)), dailyCloses: ramp(100, 90, 252) }], null);
+    expect(comp(out.SPY.entry, 'Rotation')).toBeUndefined();
+    expect(out.SPY.entry.components.reduce((s, c) => s + c.max, 0)).toBe(7);
+  });
+
+  it('remembers the last 3 weeks: oversold then turning still scores both', () => {
+    // 40 weeks down hard, then 2 up weeks — RSI has bounced off oversold by now
+    const closes = [...ramp(100, 50, 40), 60, 68]; // RSI now ~53, 2 weeks ago ~0
+    const out = computeEtfSignals([{ proxy: 'SMH', weeklyRaw: makeWeekly(closes), dailyCloses: ramp(100, 55, 252) }], null);
+    expect(comp(out.SMH.entry, 'Oversold').score).toBeGreaterThan(0);
+  });
+});
+
+describe('scoreEtfEntry drawdown in volatility units', () => {
+  const base = { rsiW: 50, belowLowerBB: false, rs3m: null, groupMedianRs3m: null, macdCross: null, divergence: null };
+  it('the same −10% is deep for a calm fund and shallow for a volatile one', () => {
+    expect(comp(scoreEtfEntry({ ...base, drawdownPct: 10, volPct: 15 }), 'Drawdown').score).toBe(2.0);  // 0.67σ
+    expect(comp(scoreEtfEntry({ ...base, drawdownPct: 10, volPct: 80 }), 'Drawdown').score).toBe(0);    // 0.13σ
+  });
+  it('falls back to the fixed % bands without a volatility reading', () => {
+    expect(comp(scoreEtfEntry({ ...base, drawdownPct: 12 }), 'Drawdown').score).toBe(1.5);
   });
 });
 

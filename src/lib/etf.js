@@ -1,6 +1,6 @@
 // ETF entry/exit signal engine — display-only, weekly cadence (months-to-a-year horizon).
 // Signals run on the US-listed proxy of each UCITS ETF (see etflist store).
-import { computeRSI, emaArray, computeMACD, computeRelativeStrength } from './indicators.js';
+import { computeRSI, emaArray, computeMACD, computeRelativeStrength, realizedVol } from './indicators.js';
 import { detectDivergence } from './signals.js';
 import { scoreTierHint, rankGaps } from './readiness.js';
 
@@ -21,7 +21,14 @@ function median(arr) {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-export function scoreEtfEntry({ rsiW, belowLowerBB, rs3m, groupMedianRs3m, macdCross, divergence, drawdownPct }) {
+// Rotation (lagging SPY → capital may rotate in) is a sector/thematic idea.
+// SPY can't lag itself and the broad-market funds rarely lag it, so for these
+// core proxies Rotation is dropped and the score rescaled to 10 — otherwise
+// CSPX/VUAA/CNDX could never reach ACT even at a real correction.
+export const CORE_PROXIES = new Set(['SPY', 'QQQ', 'RSP']);
+const RECENT_WEEKS = 3;
+
+export function scoreEtfEntry({ rsiW, belowLowerBB, rs3m, groupMedianRs3m, macdCross, divergence, drawdownPct, volPct = null, core = false }) {
   const components = [];
 
   const rsi = num(rsiW);
@@ -47,7 +54,7 @@ export function scoreEtfEntry({ rsiW, belowLowerBB, rs3m, groupMedianRs3m, macdC
       rotDetail = `RS3m ${r3 > 0 ? '+' : ''}${r3}% vs SPY`;
     }
   }
-  components.push({ label: 'Rotation', score: rotation, max: 3.0, detail: rotDetail });
+  if (!core) components.push({ label: 'Rotation', score: rotation, max: 3.0, detail: rotDetail });
 
   let turn = 0;
   const turnParts = [];
@@ -56,12 +63,19 @@ export function scoreEtfEntry({ rsiW, belowLowerBB, rs3m, groupMedianRs3m, macdC
   components.push({ label: 'Turn', score: turn, max: 2.0,
     detail: turnParts.length ? turnParts.join(', ') : 'no turn yet' });
 
-  const dd = num(drawdownPct);
-  const drawdown = dd === null ? 0 : dd >= 20 ? 2.0 : dd >= 12 ? 1.5 : dd >= 8 ? 1.0 : dd >= 5 ? 0.5 : 0;
+  // Drawdown in units of the fund's own annual volatility: −10% is a real
+  // correction for SPY (σ≈15%) and noise for SOXL (σ≈80%). Fixed % bands
+  // without a volatility reading.
+  const dd = num(drawdownPct), vol = num(volPct);
+  const z = dd !== null && vol !== null && vol > 0 ? dd / vol : null;
+  const drawdown = dd === null ? 0
+    : z !== null ? (z >= 0.6 ? 2.0 : z >= 0.45 ? 1.5 : z >= 0.3 ? 1.0 : z >= 0.15 ? 0.5 : 0)
+    : (dd >= 20 ? 2.0 : dd >= 12 ? 1.5 : dd >= 8 ? 1.0 : dd >= 5 ? 0.5 : 0);
   components.push({ label: 'Drawdown', score: drawdown, max: 2.0,
-    detail: dd === null ? 'n/a' : `−${Math.round(dd)}% off 52w high` });
+    detail: dd === null ? 'n/a' : `−${Math.round(dd)}% off 52w high${z !== null ? ` (${z.toFixed(1)}σ)` : ''}` });
 
-  const score = round1(components.reduce((s, c) => s + c.score, 0));
+  const maxSum = components.reduce((s, c) => s + c.max, 0);
+  const score = round1(components.reduce((s, c) => s + c.score, 0) * 10 / maxSum);
   return { score, components, readiness: readinessFor(score), tierHint: scoreTierHint(score), waitingOn: rankGaps(components) };
 }
 
@@ -128,6 +142,13 @@ export function computeEtfSignals(list, spyCloses) {
     const rsiW = computeRSI(wc);
     const macd = computeMACD(wc);
     const divergence = detectDivergence(wc, wh, wl);
+    // Entry memory of RECENT_WEEKS: the low (oversold) and the turn (MACD cross)
+    // are weeks apart on a weekly chart, so scoring both only on the same bar
+    // meant they never added up. "Oversold recently, turning now" counts.
+    const back = (k) => wc.slice(0, wc.length - k);
+    const recent = Array.from({ length: RECENT_WEEKS }, (_, k) => back(k)).filter(c => c.length >= 20);
+    const rsiRecentMin = Math.min(...recent.map(c => computeRSI(c) ?? Infinity));
+    const crossRecent = recent.some(c => computeMACD(c)?.crossover === 'bullish_cross') ? 'bullish_cross' : null;
 
     // Weekly BB(20,2) lower band — population σ, same convention as indicators.js
     const last20 = wc.slice(-20);
@@ -184,8 +205,9 @@ export function computeEtfSignals(list, spyCloses) {
         roc13w,
       },
       entry: scoreEtfEntry({
-        rsiW, belowLowerBB, rs3m: rs.rs3m, groupMedianRs3m,
-        macdCross: macd?.crossover ?? null, divergence, drawdownPct,
+        rsiW: Number.isFinite(rsiRecentMin) ? rsiRecentMin : rsiW, belowLowerBB, rs3m: rs.rs3m, groupMedianRs3m,
+        macdCross: crossRecent, divergence, drawdownPct,
+        volPct: realizedVol(dailyCloses, 252), core: CORE_PROXIES.has(proxy),
       }),
       exit: scoreEtfExit({
         rsiW, extensionPct, rs1m: rs.rs1m, rs3m: rs.rs3m, volumeRatio,
