@@ -12,7 +12,7 @@
   import { tdValuesToCandles, TD_DAILY_BARS } from './lib/candles.js';
   import { getTickers, getSymbols, setMarketData, getTickerData, selectTicker, getSelectedSymbol, loadDemoTickers, clearDemoTickers } from './lib/stores/watchlist.svelte.js';
   import { DEMO_TICKERS, DEMO_MARKET_DATA, DEMO_MARKET_CONTEXT, DEMO_CANDLES, DEMO_QUALITY, DEMO_REVENUE_HISTORY } from './lib/demoData.js';
-  import { getDaysToEarnings, computeScore, storeScoreSnapshot, setMarketContext, getMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
+  import { computeScore, storeScoreSnapshot, setMarketContext, getMarketContext, storeSectorMomentumSnapshot, getSectorMomentumHistory, computeSectorMomentum } from './lib/scoring.js';
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';

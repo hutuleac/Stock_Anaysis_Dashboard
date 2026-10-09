@@ -330,6 +330,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ## Known conventions / gotchas
 
 - `sectorTrend === true` means the sector ETF is in a **downtrend** (confusing name — do not invert). Consistent across `computeScore` and `generateThesis`.
+- **Earnings proximity is not shown in the UI (removed v0.30):** no trade-window box, no Earnings column, no `E 5d` chip, no thesis warning. It never fed a score. `getDaysToEarnings` survives only for the AI export's `days-to-earnings` line — don't reintroduce it as a trade window; the horizon here is months to years.
 - `getDaysToEarnings` parses date strings as UTC midnight. In US timezones "today" may return 1 instead of 0 due to `Math.ceil` on a small negative diff — known, not a bug.
 - **`TD_DAILY_BARS` (candles.js, 400)** is the one daily outputsize for every TD fetch *and* the `td_ts_1day_<sym>_1day_<N>` key the startup hydrate reads — a site with its own literal fetches fine but hydrates blank. 400 trading days ≈ 19 monthly bars; monthly RSI(14) needs 15 (250 gave ~12, so Timing's monthly-RSI points were unreachable). The chart's daily timeframes use it too, so opening a chart is a cache hit.
 - TwelveData is rate-limited to 8 calls/min on the free tier. The `twelvedata.svelte.js` queue handles this; do not add raw fetch calls outside it.
