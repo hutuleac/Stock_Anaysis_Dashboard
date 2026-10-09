@@ -3,18 +3,18 @@ import { timingChips, qualityChips, chipColor, chipTone, chipStyle, statusTone, 
 import { TIMING_MAX } from '../src/lib/timingScore.js';
 
 describe('timingChips', () => {
-  it('returns all six timing components in display order', () => {
-    const chips = timingChips({ drawdown: 12, oversold: 6, reversal: 8, consolidation: 5, volumeBehavior: 6, marketContext: 3 });
-    expect(chips.map(c => c.label)).toEqual(['Drawdown', 'Oversold', 'Reversal', 'Base', 'Volume', 'Market']);
-    expect(chips.map(c => c.max)).toEqual([20, 20, 15, 15, 15, 15]);
+  it('returns the three timing components in display order', () => {
+    const chips = timingChips({ drawdown: 12, phase: 30, marketContext: 3 });
+    expect(chips.map(c => c.label)).toEqual(['Drawdown', 'Phase', 'Market']);
+    expect(chips.map(c => c.max)).toEqual([25, 50, 25]);
     expect(chips[0].score).toBe(12);
   });
 
   it('maps a missing/non-finite component to null (distinct from 0)', () => {
-    const chips = timingChips({ drawdown: 0, oversold: null });
+    const chips = timingChips({ drawdown: 0, phase: null });
     expect(chips.find(c => c.key === 'drawdown').score).toBe(0);
-    expect(chips.find(c => c.key === 'oversold').score).toBeNull();
-    expect(chips.find(c => c.key === 'reversal').score).toBeNull(); // absent key
+    expect(chips.find(c => c.key === 'phase').score).toBeNull();
+    expect(chips.find(c => c.key === 'marketContext').score).toBeNull(); // absent key
   });
 
   it('handles a null/undefined components object', () => {
@@ -49,10 +49,7 @@ describe('chipColor', () => {
 describe('chip maxes mirror the score engines', () => {
   it('timing chip maxes are the engine caps and sum to 100', () => {
     const chips = timingChips({});
-    expect(chips.map(c => c.max)).toEqual([
-      TIMING_MAX.drawdown, TIMING_MAX.oversold, TIMING_MAX.reversal,
-      TIMING_MAX.consolidation, TIMING_MAX.volumeBehavior, TIMING_MAX.marketContext,
-    ]);
+    expect(chips.map(c => c.max)).toEqual([TIMING_MAX.drawdown, TIMING_MAX.phase, TIMING_MAX.marketContext]);
     expect(chips.reduce((s, c) => s + c.max, 0)).toBe(100);
   });
 
@@ -116,16 +113,20 @@ describe('band hints', () => {
 });
 
 describe('timingRows / qualityRows', () => {
-  const ts = { components: { drawdown: 4, oversold: 2, reversal: 15, consolidation: 5, volumeBehavior: null, marketContext: 9 },
-    notes: { oversold: [{ text: 'Daily RSI 55', warn: false }] } };
+  const ts = { components: { drawdown: 4, phase: 20, marketContext: null }, phase: 'reversal',
+    notes: { phase: [{ text: 'Reclaimed the 20-day EMA', warn: false }] } };
 
   it('ranks components by the points still on the table, nulls last', () => {
     expect(timingRows(ts).map(r => `${r.label} ${r.gap}`))
-      .toEqual(['Oversold 18', 'Drawdown 16', 'Base 10', 'Market 6', 'Reversal 0', 'Volume null']);
+      .toEqual(['Reversal 30', 'Drawdown 21', 'Market null']);
+  });
+
+  it('names the phase row after the winning path, generic when none won', () => {
+    expect(timingRows({ ...ts, phase: null })[0].label).toBe('Phase');
   });
 
   it('attaches the reading behind each component', () => {
-    expect(timingRows(ts)[0].notes[0].text).toBe('Daily RSI 55');
+    expect(timingRows(ts)[0].notes[0].text).toBe('Reclaimed the 20-day EMA');
     expect(timingRows(ts)[1].notes).toEqual([]);
   });
 

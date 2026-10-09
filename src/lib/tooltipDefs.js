@@ -791,9 +791,9 @@ export const TIPS = {
     title: 'Timing Score',
     subtitle: '0–100 · is now a good moment to buy?',
     category: 'Long-Term',
-    description: 'Adds up 6 technical components (hover each chip below for its own breakdown): Drawdown, Oversold, Reversal, Base (consolidation), Volume, Market. A component with no usable data is left out of the total entirely — it never drags the score down just because data is missing.',
+    description: 'Drawdown (how far on sale, 25) + Entry phase (the strongest of Oversold / Reversal / Base, 50) + Market (25). Hover each row for its breakdown. A component with no usable data is left out of the total.',
     levels: [
-      { range: '≥ 70',   label: 'Strong',      color: C.green, desc: 'Deep pullback with several confirming signals — technically an attractive entry window.' },
+      { range: '≥ 70',   label: 'Strong',      color: C.green, desc: 'A real discount, clearly in one good entry phase, with the market not fighting it — about 2% of trading days in a calm bull market, more in a fearful one.' },
       { range: '50–69',  label: 'Watch',       color: C.amber, desc: 'A setup is forming but isn\'t fully confirmed yet.' },
       { range: '30–49',  label: 'Neutral',     color: C.dim,   desc: 'No technical edge either way.' },
       { range: '< 30',   label: 'Wait',        color: C.muted, desc: 'Not oversold, no reversal signs — not the moment.' },
@@ -818,87 +818,44 @@ export const TIPS = {
 
   ltDrawdown: {
     title: 'Drawdown',
-    subtitle: 'Timing component · max 20 pts',
+    subtitle: 'Timing component · max 25 pts',
     category: 'Long-Term · Timing',
-    description: 'How far the current price sits below its 52-week high. A deeper drawdown scores higher points, on the theory that more damage already priced in means more of the downside is behind you.',
+    description: 'How far the price sits below its 52-week high — how much of a discount is on offer. In a confirmed bull market the bands compress (−20% is already deep), because pullbacks inside an uptrend run shallower.',
     levels: [
-      { range: '≤ −40%',      label: '20 pts', color: C.green, desc: 'Deep drawdown — also flags a warning to double-check the investment thesis hasn\'t actually changed.' },
-      { range: '−25% to −40%', label: '18 pts', color: C.green, desc: 'Major pullback.' },
-      { range: '−15% to −25%', label: '12 pts', color: C.amber, desc: 'Moderate pullback.' },
-      { range: '−10% to −15%', label: '6 pts',  color: C.amber, desc: 'Mild pullback.' },
-      { range: '> −10%',       label: '2 pts',  color: C.dim,   desc: 'Near highs — little discount to buy at.' },
+      { range: '≤ −40% (bull ≤ −20%)',        label: '25 pts', color: C.green, desc: 'Deep drawdown — also flags a warning to double-check the investment thesis hasn\'t actually changed.' },
+      { range: '−25% to −40% (bull −12/−20%)', label: '21 pts', color: C.green, desc: 'Major pullback.' },
+      { range: '−15% to −25% (bull −8/−12%)',  label: '15 pts', color: C.amber, desc: 'Moderate pullback.' },
+      { range: '−10% to −15% (bull −4/−8%)',   label: '8 pts',  color: C.amber, desc: 'Mild pullback — the minimum for the Reversal path to count.' },
+      { range: 'shallower',                    label: '2 pts',  color: C.dim,   desc: 'Near highs — little discount to buy at.' },
     ],
-    why: 'A deep drawdown alone is not a buy signal — it just means the price has moved. Pair it with Oversold and Reversal (below) for confirmation the selling is actually exhausted.',
+    why: 'A deep drawdown alone is not a buy signal — it just means the price has moved. The Phase row says where in the bottoming process the stock is.',
   },
 
-  ltOversold: {
-    title: 'Oversold',
-    subtitle: 'Timing component · max 20 pts',
+  ltPhase: {
+    title: 'Entry Phase',
+    subtitle: 'Timing component · max 50 pts · best of 3 paths',
     category: 'Long-Term · Timing',
-    description: 'Multi-timeframe RSI check — Daily (up to 6 pts), Weekly (up to 6 pts), Monthly (up to 8 pts) all scored separately and summed. Requiring all three timeframes to agree filters out a daily dip inside an otherwise healthy monthly uptrend.',
+    description: 'A bottom forms in stages that rarely overlap: first capitulation (oversold), then a turn (reversal), then a quiet base that breaks out. Each path is scored 0–50 on its own and only the strongest counts — so a stock is rewarded for being clearly in one good phase, not penalised for not being in all three at once. The row is named after the winning path; the others are listed below it.',
     levels: [
-      { range: 'Daily RSI < 30',    label: '+6 pts', color: C.green, desc: 'Short-term oversold.' },
-      { range: 'Weekly RSI < 35',   label: '+6 pts', color: C.green, desc: 'Medium-term oversold — carries more weight than daily.' },
-      { range: 'Monthly RSI < 40',  label: '+8 pts', color: C.green, desc: 'Long-term oversold — the highest-weighted signal, since it means the multi-month trend itself is stretched.' },
+      { range: 'Oversold',  label: '0–50', color: C.green, desc: 'RSI depressed on daily (10), weekly (14) and monthly (14) — bull-market bands are looser — plus capitulation-style panic volume (12).' },
+      { range: 'Reversal',  label: '0–50', color: C.green, desc: 'Bullish RSI divergence (15), reclaimed 20-day EMA (10), MACD histogram rising 3 days (8), MACD bull cross (7), up-day volume leading (10). Needs at least a mild pullback first.' },
+      { range: 'Base',      label: '0–50', color: C.green, desc: 'Bollinger width in its bottom decile (15), 60+ days range-bound (20), breakout above the base on volume (15).' },
     ],
-    why: 'Monthly RSI gets the biggest weight because it is the hardest to fake — a stock rarely gets monthly-oversold without a genuine, sustained decline.',
-  },
-
-  ltReversal: {
-    title: 'Reversal',
-    subtitle: 'Timing component · max 15 pts',
-    category: 'Long-Term · Timing',
-    description: 'Early evidence the decline is actually turning, not just paused. Four independent signals, each adds its points if present: bullish RSI divergence (+6), price reclaiming the 20-day EMA (+4), MACD histogram improving for 3 straight days (+3), and a fresh MACD bullish crossover (+2).',
-    levels: [
-      { range: 'Bull RSI divergence', label: '+6 pts', color: C.green, desc: 'Price made a lower low but RSI made a higher low — selling momentum is fading even as price falls.' },
-      { range: 'Reclaimed 20-EMA',    label: '+4 pts', color: C.green, desc: 'Price back above its 20-day average — short-term trend flipping up.' },
-      { range: 'MACD improving 3d',   label: '+3 pts', color: C.green, desc: 'Momentum histogram has grown 3 sessions in a row.' },
-      { range: 'MACD bull cross',     label: '+2 pts', color: C.green, desc: 'MACD line just crossed above its signal line.' },
-    ],
-    why: 'Drawdown and Oversold tell you a stock is beaten down; Reversal tells you buyers are starting to actually show up. High Drawdown + high Reversal together is the classic "catching the bottom" combination.',
-  },
-
-  ltBase: {
-    title: 'Base (Consolidation)',
-    subtitle: 'Timing component · max 15 pts',
-    category: 'Long-Term · Timing',
-    description: 'Rewards price building a tight, quiet base rather than still falling — a squeeze (tight Bollinger Bands, up to 8 pts) plus time spent range-bound (up to 7 pts for 60+ trading days).',
-    levels: [
-      { range: 'BB width < 10th pctile', label: '+8 pts', color: C.green, desc: 'Bollinger Bands are unusually tight vs. this stock\'s own history — volatility has compressed, often precedes a breakout.' },
-      { range: '60+ days ranging',       label: '+7 pts', color: C.green, desc: 'Extended sideways base — supply has likely been absorbed.' },
-      { range: '20–40 days ranging',     label: '+2–4 pts', color: C.amber, desc: 'A base is forming but hasn\'t matured yet.' },
-    ],
-    why: 'A tight, long base after a decline is where accumulation happens quietly before a move — very different from a stock that is still actively falling.',
-  },
-
-  ltVolume: {
-    title: 'Volume',
-    subtitle: 'Timing component · max 15 pts',
-    category: 'Long-Term · Timing',
-    description: 'Reads what volume says about who is in control: capitulation-style panic volume (up to 6 pts), more volume on up days than down days over the recent window (up to 6 pts), and a volume-confirmed breakout above the base high (+3 pts).',
-    levels: [
-      { range: 'Capitulation detected',  label: '+6 pts', color: C.green, desc: 'A volume spike consistent with panic selling — often marks exhaustion, the last sellers leaving.' },
-      { range: 'Up/down vol. ratio >1.3', label: '+6 pts', color: C.green, desc: 'Buyers are transacting more volume than sellers — accumulation, not distribution.' },
-      { range: 'Up/down vol. ratio <0.7', label: 'warning', color: C.red,  desc: 'Selling volume still dominates — flagged as a warning, not scored.' },
-      { range: 'Breakout on volume',      label: '+3 pts', color: C.green, desc: 'Price cleared the base high on above-average volume — real participation, not a thin drift.' },
-    ],
-    why: 'Price without volume context can be misleading — a bounce on shrinking volume is far less trustworthy than the same bounce on strong participation.',
+    why: 'Summing the three used to cap real stocks near 60/100, so the 70 accumulation gate almost never fired. Scoring the best phase lets a genuine capitulation, a confirmed turn or a mature base each reach it on their own.',
   },
 
   ltMarket: {
     title: 'Market',
-    subtitle: 'Timing component · max 15 pts',
+    subtitle: 'Timing component · max 25 pts',
     category: 'Long-Term · Timing',
-    description: 'The only Timing component that looks outside the stock itself — is the broader tape and sector helping or fighting this entry? SPY above its 50-day EMA (+3), the stock\'s sector outperforming (+3), extreme Fear & Greed below 30 (+2), elevated-but-not-extreme volatility (+2), and a confirmed bull regime (+4, or +2 late-cycle).',
+    description: 'Is the broad market helping this entry? Trend (up to 10) plus sentiment (up to 15). For a long-term buyer fear is the discount, so a fearful tape inside an intact uptrend scores highest. Systemic risk is not scored here — high-yield credit stress demotes the final status instead.',
     levels: [
-      { range: 'Confirmed BULL regime', label: '+4 pts', color: C.green, desc: 'SPY above a rising EMA50/EMA200 stack with calm volatility — buying a dip inside a confirmed uptrend is the best setup this engine can see. Late-cycle (extreme greed) scores +2 instead.' },
-      { range: 'SPY above EMA50',       label: '+3 pts', color: C.green, desc: 'Broad market uptrend intact — a tailwind for any long entry.' },
-      { range: 'Sector outperforming',  label: '+3 pts', color: C.green, desc: 'This stock\'s sector is leading, not lagging.' },
-      { range: 'Fear & Greed < 30',     label: '+2 pts', color: C.green, desc: 'Extreme fear in the broad market — often coincides with capitulation lows.' },
-      { range: 'Volatility 25–35',      label: '+2 pts', color: C.amber, desc: 'Elevated but not panic-level volatility.' },
-      { range: 'Volatility > 35',       label: 'warning', color: C.red,  desc: 'Extreme volatility — flagged as a warning: use staged entries only, don\'t go all-in.' },
+      { range: 'BULL regime',          label: '+10',   color: C.green, desc: 'SPY above a rising EMA stack with calm volatility. Late-cycle +6, mixed/chop +4, bear 0. Without a regime, SPY above EMA50 gives +6.' },
+      { range: 'Fear & Greed < 25',    label: '+15',   color: C.green, desc: 'Extreme fear — the crowd is selling. < 35: +11 · < 45: +7 · < 55: +3 · greed: 0.' },
+      { range: 'No F&G: volatility ≥ 25', label: '+8', color: C.amber, desc: 'Used only when Fear & Greed is unavailable.' },
+      { range: 'Volatility > 35',      label: 'warning', color: C.red, desc: 'Extreme volatility — use staged entries only, don\'t go all-in.' },
     ],
-    why: 'A stock can look perfect on its own chart and still get dragged down by a falling market — this component is the sanity check against fighting the broader trend.',
+    why: 'A stock can look perfect on its own chart and still get dragged down by a falling market — this is the sanity check, and the place where market-wide panic counts as opportunity.',
   },
 
   ltProfit: {

@@ -29,26 +29,52 @@ describe('computeTimingScore', () => {
     expect(r.components.drawdown).toBeNull();
   });
 
-  it('scores drawdown and oversold on a deep decline', () => {
+  it('scores drawdown and the oversold phase on a deep decline', () => {
     const daily = decliningDaily();
     const r = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
-    expect(r.components.drawdown).toBeGreaterThan(0);   // well below 52w high
-    expect(r.components.oversold).toBeGreaterThan(0);   // RSIs depressed
-    expect(typeof r.total).toBe('number');
+    expect(r.components.drawdown).toBe(25);             // well below 52w high
+    expect(r.phase).toBe('oversold');                   // RSIs depressed
     expect(r.signals.some(s => s.startsWith('Daily RSI'))).toBe(true);
   });
 
-  it('pins concrete total→label for the deep-decline fixture (NEUTRAL band, below the 50 cutoff)', () => {
+  it('phase is the best path, not the sum of paths', () => {
     const daily = decliningDaily();
-    // Bare: drawdown 20 + oversold 20 + consolidation 2 = 42 → NEUTRAL.
+    const r = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
+    const paths = Object.values(r.paths).filter(v => v != null);
+    expect(r.components.phase).toBe(Math.max(...paths));
+    expect(r.signals.some(s => s.startsWith('Other paths:'))).toBe(true);
+  });
+
+  it('pins total→label for the deep-decline fixture, and a bull-market panic reaches STRONG', () => {
+    const daily = decliningDaily();
+    // drawdown 25 + oversold path 38, no market inputs = 63 → WATCHLIST.
     const bare = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
-    expect(bare.total).toBe(42);
-    expect(bare.label).toBe('NEUTRAL');
-    // +6 market-context (spyAboveEma50 3 + sectorOutperforming 3) = 48 → still
-    // NEUTRAL, pinning the WATCHLIST (≥50) cutoff from below.
-    const withMc = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: true, sectorOutperforming: true } });
-    expect(withMc.total).toBe(48);
-    expect(withMc.label).toBe('NEUTRAL');
+    expect(bare.total).toBe(63);
+    expect(bare.label).toBe('WATCHLIST');
+    // + BULL trend 10 + extreme fear 15 = 88 → the 70 gate is reachable again.
+    const panic = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { regime: 'BULL', fearGreed: 20 } });
+    expect(panic.components.marketContext).toBe(25);
+    expect(panic.label).toBe('STRONG_ACCUMULATION_ZONE');
+  });
+
+  it('a volume breakout above a prior base scores on the base path', () => {
+    // decline, then a tight range, then one wide-volume close far above it
+    const n = 300;
+    const c = Array.from({ length: n }, (_, i) => (i < 200 ? 200 - i * 0.5 : 100 + (i % 2 ? 1 : -1)));
+    c[n - 1] = 130;
+    const v = c.map(() => 1000); v[n - 1] = 5000;
+    const daily = { s: 'ok', t: c.map((_, i) => 1600000000 + i * 86400), o: c, h: c.map(x => x + 0.5), l: c.map(x => x - 0.5), c, v };
+    const r = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
+    expect(r.phase).toBe('base');
+    expect(r.signals).toContain('Breakout above the base on above-average volume');
+  });
+
+  it('does not score a reversal without a prior pullback', () => {
+    const c = Array.from({ length: 300 }, (_, i) => 100 + i * 0.3);
+    const daily = { s: 'ok', t: c.map((_, i) => 1600000000 + i * 86400), o: c, h: c.map(x => x + 0.5), l: c.map(x => x - 0.5), c, v: c.map(() => 1000) };
+    const r = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
+    expect(r.components.drawdown).toBe(2);
+    expect(r.paths.reversal).toBe(0);
   });
 
   it('scores a shallow bull-regime pullback that the bear/chop bands would miss', () => {
@@ -65,10 +91,18 @@ describe('computeTimingScore', () => {
 
   it('adds market-context points and a downtrend warning appropriately', () => {
     const daily = decliningDaily();
-    const up = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: true, sectorOutperforming: true } });
+    const up = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: true } });
     const down = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { spyAboveEma50: false, spyDowntrend: true } });
     expect(up.components.marketContext).toBeGreaterThan(down.components.marketContext);
     expect(down.warnings).toContain('Broad market trend is still negative');
+  });
+
+  it('treats fear as opportunity: lower Fear & Greed scores higher', () => {
+    const daily = decliningDaily();
+    const mc = (fearGreed) => computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: { regime: 'BEAR', fearGreed } }).components.marketContext;
+    expect(mc(20)).toBe(15);
+    expect(mc(50)).toBe(3);
+    expect(mc(80)).toBe(0);
   });
 
   it('emits n/a for monthly RSI when history is too short but still scores', () => {
@@ -78,6 +112,6 @@ describe('computeTimingScore', () => {
     const daily = { s: 'ok', t: Array.from({ length: n }, (_, i) => 1600000000 + i * 86400), o: c, h: c.map(x => x + 1), l: c.map(x => x - 1), c, v: c.map(() => 1000) };
     const r = computeTimingScore({ dailyCandles: daily, weeklyCandles: weeklyFrom(daily), marketContext: {} });
     expect(r.signals.some(s => s.includes('Monthly RSI n/a'))).toBe(true);
-    expect(r.components.oversold).not.toBeNull();
+    expect(r.paths.oversold).not.toBeNull();
   });
 });

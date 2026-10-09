@@ -8,15 +8,12 @@
 // imported from the engine itself so a cap change can't drift the UI; quality's
 // caps are inline Math.min() literals in qualityScore.js and are mirrored here
 // (tests/longTermIndicators.test.js asserts both sets still sum to 100).
-import { TIMING_MAX } from './timingScore.js';
+import { TIMING_MAX, PATH_LABELS } from './timingScore.js';
 import { toneColor, toneStyle } from './tone.js';
 
 const TIMING = [
   ['drawdown', 'Drawdown', TIMING_MAX.drawdown],
-  ['oversold', 'Oversold', TIMING_MAX.oversold],
-  ['reversal', 'Reversal', TIMING_MAX.reversal],
-  ['consolidation', 'Base', TIMING_MAX.consolidation],
-  ['volumeBehavior', 'Volume', TIMING_MAX.volumeBehavior],
+  ['phase', 'Phase', TIMING_MAX.phase],
   ['marketContext', 'Market', TIMING_MAX.marketContext],
 ];
 
@@ -105,5 +102,7 @@ export const qualityTone = (total) => total == null ? 'none' : total >= 65 ? 'go
 const rows = (list, notes) => list
   .map(c => ({ ...c, gap: c.score == null ? null : Math.round((c.max - c.score) * 10) / 10, notes: notes?.[c.key] ?? [] }))
   .sort((a, b) => (b.gap ?? -1) - (a.gap ?? -1));
-export const timingRows  = (ts) => rows(timingChips(ts?.components), ts?.notes);
+// The Phase row names the path that won (Oversold / Reversal / Base).
+export const timingRows  = (ts) => rows(timingChips(ts?.components)
+  .map(c => c.key === 'phase' && ts?.phase ? { ...c, label: PATH_LABELS[ts.phase] } : c), ts?.notes);
 export const qualityRows = (qs) => rows(qualityChips(qs?.components));
