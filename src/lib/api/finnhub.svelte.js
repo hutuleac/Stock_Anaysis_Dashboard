@@ -144,7 +144,9 @@ const PRUNE_PREFIXES = [
 // of "storage full" recurring. Never touches macro data (fh_feargreed, fh_btc,
 // fred_*), notes, watchlist, portfolio, or API keys — those aren't per-symbol.
 export function pruneOrphanedCache(validSymbols) {
-  const keep = new Set(validSymbols.map(s => s.toUpperCase()));
+  // Sector ETFs are market-wide (rotation tile + per-ticker sector momentum),
+  // not watchlist symbols — pruning them wiped the snapshot's seeded quotes.
+  const keep = new Set([...validSymbols, ...ALL_SECTOR_ETFS].map(s => s.toUpperCase()));
   let removed = 0;
   try {
     const toDelete = [];
@@ -462,6 +464,8 @@ async function fetchFearAndGreed() {
   if (cached) return { data: cached, stale: false };
 
   try {
+    // Offline (snapshot) runs read the snapshot's F&G, not today's — keeps it on the same clock as the prices.
+    if (!networkEnabled) throw new Error('Network disabled');
     const res  = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = parseFearGreed(await res.json());
@@ -486,6 +490,7 @@ async function fetchBtcQuote() {
   if (cached) return { data: cached, stale: false };
 
   try {
+    if (!networkEnabled) throw new Error('Network disabled');
     const res  = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();

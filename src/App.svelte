@@ -261,7 +261,7 @@
           const etfQuote = (etf === 'SPY' ? marketContextData?.spy : marketContextData?.sectors?.[etf])
             ?? await fetchSectorETFQuote(ticker.sector);
           if (etfQuote.data) {
-            storeSectorMomentumSnapshot(etf, etfQuote.data.dp);
+            storeSectorMomentumSnapshot(etf, etfQuote.data.dp, etfQuote.data.t);
             results[ticker.symbol].sectorMomentum = computeSectorMomentum(getSectorMomentumHistory(etf), etfQuote.data.dp);
           } else {
             results[ticker.symbol].sectorMomentum = null;
@@ -485,9 +485,12 @@
     return m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
   }
 
+  // Date, not weekday: a weeks-old snapshot must not read as this week's.
   function fmtSnapshot(snap) {
-    return new Date(snap.generatedAt).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    return new Date(snap.generatedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
+  // Weekend + a holiday stays under this; older means the scheduled job stopped.
+  const SNAPSHOT_STALE_MS = 4 * 86400000;
 
   function formatTime(date) {
     if (!date) return 'Never';
@@ -792,10 +795,11 @@
 
         <!-- Last refreshed -->
         {#if snapshot && !inFlight}
-          <span class="text-xs text-text-muted cursor-default" use:tipAction={() => ({
-            title: `${snapshot.mode === 'open' ? 'Market-open' : 'Market-close'} snapshot`,
-            description: `Data published by the scheduled job at ${fmtSnapshot(snapshot)} (runs ~10:00 and ~16:30 New York time on weekdays). ${getApiKey() ? 'Press R or Refresh for live prices.' : 'Add API keys in Settings for live prices.'}`,
-          })}>{snapshot.mode === 'open' ? 'Open' : 'Close'} snapshot<span class="hidden sm:inline">&nbsp;· {fmtSnapshot(snapshot)}</span></span>
+          {@const old = now - snapshot.generatedAt > SNAPSHOT_STALE_MS}
+          <span class="text-xs {old ? 'text-warning' : 'text-text-muted'} cursor-default" use:tipAction={() => ({
+            title: `${snapshot.mode === 'open' ? 'Intraday' : 'Market-close'} snapshot`,
+            description: `Data published by the scheduled job on ${fmtSnapshot(snapshot)} (${formatAge(new Date(snapshot.generatedAt))} ago; it runs during and after each weekday session).${old ? ' This is older than it should be — the scheduled job may have stopped.' : ''} ${getApiKey() ? 'Press R or Refresh for live prices.' : 'Add API keys in Settings for live prices.'}`,
+          })}>{old ? '⚠ ' : ''}{snapshot.mode === 'open' ? 'Intraday' : 'Close'} snapshot<span class="hidden sm:inline">&nbsp;· {fmtSnapshot(snapshot)}</span></span>
         {:else if staleCount && !inFlight}
           <span class="text-xs text-warning cursor-default" use:tipAction={() => ({
             title: 'Cached quotes',

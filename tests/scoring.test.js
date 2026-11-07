@@ -549,10 +549,21 @@ describe('storeSectorMomentumSnapshot / getSectorMomentumHistory', () => {
     expect(typeof history[0].ts).toBe('number');
   });
 
-  it('does not add a duplicate within 1 hour', () => {
+  it('keeps one sample per trading day — a later reading of the same day replaces it', () => {
     storeSectorMomentumSnapshot('XLK', 1.5);
     storeSectorMomentumSnapshot('XLK', 2.0);
-    expect(getSectorMomentumHistory('XLK')).toHaveLength(1);
+    const history = getSectorMomentumHistory('XLK');
+    expect(history).toHaveLength(1);
+    expect(history[0].dp).toBe(2.0);
+  });
+
+  it('keys the day on the quote timestamp, not the wall clock (snapshot reloads)', () => {
+    const oct17 = Date.UTC(2026, 9, 17, 20) / 1000, oct19 = Date.UTC(2026, 9, 19, 20) / 1000;
+    storeSectorMomentumSnapshot('XLK', 0.5, oct17);
+    storeSectorMomentumSnapshot('XLK', -0.3, oct19);
+    storeSectorMomentumSnapshot('XLK', -0.3, oct19); // same snapshot re-read hours later
+    storeSectorMomentumSnapshot('XLK', -0.3, oct19);
+    expect(getSectorMomentumHistory('XLK').map(h => h.dp)).toEqual([0.5, -0.3]);
   });
 
   it('trims to the trailing 10 entries', () => {

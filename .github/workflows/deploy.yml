@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
   schedule:
-    # Snapshots at ~10:00 ET (open) and ~16:30 ET (close), weekdays. Cron is UTC
-    # and ignores daylight saving, so each slot has an EDT and an EST cron and
-    # the gate job keeps whichever lands in the New York window.
+    # Aimed at ~10:00 ET and ~16:30 ET on weekdays (an EDT and an EST cron per
+    # slot — cron is UTC). GitHub has been starting these 3–6 h late, so the gate
+    # classifies each run by when it actually starts, not by which cron fired.
     - cron: '0 14 * * 1-5'
     - cron: '0 15 * * 1-5'
     - cron: '30 20 * * 1-5'
@@ -30,11 +30,13 @@ jobs:
           if [ "${{ github.event_name }}" = push ]; then mode=reuse
           elif [ "${{ github.event_name }}" != schedule ]; then mode=close
           else
+            # New York time-of-day buckets, not narrow windows: a window skipped
+            # every run from Oct 19 to Nov 7 2026 while reporting green.
             t=$((10#$(TZ=America/New_York date +%H%M)))
-            # windows absorb GitHub's cron start delays (often 5–20 min)
-            if   [ $t -ge 955 ]  && [ $t -le 1045 ]; then mode=open
-            elif [ $t -ge 1625 ] && [ $t -le 1720 ]; then mode=close
-            else mode=skip; fi
+            if   [ "$(TZ=America/New_York date +%u)" -ge 6 ]; then mode=skip
+            elif [ $t -ge 1625 ]; then mode=close   # a second close run the same day reuses (snapshot.mjs)
+            elif [ $t -ge 930 ];  then mode=open    # intraday: quotes/F&G/BTC refresh, candles reuse
+            else mode=skip; fi                     # pre-open: last evening's close is still current
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "snapshot mode: $mode"
@@ -59,6 +61,7 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm test
       - run: node scripts/fetch-macro.mjs
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
