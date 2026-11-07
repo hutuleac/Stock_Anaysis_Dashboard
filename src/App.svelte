@@ -4,6 +4,7 @@
   import { fetchMacroContext, readMacroFromCache } from './lib/api/fred.js';
   import { detectMarketRegime } from './lib/macro.js';
   import { seedSnapshot } from './lib/snapshot.js';
+  import { getMarketStatus } from './lib/marketHours.js';
   import { computeIndicatorsFromCandles, computeWeeklyTrend, computeRelativeStrength, computeBreadth, resampleWeekly, realizedVol, emaArray } from './lib/indicators.js';
   import { computeSetupSignals } from './lib/signals.js';
   import { computeTimingScore } from './lib/timingScore.js';
@@ -87,36 +88,6 @@
       handleRefresh();
     }
   });
-
-  function getMarketStatus() {
-    const now = new Date();
-    // Convert to US Eastern time
-    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const day = et.getDay(); // 0=Sun, 6=Sat
-    const h = et.getHours(), min = et.getMinutes();
-    const mins = h * 60 + min;
-    const isWeekday = day >= 1 && day <= 5;
-    const isOpen = isWeekday && mins >= 570 && mins < 960; // 9:30–16:00
-
-    let nextEvent = null;
-    if (isOpen) {
-      const closeMin = 960 - mins;
-      nextEvent = `Closes in ${Math.floor(closeMin / 60)}h ${closeMin % 60}m`;
-    } else {
-      // Next open: find next weekday 9:30
-      let minsToOpen = (570 - mins + 1440) % 1440;
-      if (!isWeekday) {
-        const daysToMon = day === 0 ? 1 : 7 - day + 1;
-        minsToOpen = daysToMon * 1440 - mins + 570;
-      } else if (mins >= 960) {
-        const daysToNext = day === 5 ? 3 : 1;
-        minsToOpen = daysToNext * 1440 - mins + 570;
-      }
-      const h2 = Math.floor(minsToOpen / 60), m2 = minsToOpen % 60;
-      nextEvent = h2 > 23 ? `Opens ${Math.floor(h2/24)}d ${h2%24}h` : `Opens in ${h2}h ${m2}m`;
-    }
-    return { isOpen, nextEvent };
-  }
 
   // Refresh market status every minute + auto-refresh if configured
   if (typeof window !== 'undefined') {

@@ -117,6 +117,7 @@ src/lib/
   demoData.js         — no-API-key demo fixtures: seeded synthetic OHLCV per ticker + ETF proxy, run through the real engines
   longTermIndicators.js — timing/quality chips, band hints, waiting-on ranking (pure formatting)
   tone.js             — the one colour palette (good/partial/caution/danger/waiting/none)
+  marketHours.js      — getMarketStatus (header OPEN/CLOSED + auto-refresh gate): NYSE session with full-day holidays from the exchange rules (Good Friday via Easter, Sat→Fri / Sun→Mon observance, no Dec 31 make-up). Early closes not modelled
   readiness.js        — ACT/SOON/WATCH/WAIT + direction-aware BUY/SELL tones on top of tone.js; reconcileVerdict (expanded-row verdict sentence)
   tooltipDefs.js      — TIPS.* rich tooltip definitions
   actions/tooltip.js  — Svelte action: desktop hover + mobile tap-to-open (touchend on iOS)
