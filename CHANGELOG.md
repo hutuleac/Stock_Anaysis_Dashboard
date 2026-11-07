@@ -2,6 +2,16 @@
 
 All notable changes to the Stock Analysis Dashboard. Newest first. The version badge in the app header is read from `package.json`: the minor number moves for each feature round, and patch releases don't change the badge.
 
+## v0.31 (2026-11-07): the published snapshot is alive again, and says how old it is
+
+- **Snapshots ship again.** From Oct 19 to Nov 7, every scheduled run skipped while reporting green: GitHub started the crons 3–6 h late, outside the gate's narrow New York windows. Visitors without keys saw 19-day-old prices, and the credit-stress gate sat on Oct 16 data. The gate now picks the mode by New York time of day (intraday, after the close), and a second close on the same day reuses the first (#77).
+- **Failures are loud.** A run where no quote comes back fails instead of publishing old prices as new, and `npm test` now runs before every deploy (#77).
+- **The header shows the snapshot's date**, amber ⚠ past 4 days. It used to show a weekday and time only, so a 19-day-old snapshot read "Mon 11:27 PM" (#77).
+- **The snapshot view stays on one clock**: sector data is no longer wiped on load (9 of 11 sectors were empty, and sector momentum missing for 13 of 14 tickers), and Fear & Greed and BTC no longer load live over snapshot prices (#77).
+- **Sector momentum counts each trading day once**; reloads used to stack copies of the same day (#77).
+- **Fear no longer lowers the overall score.** It took up to 3 points off while the Long-Term view read the same fear as a buying chance. Extreme greed still takes 2 (#78).
+- **Removed the Settings portfolio positions**: they were saved but nothing in the app used them (#79).
+
 ## v0.30 (2026-10-09): the score looks for strong companies, not swing trades
 
 - **Fundamentals lead the overall score**: weights are now 35 / 55 / 10 (Technical / Fundamental / Sentiment), was 35 / 45 / 20. Sentiment (headlines + sector momentum) is cut to 10% because it rises with hype (#76).

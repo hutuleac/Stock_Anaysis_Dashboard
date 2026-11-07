@@ -72,7 +72,7 @@ Available gstack skills:
 
 ---
 
-# Project State — Stock Analysis Dashboard v0.30
+# Project State — Stock Analysis Dashboard v0.31
 
 ## What this is
 
@@ -144,7 +144,7 @@ src/lib/
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
-tests/                — 26 files, 568 tests (~1s). One test file per lib module, same basename.
+tests/                — 26 files, 569 tests (~1s). One test file per lib module, same basename.
 ```
 
 ## Scoring engine (scoring.js)
@@ -356,7 +356,7 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # 568 unit tests, ~1s
+npm test          # 569 unit tests, ~1s
 npm run build     # production build → dist/
 npx vite preview --base /Stock_Anaysis_Dashboard/   # prod preview (snapshot path is prod-only); without --base the JS 404s — vite.config sets base for `build` only
 ```
