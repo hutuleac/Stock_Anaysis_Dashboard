@@ -314,13 +314,18 @@ describe('computeScore', () => {
   });
 
   // ── Fear & Greed modifier ──
-  it('extreme fear (F&G < 25) reduces LONG scores by up to 3', () => {
+  it('fear does not penalise LONG scores — on this horizon it is opportunity', () => {
     const ticker = makeTicker({ price: 100, dp: 3, ema50: 80, pe: 20, epsGrowth: 25 });
-    const noFG    = computeScore(ticker, { fearGreedValue: 50 });
-    const fearFG  = computeScore(ticker, { fearGreedValue: 20 });
-    if (noFG.score > 50) {
-      expect(fearFG.score).toBeLessThanOrEqual(noFG.score);
-    }
+    const neutral = computeScore(ticker, { fearGreedValue: 50 });
+    expect(neutral.score).toBeGreaterThan(50);
+    expect(computeScore(ticker, { fearGreedValue: 20 }).score).toBe(neutral.score);
+    expect(computeScore(ticker, { fearGreedValue: 30 }).score).toBe(neutral.score);
+  });
+
+  it('extreme greed (F&G > 75) trims LONG scores by 2, never below 50', () => {
+    const ticker = makeTicker({ price: 100, dp: 3, ema50: 80, pe: 20, epsGrowth: 25 });
+    const neutral = computeScore(ticker, { fearGreedValue: 50 });
+    expect(computeScore(ticker, { fearGreedValue: 80 }).score).toBe(Math.max(50, neutral.score - 2));
   });
 
   // ── Conviction ──

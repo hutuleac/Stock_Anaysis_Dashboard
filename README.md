@@ -111,7 +111,7 @@ flowchart LR
     LT --> V
 ```
 
-The score is built for a months-to-years horizon: fundamentals lead (55% — PEG, EPS growth and the Quality Score), a new high on solid numbers is not penalised, and headline sentiment counts only 10%. It adapts to the market: in high volatility it leans further on fundamentals, a falling S&P 500 pulls bullish scores toward neutral, and extreme fear or greed nudges them. A **conviction** figure shows how many signals agree, which is separate from how bullish the score is.
+The score is built for a months-to-years horizon: fundamentals lead (55% — PEG, EPS growth and the Quality Score), a new high on solid numbers is not penalised, and headline sentiment counts only 10%. It adapts to the market: in high volatility it leans further on fundamentals, a falling S&P 500 pulls bullish scores toward neutral, and extreme greed nudges them down. Fear is not penalised — on this horizon it is opportunity. A **conviction** figure shows how many signals agree, which is separate from how bullish the score is.
 
 ---
 
