@@ -141,7 +141,6 @@ src/lib/
     TooltipOverlay.svelte / OnboardingModal.svelte
   stores/
     watchlist.svelte.js     — ticker list, fetch orchestration
-    portfolio.svelte.js     — trade log, FIFO P&L
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data
     prompts.svelte.js       — AI prompt templates (localStorage, seeded from DEFAULT_TEMPLATES)
     tooltip.svelte.js
@@ -349,8 +348,8 @@ Shown when no API key is set. It used to be static quote/metric literals only, w
 - **`chartAnchors.js` `MIN_BARS` is 30**, aligned with `computeIndicatorsFromCandles`' floor so AVWAP/POC/Fib/FVG never silently vanish while RSI/MACD still render off the same daily set. Don't raise it to 60.
 - **`pct52wRange(price, low, high)`** clamps 0–100 (null on `high <= low` or falsy inputs). A live price can exceed the 7-day-cached 52w high on a breakout; this keeps the marker inside the bar.
 - **Cache self-heals under quota pressure.** `writeCache` in both `finnhub.svelte.js` and `twelvedata.svelte.js` catches `QuotaExceededError`, calls the shared `evictStaleCache()` (exported from finnhub, one-way dependency) and retries once before raising the storage-full banner. Eviction is expired-only, not LRU — it won't reclaim space if everything is fresh.
-- **`pruneOrphanedCache` also prunes `sv_` score history** for removed symbols; the 90-day self-trim only runs on write, which stops at removal. It never touches macro/watchlist/portfolio/API keys.
-- All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>` (90-day retention, max 300 snapshots — Score-Z window). Trade log: `tradeLog`. Refresh snapshot: `dashboard_supplement`. (Paper trades, price alerts, and the News UI were removed in the post-v0.19 mobile-fit round — don't re-document them.)
+- **`pruneOrphanedCache` also prunes `sv_` score history** for removed symbols; the 90-day self-trim only runs on write, which stops at removal. It never touches macro/watchlist/API keys.
+- All persistent state lives in localStorage. Score history keys: `sv_<SYMBOL>` (90-day retention, max 300 snapshots — Score-Z window). Refresh snapshot: `dashboard_supplement`. (Paper trades, price alerts, and the News UI were removed in the post-v0.19 mobile-fit round; the Settings portfolio-positions box and its store, which nothing read, in v0.31 — don't re-document them.)
 
 ## Running locally
 
