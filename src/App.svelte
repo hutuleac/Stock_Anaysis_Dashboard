@@ -16,7 +16,6 @@
   import WatchlistTable from './lib/components/WatchlistTable.svelte';
   import MarketContextBar from './lib/components/MarketContextBar.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
-  // OnboardingModal removed — demo mode replaces it
 
   import SetupRadar from './lib/components/SetupRadar.svelte';
   import DipRadar from './lib/components/DipRadar.svelte';

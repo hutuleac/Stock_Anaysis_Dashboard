@@ -39,7 +39,6 @@ const FH_MIN_INTERVAL = 1100; // Finnhub free: 60 calls/min → enforce 1.1s bet
 let _fhLastCall = 0;
 
 let apiKey = $state('');
-let refreshing = $state(false);
 let refreshProgress = $state({ current: 0, total: 0 });
 
 export function getApiKey() { return apiKey; }
@@ -48,7 +47,6 @@ export function setApiKey(key) {
   try { localStorage.setItem('finnhub_api_key', key); }
   catch (e) { console.warn('localStorage full:', e); }
 }
-export function isRefreshing() { return refreshing; }
 export function getRefreshProgress() { return refreshProgress; }
 
 // Initialize from localStorage
@@ -351,7 +349,6 @@ export function hydrateFromCache(symbols) {
 }
 
 export async function refreshAll(symbols, onProgress) {
-  refreshing = true;
   refreshProgress = { current: 0, total: symbols.length };
   const results = {};
 
@@ -370,7 +367,6 @@ export async function refreshAll(symbols, onProgress) {
     if (i < symbols.length - 1) await delay(CALL_DELAY_MS);
   }
 
-  refreshing = false;
   refreshProgress = { current: 0, total: 0 };
   return results;
 }

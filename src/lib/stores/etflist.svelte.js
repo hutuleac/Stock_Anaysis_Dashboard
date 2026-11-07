@@ -35,11 +35,6 @@ export function removeEtf(ucits) {
   persist();
 }
 
-export function resetEtfs() {
-  etfs = [...HARDCODED_ETFS];
-  persist();
-}
-
 export function getUniqueProxies() {
   return [...new Set(etfs.map(e => e.proxy))];
 }

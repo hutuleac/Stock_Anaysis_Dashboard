@@ -365,7 +365,18 @@
     }
     dragIndex = null;
   }
+
+  function closeSearch() { searchOpen = false; searchResults = []; }
+
+  // Keyboard equivalent of the click-outside backdrops below.
+  function onEscape(e) {
+    if (e.key !== 'Escape') return;
+    if (copyFallback) copyFallback = null;
+    else if (searchOpen) closeSearch();
+  }
 </script>
+
+<svelte:window onkeydown={onEscape} />
 
 <div class="w-full">
   <!-- Search Bar -->
@@ -457,8 +468,7 @@
 
   <!-- Click outside to close search -->
   {#if searchOpen}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-40" onclick={() => { searchOpen = false; searchResults = []; }}></div>
+    <div class="fixed inset-0 z-40" role="presentation" onclick={closeSearch}></div>
   {/if}
 
   <!-- Setup/RS/EMA-stack/52w chip row — shared between mobile card and desktop ticker cell.
@@ -1008,8 +1018,8 @@
        browsers (Instagram/FB webviews etc). Shows the prompt in a selectable textarea so the
        user can still long-press → Copy even when the Clipboard API is unavailable. -->
   {#if copyFallback}
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4" onclick={() => { copyFallback = null; }}>
-      <div class="bg-surface-800 border border-border rounded-lg w-full max-w-lg p-4" onclick={(e) => e.stopPropagation()}>
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) copyFallback = null; }}>
+      <div class="bg-surface-800 border border-border rounded-lg w-full max-w-lg p-4" role="dialog" aria-modal="true" aria-label="Copy prompt">
         <div class="flex items-center justify-between mb-2">
           <p class="text-sm font-semibold text-text-primary">Copy prompt for {copyFallback.symbol}</p>
           <button class="text-text-muted hover:text-text-primary p-1" onclick={() => { copyFallback = null; }}>✕</button>
