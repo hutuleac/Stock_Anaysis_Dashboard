@@ -2,7 +2,6 @@
   import { getApiKey, setApiKey, clearStorageFullFlag } from '../api/finnhub.svelte.js';
   import { getTDApiKey, setTDApiKey } from '../api/twelvedata.svelte.js';
   import { getFredApiKey, setFredApiKey } from '../api/fred.js';
-  import { getPositions, setPositions } from '../stores/portfolio.svelte.js';
   import { getDefaultTickers, addDefaultTicker, removeDefaultTicker, resetDefaultTickers, addTicker } from '../stores/watchlist.svelte.js';
   import { getTemplates, getDefaultId, setDefaultId, updateTemplate, resetTemplate } from '../stores/prompts.svelte.js';
 
@@ -36,7 +35,6 @@
     setTimeout(() => saveMessage = '', 2500);
   }
 
-  let portfolioText = $state('');
   let saveMessage = $state('');
   let autoRefreshInterval = $state(parseInt(localStorage.getItem('autoRefreshInterval') || '0'));
   let notifyEnabled = $state(localStorage.getItem('notifyEnabled') === 'true');
@@ -58,14 +56,6 @@
     localStorage.setItem('notifyEnabled', String(notifyEnabled));
   }
 
-  // Initialize portfolio text from current positions
-  $effect(() => {
-    const positions = getPositions();
-    if (positions.length > 0 && !portfolioText) {
-      portfolioText = positions.map(p => `${p.ticker} ${p.qty} shares @ $${p.avgCost}`).join('\n');
-    }
-  });
-
   function saveApiKey() {
     setApiKey(apiKeyInput.trim());
     saveMessage = 'API key saved';
@@ -81,27 +71,6 @@
   function saveFredApiKey() {
     setFredApiKey(fredApiKeyInput.trim());
     saveMessage = 'FRED key saved — refresh to load macro context';
-    setTimeout(() => saveMessage = '', 3000);
-  }
-
-  function parsePortfolio() {
-    const lines = portfolioText.trim().split('\n').filter(l => l.trim());
-    const parsed = [];
-
-    for (const line of lines) {
-      // Match patterns like: NVDA 10 shares @ $800  or  NVDA 10 @ 800  or  NVDA 10 800
-      const match = line.match(/^(\w+)\s+(\d+)\s*(?:shares?\s*)?(?:@\s*\$?)(\d+(?:\.\d+)?)/i);
-      if (match) {
-        parsed.push({ ticker: match[1].toUpperCase(), qty: parseInt(match[2]), avgCost: parseFloat(match[3]) });
-      }
-    }
-
-    if (parsed.length > 0) {
-      setPositions(parsed);
-      saveMessage = `Saved ${parsed.length} position${parsed.length > 1 ? 's' : ''}`;
-    } else {
-      saveMessage = 'Could not parse any positions. Use format: NVDA 10 shares @ $800';
-    }
     setTimeout(() => saveMessage = '', 3000);
   }
 </script>
@@ -240,31 +209,6 @@
         <p class="text-xs text-text-muted">These tickers are added automatically on first launch. "Load to Watchlist" adds any missing ones now.</p>
       </div>
 
-      <!-- Portfolio Snapshot -->
-      <div class="space-y-2">
-        <label class="block">
-          <span class="text-sm font-medium text-text-secondary">Portfolio Positions</span>
-          <textarea
-            placeholder="NVDA 10 shares @ $800&#10;AAPL 25 shares @ $175&#10;MSFT 15 @ 420"
-            class="w-full mt-1 bg-surface-700 border border-border rounded px-3 py-2 text-text-primary font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-bull-strong/50 h-32 resize-y"
-            bind:value={portfolioText}
-          ></textarea>
-        </label>
-        <div class="flex items-center gap-3">
-          <button
-            class="px-4 py-2 bg-uncertain text-white font-semibold text-sm rounded hover:brightness-110 transition"
-            onclick={parsePortfolio}
-          >
-            Save Positions
-          </button>
-          {#if getPositions().length > 0}
-            <span class="text-xs text-text-muted">{getPositions().length} positions saved</span>
-          {/if}
-        </div>
-        <p class="text-xs text-text-muted">
-          Format: TICKER QTY shares @ $PRICE (one per line)
-        </p>
-      </div>
 
       <!-- Auto-refresh -->
       <div class="space-y-2">
@@ -343,7 +287,7 @@
         <button
           class="px-3 py-1.5 text-xs bg-surface-700 hover:bg-surface-600 text-text-secondary hover:text-danger rounded transition-colors border border-border"
           onclick={() => {
-            const keep = ['watchlist', 'watchlist_defaults', 'portfolio', 'portfolioValue', 'finnhub_api_key', 'twelvedata_api_key', 'fred_api_key', 'lastRefreshed'];
+            const keep = ['watchlist', 'watchlist_defaults', 'finnhub_api_key', 'twelvedata_api_key', 'fred_api_key', 'lastRefreshed'];
             // Preserve per-ticker notes and score velocity history
             for (let i = 0; i < localStorage.length; i++) {
               const k = localStorage.key(i);
@@ -362,7 +306,7 @@
         >
           Clear API cache
         </button>
-        <p class="text-xs text-text-muted">Removes cached quotes, charts, news, and fundamentals. Keeps your watchlist and positions.</p>
+        <p class="text-xs text-text-muted">Removes cached quotes, charts, news, and fundamentals. Keeps your watchlist and API keys.</p>
       </div>
     </div>
   </div>
