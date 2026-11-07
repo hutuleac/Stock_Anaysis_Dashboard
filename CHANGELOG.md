@@ -2,6 +2,14 @@
 
 All notable changes to the Stock Analysis Dashboard. Newest first. The version badge in the app header is read from `package.json`: the minor number moves for each feature round, and patch releases don't change the badge.
 
+## v0.31.1 (2026-11-07): lighter page, holidays, cleanup
+
+- **The page loads lighter**: the price chart and its library load when you first open a row, not with the page. Main bundle 569 → 390 KB (#81).
+- **Market holidays read as closed**: the header said OPEN on Thanksgiving, Christmas and the other NYSE holidays, and auto-refresh spent API calls on them. Holidays come from the exchange's rules, so there is no list to keep up to date. Early closes are not modelled (#83).
+- **Escape closes Settings, the search dropdown and the copy dialog**; they had no keyboard way out before. The build has no warnings left (#80).
+- **Dead code removed**: an orphaned onboarding modal, unused helpers, and a MACD the ETF table computed for every fund and never read (#80).
+- **Dependencies updated** within their ranges (Svelte, Vite, Tailwind, lightweight-charts, Vitest), clearing two security advisories (#82).
+
 ## v0.31 (2026-11-07): the published snapshot is alive again, and says how old it is
 
 - **Snapshots ship again.** From Oct 19 to Nov 7, every scheduled run skipped while reporting green: GitHub started the crons 3–6 h late, outside the gate's narrow New York windows. Visitors without keys saw 19-day-old prices, and the credit-stress gate sat on Oct 16 data. The gate now picks the mode by New York time of day (intraday, after the close), and a second close on the same day reuses the first (#77).

@@ -146,7 +146,7 @@ git clone https://github.com/hutuleac/Stock_Anaysis_Dashboard
 cd Stock_Anaysis_Dashboard
 npm install
 npm run dev     # http://localhost:5173 (demo data until you add keys)
-npm test        # 569 unit tests, ~1 s
+npm test        # 590 unit tests, ~1 s
 ```
 
 ---
@@ -180,7 +180,7 @@ npm test        # 569 unit tests, ~1 s
 | Data | Finnhub + TwelveData + FRED free tiers |
 | Storage | Browser localStorage only |
 | Hosting | GitHub Pages, deployed and snapshotted by GitHub Actions |
-| Tests | Vitest: 569 tests over every engine (indicators, scoring, setups, dips, ETFs, long-term, snapshot) |
+| Tests | Vitest: 590 tests over every engine (indicators, scoring, setups, dips, ETFs, long-term, snapshot) |
 
 <details>
 <summary><b>Indicator maths notes</b></summary>
