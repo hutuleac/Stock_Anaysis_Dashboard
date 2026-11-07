@@ -266,15 +266,12 @@ export function computeScore(tickerData, marketContext = _marketContext) {
   }
 
   // ── FEAR & GREED MODIFIER ────────────────────────────────────────────────────
-  // Extreme Fear: LONG setups face additional market headwind.
-  // Extreme Greed: contrarian caution — market likely extended.
+  // Extreme Greed: contrarian caution — market likely extended. Fear is not
+  // penalised: on a months-to-years horizon it is opportunity, the same read the
+  // Long-Term engine's panic boost makes (a falling SPY is already the penalty above).
 
   const fg = marketContext?.fearGreedValue ?? null;
-  if (fg !== null && score > 50) {
-    if (fg < 25)      score = Math.max(50, score - 3); // Extreme Fear
-    else if (fg > 75) score = Math.max(50, score - 2); // Extreme Greed (contrarian)
-    else if (fg < 35) score = Math.max(50, score - 1); // Fear
-  }
+  if (fg !== null && fg > 75 && score > 50) score = Math.max(50, score - 2);
 
   // ── MACRO REGIME PENALTY ────────────────────────────────────────────────────
   // Inverted yield curve (T10Y2Y < 0) is a recession signal — pull LONG scores

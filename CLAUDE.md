@@ -155,7 +155,7 @@ tests/                — 26 files, 565 tests (~1s). One test file per lib modul
 - **Technical (v0.30):** strength is not penalised — 52w position ≥ 0.4 → 0.8 flat (a new high on solid numbers can be an entry), RSI ≥ 70 → 0.5 (was 0.25), Stoch ≥ 60 → 0.4 (was 0.2 above 75). T4 is now **3-month RS vs SPY** (`data.rs.rs3m`: >10 1.0 · >3 .8 · >−3 .55 · >−10 .35 · else .15); it replaced the one-day % move.
 - **Regime shift:** VIX > 25 → 28/62/10; VIX > 35 → 22/68/10 (T/F/S)
 - **SPY penalty:** downtrend → LONG scores pulled 20% toward 50
-- **F&G modifier:** extreme fear < 25 → −3; extreme greed > 75 → −2
+- **F&G modifier:** extreme greed > 75 → −2 only. The fear penalty (< 25 → −3, < 35 → −1) was dropped in v0.31: on a months-to-years horizon fear is opportunity, the same read as Long-Term's panic boost — the two engines used to pull in opposite directions on the same F&G reading. Don't reintroduce it.
 - **Badges:** STRONG_LONG ≥ 72 · LEAN_LONG ≥ 58 · NEUTRAL ≥ 42 · LEAN_SHORT ≥ 28 · STRONG_SHORT < 28
 - **Conviction:** % of signals aligned with score direction; HIGH ≥ 75% / MODERATE ≥ 55% / LOW ≥ 35% / MIXED
 
