@@ -79,7 +79,7 @@ flowchart LR
     FH[("Finnhub<br/>prices · fundamentals<br/>news")]
     TD[("TwelveData<br/>price history")]
     FR[("FRED<br/>macro")]
-    JOB["⏰ GitHub Actions<br/>~10:00 open · ~16:30 close<br/>New York time, weekdays"]
+    JOB["⏰ GitHub Actions<br/>intraday · after the close<br/>New York time, weekdays"]
     SNAP["📦 snapshot.json<br/>on GitHub Pages"]
     YOU["💻 Your browser<br/>computes every score"]
     REF["🔄 Refresh (optional)<br/>live prices with<br/>your own keys"]

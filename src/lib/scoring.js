@@ -421,7 +421,10 @@ export function getScoreVelocity(symbol) {
 const SECTOR_MOMENTUM_KEY = (etf) => `sm_${etf}`;
 const MOMENTUM_WINDOW = 10;
 
-export function storeSectorMomentumSnapshot(etf, dp) {
+// One sample per trading day, keyed by the quote's own timestamp (Finnhub `t`,
+// seconds): re-reading the same session — snapshot reloads, weekend or intraday
+// refreshes — replaces that day's sample instead of stacking duplicates.
+export function storeSectorMomentumSnapshot(etf, dp, quoteTs) {
   if (!Number.isFinite(dp)) return;
   const key = SECTOR_MOMENTUM_KEY(etf);
   let history = [];
@@ -431,10 +434,9 @@ export function storeSectorMomentumSnapshot(etf, dp) {
   } catch { /* noop */ }
 
   const now = Date.now();
-  const last = history[history.length - 1];
-  if (!last || now - last.ts > 3600000) {
-    history.push({ dp, ts: now });
-  }
+  const day = new Date(quoteTs > 0 ? quoteTs * 1000 : now).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  if (history[history.length - 1]?.day === day) history[history.length - 1] = { dp, ts: now, day };
+  else history.push({ dp, ts: now, day });
   if (history.length > MOMENTUM_WINDOW) history = history.slice(-MOMENTUM_WINDOW);
 
   try {

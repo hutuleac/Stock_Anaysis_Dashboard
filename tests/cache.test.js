@@ -28,7 +28,7 @@ const NOW = Date.now();
 const entry = (data, ageMs = 0) => JSON.stringify({ data, ts: NOW - ageMs });
 
 // Imported after the stub is in place (finnhub reads localStorage at module load).
-const { pruneOrphanedCache, evictStaleCache, parseFearGreed } = await import('../src/lib/api/finnhub.svelte.js');
+const { pruneOrphanedCache, evictStaleCache, parseFearGreed, setNetworkEnabled, fetchMarketContext } = await import('../src/lib/api/finnhub.svelte.js');
 
 beforeEach(() => { localStorage.clear(); });
 
@@ -78,6 +78,35 @@ describe('pruneOrphanedCache', () => {
     expect(localStorage.getItem('fred_cpi')).not.toBeNull();
     expect(localStorage.getItem('watchlist')).not.toBeNull();
     expect(localStorage.getItem('finnhub_api_key')).not.toBeNull();
+  });
+
+  it('keeps sector ETF quotes — market-wide, not watchlist symbols', () => {
+    localStorage.setItem('fh_quote_XLK', entry({ c: 1, dp: 0.4 }));
+    localStorage.setItem('fh_quote_XLRE', entry({ c: 1, dp: -0.2 }));
+
+    pruneOrphanedCache(['AAPL']);
+
+    expect(localStorage.getItem('fh_quote_XLK')).not.toBeNull();
+    expect(localStorage.getItem('fh_quote_XLRE')).not.toBeNull();
+  });
+});
+
+describe('offline (snapshot) market context', () => {
+  it('makes no network calls and serves the cached F&G / BTC', async () => {
+    const realFetch = globalThis.fetch, fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy;
+    localStorage.setItem('fh_feargreed_market', entry({ score: 46 }, 5 * 3600e3)); // past its 1h TTL
+    localStorage.setItem('fh_btc_market', entry({ price: 1, dp: 2 }, 5 * 3600e3));
+    setNetworkEnabled(false);
+    try {
+      const ctx = await fetchMarketContext();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(ctx.fearGreed.data.score).toBe(46);
+      expect(ctx.btc.data.dp).toBe(2);
+    } finally {
+      setNetworkEnabled(true);
+      globalThis.fetch = realFetch;
+    }
   });
 });
 

@@ -3,13 +3,14 @@
 // an in-memory localStorage, so every entry is byte-identical to what the
 // browser would cache — no second copy of the fetch/trim logic to drift.
 //
-// SNAPSHOT_MODE:
+// SNAPSHOT_MODE (picked by deploy.yml's gate from the New York time the run starts):
 //   close  — fresh run: everything for watchlist.json + ETF proxies + SPY
-//   open   — start from the live snapshot; only expired entries refetch
+//   open   — intraday; start from the live snapshot, only expired entries refetch
 //            (quotes, Fear & Greed, BTC — the rest is still inside its TTL)
 //   reuse  — push deploys: republish the live snapshot, zero API calls
 // LIVE_URL is the deployed snapshot.json. Keys come from repo secrets; a
-// missing key or failed call never fails the deploy.
+// missing key or a failed call never fails the deploy — a run where no quote
+// at all came back does (see the check before publishing).
 import { writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 
@@ -23,6 +24,12 @@ if (LIVE_URL) {
   if (!live?.entries) live = null;
 }
 const publish = (snap) => writeFileSync(OUT, JSON.stringify(snap));
+
+// Each slot has two crons and both now run: the second scheduled close of the
+// same New York day republishes instead of spending a second fresh run.
+const nyDate = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+if (mode === 'close' && process.env.GITHUB_EVENT_NAME === 'schedule'
+    && live?.mode === 'close' && nyDate(live.generatedAt) === nyDate(Date.now())) mode = 'reuse';
 
 if (mode === 'reuse' || !fhKey) {
   if (live) { publish(live); console.log(`snapshot.json: republished ${live.mode} snapshot`); }
@@ -79,6 +86,12 @@ await Promise.all([
   tdKey && Promise.all(candleSymbols.map(s => td.fetchTimeSeries(s, '1day', TD_DAILY_BARS))),
 ]);
 await server.close();
+
+// Fail loudly when nothing was fetched (revoked key, API down): publishing would
+// stamp old prices with a fresh generatedAt. The failed run keeps the live site.
+if (!symbols.some(s => JSON.parse(store.get(`fh_quote_${s}`) ?? '{}').ts >= generatedAt)) {
+  throw new Error('No quote fetched this run — snapshot not published');
+}
 
 // Cache entries only — the shim also holds the API keys setApiKey persisted.
 const entries = Object.fromEntries([...store].filter(([k]) => /^(fh|td)_/.test(k)));
