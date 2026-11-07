@@ -138,7 +138,7 @@ src/lib/
     HighlightsStrip.svelte  — cross-view "Today" ACT/SOON digest + in-browser notifications
     ScanSummary.svelte      — one-line "Scans" summary; opens one scan panel + filters the watchlist to its tickers
     SettingsPanel.svelte    — API keys, AI prompts, notification toggle
-    TooltipOverlay.svelte / OnboardingModal.svelte
+    TooltipOverlay.svelte
   stores/
     watchlist.svelte.js     — ticker list, fetch orchestration
     etflist.svelte.js       — UCITS ETF catalog (+US proxy mapping) + proxy candle data

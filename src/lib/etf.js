@@ -140,7 +140,6 @@ export function computeEtfSignals(list, spyCloses) {
     const price = dailyCloses[dailyCloses.length - 1];
 
     const rsiW = computeRSI(wc);
-    const macd = computeMACD(wc);
     const divergence = detectDivergence(wc, wh, wl);
     // Entry memory of RECENT_WEEKS: the low (oversold) and the turn (MACD cross)
     // are weeks apart on a weekly chart, so scoring both only on the same bar

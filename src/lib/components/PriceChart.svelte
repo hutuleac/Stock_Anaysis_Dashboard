@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType } from 'lightweight-charts';
+  import { createChart, CandlestickSeries, LineSeries, HistogramSeries } from 'lightweight-charts';
   import { fetchCandles, fetchHistoricalEarnings } from '../api/finnhub.svelte.js';
   import { hasTDApiKey, fetchTimeSeries } from '../api/twelvedata.svelte.js';
   import { getTickerData } from '../stores/watchlist.svelte.js';

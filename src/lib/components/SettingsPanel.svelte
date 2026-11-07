@@ -75,10 +75,11 @@
   }
 </script>
 
+<svelte:window onkeydown={(e) => { if (open && e.key === 'Escape') open = false; }} />
+
 {#if open}
-  <!-- Backdrop -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onclick={() => open = false}></div>
+  <!-- Backdrop (Escape is the keyboard equivalent) -->
+  <div class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" role="presentation" onclick={() => open = false}></div>
 
   <!-- Panel -->
   <div class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-surface-800 border-l border-border z-50 overflow-y-auto">

@@ -1,17 +1,31 @@
 import { fetchProfile, getSectorETF } from '../api/finnhub.svelte.js';
 import { HARDCODED_DEFAULTS } from '../defaultLists.js';
 
-let tickers = $state([]);
+// Initial values are read into plain locals first, then wrapped in $state —
+// reading a $state at module load only sees its initial value.
+let initialDefaults = [...HARDCODED_DEFAULTS];
+try {
+  const savedDefaults = localStorage.getItem('watchlist_defaults');
+  if (savedDefaults) initialDefaults = JSON.parse(savedDefaults);
+} catch { /* noop */ }
+
+// Watchlist from localStorage, seeded with the defaults on first run
+let initialTickers = [];
+try {
+  const saved = localStorage.getItem('watchlist');
+  if (saved) initialTickers = JSON.parse(saved);
+} catch { /* noop */ }
+if (initialTickers.length === 0) {
+  initialTickers = [...initialDefaults];
+  try { localStorage.setItem('watchlist', JSON.stringify(initialTickers)); } catch { /* noop */ }
+}
+
+let tickers = $state(initialTickers);
 let selectedSymbol = $state(null);
 let marketData = $state({});
 
-
 // User-configurable defaults — persisted separately from active watchlist
-let defaultTickers = $state([]);
-try {
-  const savedDefaults = localStorage.getItem('watchlist_defaults');
-  defaultTickers = savedDefaults ? JSON.parse(savedDefaults) : [...HARDCODED_DEFAULTS];
-} catch { defaultTickers = [...HARDCODED_DEFAULTS]; }
+let defaultTickers = $state(initialDefaults);
 
 function persistDefaults() {
   try { localStorage.setItem('watchlist_defaults', JSON.stringify(defaultTickers)); } catch { /* noop */ }
@@ -37,17 +51,6 @@ export function resetDefaultTickers() {
   persistDefaults();
 }
 
-// Initialize watchlist from localStorage or seed with defaults on first run
-try {
-  const saved = localStorage.getItem('watchlist');
-  if (saved) tickers = JSON.parse(saved);
-} catch { /* noop */ }
-
-if (tickers.length === 0) {
-  tickers = [...defaultTickers];
-  try { localStorage.setItem('watchlist', JSON.stringify(tickers)); } catch { /* noop */ }
-}
-
 function persistTickers() {
   try {
     localStorage.setItem('watchlist', JSON.stringify(tickers));
@@ -58,7 +61,6 @@ function persistTickers() {
 
 export function getTickers() { return tickers; }
 export function getSelectedSymbol() { return selectedSymbol; }
-function getMarketData() { return marketData; }
 
 export function selectTicker(symbol) {
   selectedSymbol = selectedSymbol === symbol ? null : symbol;
