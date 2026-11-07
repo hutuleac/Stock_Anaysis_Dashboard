@@ -6,7 +6,7 @@
   import { searchCatalog } from '../etfCatalog.js';
   import { tooltip as tipAction } from '../actions/tooltip.js';
   import { TIPS } from '../tooltipDefs.js';
-  import PriceChart from './PriceChart.svelte';
+  import PriceChart from './LazyPriceChart.svelte';
   import { hasTDApiKey } from '../api/twelvedata.svelte.js';
 
   // Gates mobile card vs desktop table so the expanded row's PriceChart only mounts once.

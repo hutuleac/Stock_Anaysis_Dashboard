@@ -16,7 +16,7 @@
   import { getTemplates, getDefaultId, getTemplate } from '../stores/prompts.svelte.js';
   import EntryPanel from './EntryPanel.svelte';
   import ThesisSummary from './ThesisSummary.svelte';
-  import PriceChart from './PriceChart.svelte';
+  import PriceChart from './LazyPriceChart.svelte';
   import FundamentalsBar from './FundamentalsBar.svelte';
 
   // filterSymbols: set by the scan summary (App) — show only these tickers.
